@@ -17,22 +17,6 @@ function stats(p,U){
   const ep=+S.settings.epargne||0;
   return {ms,lisse,pointMort,depMoy,nData:wd.length,autonomie:ep>0&&depMoy>0?ep/depMoy:null,autoEss:ep>0&&pointMort>0?ep/pointMort:null};
 }
-function retenir(A,st,U){
-  U=U||UNIV;
-  const items=[]; const [a]=bounds(P);
-  if(P.lvl==='M'&&U!=='pro'){const last=S.ops.filter(o=>o.date.slice(0,7)===a).reduce((m,o)=>o.date>m?o.date:m,'');
-    if(last){const d=+last.slice(8,10), dim=new Date(P.y,P.m,0).getDate();
-      if(d>=5&&d<dim-2&&A.net>0){const proj=A.net/d*dim;items.push({e:st.lisse>0&&proj>st.lisse?'⚠️':'',t:`À ce rythme, vos dépenses finiront le mois vers ${eur0(proj)}${st.lisse>0?`, pour des rentrées lissées de ${eur0(st.lisse)}`:''}.`,go:'economies'})}}}
-  if(st.lisse>0&&A.any&&st.nData>=3){const mi=A.income/A.months, d=(mi-st.lisse)*A.months;
-    if(mi>st.lisse*1.15) items.push({e:'🎉',t:`Bonne période : ${eur0(d)} au-dessus de vos rentrées lissées. Gardez-en une partie pour les mois creux.`,go:'objectifs'});
-    else if(mi<st.lisse*.7) items.push({e:'⚠️',t:`Période creuse : ${eur0(-d)} sous vos rentrées lissées.${st.autonomie!=null?` Votre matelas couvre ${fmt1(st.autonomie)} mois.`:''}`,go:'objectifs'})}
-  const X=agg(P,'pro'), tx=+S.settings.taux||0;
-  if(U!=='perso'&&X.ca>0) items.push(tx>0?{e:'',t:`À mettre de côté pour les cotisations et les impôts : ${eur0(X.provision)}, soit ${tx} % ${S.settings.assiette==='resultat'?`de votre résultat de ${eur0(Math.max(0,X.resultat))}`:`des ${eur0(X.ca)} encaissés`}.`,go:'regles'}:{e:'',t:'Indiquez dans Réglages la part de vos revenus à mettre de côté pour les cotisations et les impôts.',go:'regles'});
-  const ch=S.challenges.filter(c=>c.month===thisMonth()).map(evalDefi).find(x=>x&&x.status==='en cours');
-  if(ch) items.push({e:'🎯',t:`Défi en cours : ${ch.name}. ${ch.progress}`,go:'objectifs'});
-  if(st.autonomie!=null) items.push({e:'',t:`Votre matelas : ${fmt1(st.autonomie)} mois d’autonomie, pour ${S.settings.objectif||6} visés.`,go:'objectifs'});
-  return items.slice(0,3);
-}
 function recurring(){
   const last=lastOpDate(); if(!last) return [];
   const end={y:+last.slice(0,4),m:+last.slice(5,7)}; const ms=monthsTo(end.y,end.m,6).map(q=>q.y+'-'+pad2(q.m));
@@ -52,31 +36,3 @@ function recurring(){
   }
   return out.sort((a,b)=>b.annual-a.annual);
 }
-function hoursTxt(eur,rate){const h=eur/rate;const H=Math.floor(h),M=Math.round((h-H)*60);return H?`${H} h${M?' '+pad2(M):''}`:`${Math.max(1,M)} min`}
-function vEco(){
-  const A=agg(P), B=agg(shift(P,-1)), st=stats(P,'all'), rec=recurring();
-  const recTot=rec.reduce((s,r)=>s+r.annual,0);
-  const X=activite(P), surCible=!(X.tauxLisse>=X.cible*.3), rate=surCible?X.cible:X.tauxLisse;
-  const top=Object.values(A.by).flatMap(e=>e.ops).filter(o=>o.amount<0&&!catById(catOf(o))?.fixed).sort((a,b)=>a.amount-b.amount).slice(0,6);
-  const fixedCats=S.categories.filter(c=>c.fixed&&c.type==='expense');
-  const l3=st.ms.filter(x=>x.a.any).slice(-3);
-  const rises=Object.entries(A.by).filter(([c])=>c!=='_pending').map(([c,e])=>{const pb=B.by[c]?.net||0;return {c,now:e.net,pb,d:e.net-pb}}).filter(x=>B.any&&x.d>30&&x.pb>0&&x.d/x.pb>.2).sort((a,b)=>b.d-a.d);
-  return periodBar()+`
-  <section class="block"><h3 class="sec">Votre point mort</h3>
-    <div class="kpi">${eur0(st.pointMort)}<small>par mois</small></div>
-    <p class="lead">Ce qu’il faut encaisser au minimum chaque mois pour couvrir vos charges fixes, en moyenne sur les trois derniers mois.</p>
-    ${fixedCats.map(c=>{const v=l3.reduce((s,x)=>s+(x.a.by[c.id]?.net||0),0)/(l3.length||1);return v?`<div class="row"><span>${esc(c.name)}</span><b>${eur0(v)}</b></div>`:''}).join('')}
-    <p class="note" style="margin-top:12px">Vous choisissez ce qui compte comme charge fixe dans Réglages, rubrique par rubrique.</p></section>
-  <section class="block"><h3 class="sec">Abonnements et prélèvements réguliers</h3>
-    ${rec.length?`<div class="kpi">${eur0(recTot)}<small>par an</small></div><p class="lead">Ce qui est prélevé chaque mois, repéré sur les six derniers mois, hors prêts. À passer en revue une fois par an : on y trouve souvent des abonnements oubliés.</p>
-    ${rec.map(r=>`<div class="row"><span>${esc(r.m)}</span><b>${eur0(r.annual)} / an</b><span class="sub">${esc(catById(r.c)?.name||'')}, environ ${eur(r.monthly)} par mois</span></div>`).join('')}`:'<p class="note">Rien de régulier repéré pour l’instant. Il faut au moins trois mois de relevés.</p>'}
-  </section>
-  <section class="block"><h3 class="sec">Le vrai prix de vos dépenses</h3>
-    ${rate?`<p class="lead">${surCible?`Voici ce que vos plus grosses dépenses de la période, hors charges fixes, représentent en heures de travail.`:`Votre heure de travail vous rapporte réellement ${eur(rate)}, d’après votre revenu net des ${X.nLisse} derniers mois et ${X.H} h travaillées par mois. Voici ce que vos plus grosses dépenses de la période, hors charges fixes, vous ont coûté en temps de travail.`}</p>${surCible?`<p class="note" style="margin-top:-14px">Calculé sur votre taux visé de ${eur(X.cible)}.</p>`:''}
-    ${top.map(o=>`<div class="row"><span>${esc(o.merchant)}</span><b>${hoursTxt(-o.amount,rate)}</b><span class="sub">${dfmt(o.date)}, ${eur(-o.amount)}</span></div>`).join('')||'<p class="note">Aucune dépense sur cette période.</p>'}`
-    :`<p class="note">${X.nLisse?'Votre revenu net est nul ou négatif sur les derniers mois : impossible de donner un prix à votre heure pour l’instant.':'Il faut des encaissements professionnels pour calculer ce que vous rapporte une heure de travail.'}</p>`}
-  </section>
-  ${rises.length?`<section class="block"><h3 class="sec">Postes en hausse</h3><p class="lead">Par rapport à la période précédente.</p>
-    ${rises.map(x=>`<div class="row"><span>${esc(catById(x.c)?.name||x.c)} ${x.d/x.pb>.5?'🔥':'⚠️'}</span><b>+${eur0(x.d)}</b><span class="sub">${eur0(x.pb)} puis ${eur0(x.now)}</span></div>`).join('')}</section>`:''}`;
-}
-

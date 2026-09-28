@@ -3,7 +3,7 @@ let db=null, uid=null, mode='local', stateDirty=false, dirtyMonths=new Set(), ti
 const LS='mes-comptes-v1';
 const base=()=>`data/users/${uid}/state`;
 const LSUI='mes-comptes-affichage';
-function loadUI(){try{const u=JSON.parse(localStorage.getItem(LSUI)||'{}');if(['all','pro','perso'].includes(u.univ))UNIV=u.univ}catch(e){}}
+function loadUI(){UNIV='all'}
 function saveUI(){try{localStorage.setItem(LSUI,JSON.stringify({univ:UNIV}))}catch(e){}}
 function loadLocal(){try{const t=localStorage.getItem(LS);return t?JSON.parse(t):null}catch(e){return null}}
 function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
@@ -19,7 +19,8 @@ function merge(x){
   const st={...x,schemaVersion:x.schemaVersion||1,accounts:x.accounts||[],categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]};
   if(!st.since&&st.ops.length){st.since=Date.now();MIGRATED=true}
   if(!st.masked) st.masked={};
-  st.game={seenLevel:null,backups:0,cagnotte:{nom:'',montant:0},...(st.game||{})};
+  if(!st.virements) st.virements={};
+  if(st.onboarded==null) st.onboarded=st.ops.length>0;
   st.challenges.forEach(c=>{if(!c.key)c.key=newId('d_')});
   if(migrateSchema(st)){MIGRATED=true;st.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)))}
   return st;
@@ -49,6 +50,11 @@ function migrateSchema(st){
     if(+st.settings.heures===140) st.settings.heures=160;
     if(!st.settings.netVise) st.settings.netVise=2000;
     st.schemaVersion=3;
+  }
+  if(st.schemaVersion<4){
+    /* v3 → v4 : nouvelles rubriques du foyer, noms plus simples (un nom personnalisé est gardé) */
+    for(const c of st.categories){const d=CATS0.find(k=>k.id===c.id);if(d&&OLD_NAMES[c.id]===c.name){c.name=d.name;c.icon=d.icon}}
+    st.schemaVersion=4;
   }
   return st.schemaVersion!==v0;
 }

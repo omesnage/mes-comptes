@@ -70,15 +70,14 @@ function revPanel(){
   const d=revDraft, H=d.sheets[d.sheet].rows[d.h]||[];
   const opt=(sel,optional)=>(optional?`<option value="-1"${sel<0?' selected':''}>Aucune</option>`:'')+H.map((c,i)=>`<option value="${i}"${i===sel?' selected':''}>${esc(cellStr(c)||'Colonne '+(i+1))}</option>`).join('');
   const {list,skipped}=revParse(); const tot=list.reduce((s,o)=>s+o.amount,0);
-  return `<div class="map"><h4>${esc(d.name)}</h4>
-    ${d.sheets.length>1?`<label>Feuille<select class="quiet" data-rev="sheet">${d.sheets.map((s,i)=>`<option value="${i}"${i===d.sheet?' selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`:''}
-    <label>Date<select class="quiet" data-rev="date">${opt(d.date)}</select></label>
-    <label>Montant<select class="quiet" data-rev="amt">${opt(d.amt)}</select></label>
-    <label>Client ou libellé<select class="quiet" data-rev="lab">${opt(d.lab,true)}</select></label>
-  </div>
-  <p class="count">${list.length} revenu${list.length>1?'s':''} reconnu${list.length>1?'s':''}, total ${eur(tot)}${skipped?`. ${skipped} ligne${skipped>1?'s':''} ignorée${skipped>1?'s':''}, sans date ou montant lisible`:''}.</p>
-  ${list.slice(0,5).map(o=>`<div class="op"><div class="op-date">${o.date.slice(8,10)}/${o.date.slice(5,7)}/${o.date.slice(2,4)}</div><div class="op-m">${esc(o.label)}</div><div class="op-amt cr">${o.amount<0?'−':'+'}${eur(Math.abs(o.amount))}</div></div>`).join('')}
-  <div class="btn-row" style="margin-top:22px;align-items:center"><button class="btn" data-act="revok"${list.length?'':' disabled'}>Importer ${list.length} revenu${list.length>1?'s':''}</button><button class="link" data-act="revcancel">Annuler</button></div>`;
+  return `<p class="f-lbl">${esc(d.name)}</p>
+    ${d.sheets.length>1?`<label class="champ">Feuille<select class="grand" data-rev="sheet">${d.sheets.map((s,i)=>`<option value="${i}"${i===d.sheet?' selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`:''}
+    <label class="champ">Colonne de la date<select class="grand" data-rev="date">${opt(d.date)}</select></label>
+    <label class="champ">Colonne du montant<select class="grand" data-rev="amt">${opt(d.amt)}</select></label>
+    <label class="champ">Colonne du client (facultatif)<select class="grand" data-rev="lab">${opt(d.lab,true)}</select></label>
+  <p class="phrase">${list.length} encaissement${list.length>1?'s':''} trouvé${list.length>1?'s':''}, ${eur(tot)} au total${skipped?`. ${skipped} ligne${skipped>1?'s':''} sans date ou montant lisible, ignorée${skipped>1?'s':''}`:''}.</p>
+  <div class="apercu">${list.slice(0,5).map(o=>`<div class="pv"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span><span>${esc(o.label)}</span><span class="cr">+${eur(o.amount)}</span></div>`).join('')}</div>
+  <div class="boutons"><button class="btn" data-act="revok"${list.length?'':' disabled'}>Importer ${list.length} encaissement${list.length>1?'s':''}</button><button class="lien" data-act="revcancel">Annuler</button></div>`;
 }
 function revImport(){
   const {list}=revParse();
@@ -90,7 +89,7 @@ function revImport(){
   }
   const first=S.incomeSource!=='file'; S.incomeSource='file';
   S.ops.sort((a,b)=>a.date<b.date?1:-1);
-  revMsg=`${list.length} revenu${list.length>1?'s':''} importé${list.length>1?'s':''}.`+(first?' La synthèse compte désormais vos revenus depuis ce fichier.':'');
+  revMsg=`${list.length} encaissement${list.length>1?'s':''} importé${list.length>1?'s':''}.`+(first?' Vos encaissements sont désormais lus dans ce tableau.':'');
   revDraft=null; P=null; save(); render();
 }
 

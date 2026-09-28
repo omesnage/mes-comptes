@@ -6,7 +6,7 @@
 <title>Mes comptes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -19,10 +19,9 @@
 <div class="wrap">
   <header class="top">
     <div class="brand">Mes comptes</div>
-    <div class="status" id="status"></div>
+    <div class="top-droite"><span class="status" id="status"></span><button id="gear" data-tab="reglages" aria-label="Réglages"><i data-lucide="settings"></i></button></div>
   </header>
-  <div id="univ"></div>
-  <nav class="tabs" id="tabs"></nav>
+  <nav class="tabs" id="tabs" aria-label="Navigation principale"></nav>
   <div id="demoBar"></div>
   <main id="view"></main>
 </div>

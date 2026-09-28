@@ -28,6 +28,11 @@ function prevLabel(p){
 }
 let AGG={}, RAW={};
 function monthKeys(a,b){const out=[];let y=+a.slice(0,4),m=+a.slice(5,7);const by=+b.slice(0,4),bm=+b.slice(5,7);while(y<by||(y===by&&m<=bm)){out.push(y+'-'+pad(m));if(++m>12){m=1;y++}}return out}
+/* Frais remboursés par l'activité : comptés dans les frais de l'activité, et déduits de la rubrique perso (Voiture et transports) */
+function frais(R,debit,credit,amt){
+  if(debit){const e=R.pro.by.fraisrembourses||(R.pro.by.fraisrembourses={spent:0,ref:0,ops:[]});e.spent+=amt;e.ops.push(debit);R.pro.any=true}
+  const p=R.perso.by.transport||(R.perso.by.transport={spent:0,ref:0,ops:[]});p.ref+=amt;p.ops.push(credit);R.perso.any=true;
+}
 /* Calcul de base d'une période : un seau par univers (pro, perso) et la rémunération pro → perso */
 function aggRaw(p){
   const ck=p.lvl+p.y+'-'+p.m+(p.lvl==='Q'?Math.ceil(p.m/3):''); if(RAW[ck]) return RAW[ck];
@@ -39,9 +44,12 @@ function aggRaw(p){
     R.any=true;
     if(o.src==='rev'){R.pro.any=true;if(fileInc){R.pro.income+=o.amount;R.pro.inc.revenus=(R.pro.inc.revenus||0)+o.amount}continue}
     const x=!o.cat&&INTERNAL[o.id]?BYID[INTERNAL[o.id]]:null;
-    if(x){ if(o.amount<0){const r=remuDir(o,x);if(r){R.remu+=r*-o.amount;R.remuOps.push(o)}} continue }
+    if(x){ if(o.amount<0){const r=remuDir(o,x);
+        if(r>0&&virKind(o,x)==='ndf'){frais(R,o,x,-o.amount)}
+        else if(r){R.remu+=r*-o.amount;R.remuOps.push(o)}} continue }
     const c=catOf(o)||'_pending';
     if(c==='_pending'&&o.amount>0) continue;
+    if(c==='fraisrembourses'&&o.amount>0){frais(R,hasPro()?null:o,o,o.amount);continue}
     const ty=c==='_pending'?'expense':typeOf(c);
     if(ty==='transfer') continue;
     if(ty==='remu'){

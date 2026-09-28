@@ -1,44 +1,54 @@
 /* ============ Données de base ============ */
-const SCHEMA=3;
+const SCHEMA=4;
 const SET0={epargne:0,taux:0,heures:160,netVise:2000,objectif:6,assiette:'ca'};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
- ['courses','Courses alimentaires','shopping-basket','expense','perso'],
- ['resto','Restaurants & cafés','utensils','expense','perso'],
- ['transport','Transport & carburant','car','expense','auto'],
- ['logement','Logement & énergie','house','expense','perso'],
+ ['logement','Logement','house','expense','perso',1],
+ ['energie','Énergie','zap','expense','perso',1],
+ ['courses','Courses','shopping-basket','expense','perso'],
+ ['resto','Restaurants et cafés','utensils','expense','perso'],
+ ['transport','Voiture et transports','car','expense','auto'],
+ ['abonnements','Abonnements et téléphone','smartphone','expense','auto',1],
  ['sante','Santé','heart-pulse','expense','perso'],
- ['abonnements','Abonnements & téléphonie','smartphone','expense','auto'],
- ['loisirs','Loisirs & culture','ticket','expense','perso'],
- ['shopping','Shopping','shopping-bag','expense','perso'],
- ['frais','Frais bancaires','landmark','expense','auto'],
- ['pret','Remboursement de prêt','key-round','expense','auto'],
- ['logiciels','Logiciels & outils','app-window','expense','pro'],
- ['materiel','Matériel & fournitures','monitor','expense','pro'],
- ['deplacements','Déplacements professionnels','plane','expense','pro'],
+ ['loisirs','Loisirs','ticket','expense','perso'],
+ ['shopping','Vêtements et shopping','shirt','expense','perso'],
+ ['maison','Maison et équipement','sofa','expense','perso'],
+ ['enfants','Enfants','baby','expense','perso'],
+ ['animaux','Animaux','paw-print','expense','perso'],
+ ['cadeaux','Cadeaux','gift','expense','perso'],
+ ['voyages','Voyages','luggage','expense','perso'],
+ ['frais','Banque','landmark','expense','auto',1],
+ ['impotsfoyer','Impôts et taxes du foyer','receipt','expense','perso',1],
+ ['pret','Remboursement de prêt','key-round','expense','auto',1],
+ ['divers','Autres','circle-dashed','expense','auto'],
+ ['logiciels','Logiciels et outils','app-window','expense','pro'],
+ ['materiel','Matériel et fournitures','monitor','expense','pro'],
+ ['deplacements','Déplacements de l’activité','train-front','expense','pro'],
  ['soustraitance','Sous-traitance','handshake','expense','pro'],
- ['comptable','Comptable & juridique','scale','expense','pro'],
- ['cotisations','Cotisations sociales','shield-check','expense','pro'],
- ['impots','Impôts sur l’activité','receipt','expense','pro'],
- ['pro','Autres frais professionnels','briefcase','expense','pro'],
+ ['comptable','Comptable','calculator','expense','pro'],
+ ['cotisations','Versements de ce qui est mis de côté','piggy-bank','expense','pro'],
+ ['impots','Impôts de l’activité','receipt-text','expense','pro'],
+ ['fraisrembourses','Frais remboursés par l’activité','car-front','expense','pro'],
+ ['pro','Autres frais de l’activité','briefcase','expense','pro'],
  ['remb','Remboursements','rotate-ccw','expense','auto'],
- ['rentrees','Rentrées d’argent','hand-coins','income','perso'],
- ['revenus','Revenus','arrow-down-left','income','auto'],
- ['remu','Rémunération (pro vers perso)','arrow-left-right','remu','auto'],
- ['interne','Virements internes','repeat','transfer','auto'],
- ['divers','Divers','circle-dashed','expense','auto']
-].map(([id,name,icon,type,univers])=>({id,name,icon,type,univers,budget:0,fixed:false}));
+ ['rentrees','Autres rentrées','hand-coins','income','perso'],
+ ['revenus','Revenus et encaissements','arrow-down-left','income','auto'],
+ ['remu','Votre rémunération','arrow-left-right','remu','auto'],
+ ['interne','Virements entre vos comptes','repeat','transfer','auto']
+].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,budget:0,fixed:!!fixed}));
+/* Anciens noms par défaut, remplacés par les nouveaux lors de la migration (un nom personnalisé est gardé) */
+const OLD_NAMES={courses:'Courses alimentaires',resto:'Restaurants & cafés',transport:'Transport & carburant',logement:'Logement & énergie',sante:'Santé',abonnements:'Abonnements & téléphonie',loisirs:'Loisirs & culture',shopping:'Shopping',frais:'Frais bancaires',pret:'Remboursement de prêt',logiciels:'Logiciels & outils',materiel:'Matériel & fournitures',deplacements:'Déplacements professionnels',soustraitance:'Sous-traitance',comptable:'Comptable & juridique',cotisations:'Cotisations sociales',impots:'Impôts sur l’activité',pro:'Autres frais professionnels',remb:'Remboursements',rentrees:'Rentrées d’argent',revenus:'Revenus',remu:'Rémunération (pro vers perso)',interne:'Virements internes',divers:'Divers'};
+/* Remboursement de frais par l'activité (indemnités kilométriques, notes de frais) */
+const NDF_RE=/\b(IK|INDEMNITES? (KM|KILOMETRIQUES?)|FRAIS KM|NOTES? DE FRAIS|NDF|REMBOURSEMENT( DE)? FRAIS|REMB FRAIS)\b/;
 /* Rubriques qui correspondent au paiement de la provision (cotisations, impôts) */
 const PROV_CATS=new Set(['cotisations','impots']);
 const typeOf=id=>(S.categories.find(c=>c.id===id)||{}).type||'expense';
 const LOAN_RE=/\b(ECH(EANCE)?|REMB(OURSEMENT)?|PRLV|PRELEVEMENT)?\s*(SEPA\s*)?(DE\s*)?(PRET|CREDIT IMMO|PRET IMMO)\b|\b(COFIDIS|CETELEM|SOFINCO|FRANFINANCE|FLOA|ONEY)\b/;
-CATS0.forEach(c=>{if(['logement','pret','abonnements','frais'].includes(c.id))c.fixed=true});
 function autoCatOf(label){const b=brandOf(label);if(b&&b[2])return b[2];if(LOAN_RE.test(norm(label)))return 'pret';return null}
 
 /* Mots-clés toujours professionnels, quel que soit le compte */
 const KW_PRO=[
  [/URSSAF|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
- [/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|\bCFE\b/,'impots'],
  [/EXPERT COMPTABLE|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE/,'comptable']
 ];
 /* Mots-clés professionnels seulement sur un compte pro */
@@ -48,15 +58,21 @@ const KW_PROACC=[
  [/SNCF|OUIGO|AIR FRANCE|EASYJET|RYANAIR|HOTEL|BOOKING|AIRBNB|IBIS|NOVOTEL/,'deplacements']
 ];
 const KW=[
- [/TOTALENERGIES|EDF|ENGIE|VEOLIA|SAUR|LOYER|SYNDIC|FONCIA|NEXITY|GRDF|EAU DE/,'logement'],
+ [/PRLV.*TOTALENERGIES|\bEDF\b|ENGIE|VEOLIA|SAUR|GRDF|EAU DE|EKWATEUR|ENERCOOP|OHM ENERGIE|MINT ENERGIE/,'energie'],
+ [/LOYER|SYNDIC|FONCIA|NEXITY|ASSURANCE HABITATION/,'logement'],
+ [/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|TAXE FONCIERE|TAXE HABITATION/,'impotsfoyer'],
+ [/IKEA|LEROY MERLIN|CASTORAMA|BRICO|MAISONS DU MONDE|CONFORAMA|DARTY|BUT\b|GIFI|ACTION\b/,'maison'],
+ [/JOUE CLUB|KING JOUET|CRECHE|CANTINE|OKAIDI|CYRILLUS|VERTBAUDET|AUBERT|PERISCOLAIRE/,'enfants'],
+ [/VETERINAIRE|\bVETO\b|ANIMALERIE|MAXI ZOO|ZOOPLUS|CROQUETTES/,'animaux'],
+ [/BOOKING|AIRBNB|HOTEL|EASYJET|RYANAIR|AIR FRANCE|VOLOTEA|TRANSAVIA|CLUB MED|VACANCES/,'voyages'],
  [/CARREFOUR|LECLERC|INTERMARCHE|LIDL|AUCHAN|SUPER U|HYPER U|MONOPRIX|FRANPRIX|BIOCOOP|CASINO|ALDI|NETTO|SPAR|PICARD|GRAND FRAIS|PRIMEUR|BOUCHERIE|FROMAGER|NATURALIA|LA VIE CLAIRE/,'courses'],
  [/RESTAU|BRASSERIE|CAFE|BISTRO|BOULANGERIE|PATISS|MCDO|MC DONALD|BURGER|KFC|SUSHI|PIZZ|CREPERIE|UBER EATS|DELIVEROO|STARBUCKS|TRAITEUR/,'resto'],
- [/TOTAL|ESSO|SHELL|AVIA|STATION|SNCF|OUIGO|RATP|UBER|BOLT|BLABLACAR|AUTOROUTE|VINCI|APRR|SANEF|ASF|PARKING|INDIGO|AIR FRANCE|EASYJET|RYANAIR|PEAGE|LIME/,'transport'],
+ [/TOTAL|ESSO|SHELL|AVIA|STATION|SNCF|OUIGO|RATP|UBER|BOLT|BLABLACAR|AUTOROUTE|VINCI|APRR|SANEF|ASF|PARKING|INDIGO|PEAGE|LIME/,'transport'],
  [/PHARMA|DOCTEUR|MEDECIN|DENTISTE|KINE|OPTIC|LABO|HOPITAL|CLINIQUE|CPAM|MUTUELLE|AMELI|DOCTOLIB/,'sante'],
  [/FREE MOBILE|FREE|ORANGE|SFR|BOUYGUES|SOSH|NETFLIX|SPOTIFY|DEEZER|DISNEY|CANAL|APPLE|ITUNES|GOOGLE|ADOBE|MICROSOFT|AMAZON PRIME|PRIME VIDEO|ANTHROPIC|CLAUDE|OPENAI|SQUARESPACE|DROPBOX/,'abonnements'],
  [/CINEMA|PATHE|GAUMONT|UGC|THEATRE|MUSEE|CONCERT|LIBRAIRIE|CULTURA|STEAM|PLAYSTATION|BILLET/,'loisirs'],
- [/AMAZON|FNAC|DARTY|DECATHLON|IKEA|ZARA|UNIQLO|SEPHORA|LEROY MERLIN|CASTORAMA|BRICO|ACTION|GIFI|ETSY|VINTED|ZALANDO|H&M/,'shopping'],
- [/FRAIS|COTIS|COMMISSION|AGIOS|INTERETS DEB/,'frais'],
+ [/AMAZON|FNAC|DECATHLON|ZARA|UNIQLO|SEPHORA|ETSY|VINTED|ZALANDO|H&M|KIABI|CELIO|JULES/,'shopping'],
+ [/FRAIS TENUE|COTIS(ATION)? (CARTE|CB)|COMMISSION|AGIOS|INTERETS DEB|FRAIS BANCAIRES/,'frais'],
  [/SALAIRE|PAIE|HONORAIRES|CAF|FRANCE TRAVAIL|POLE EMPLOI/,'revenus'],
  [/RETRAIT ESPECES/,'divers']
 ];
@@ -91,17 +107,17 @@ const BRANDS=[
 function brandOf(label){const s=norm(label);return BRANDS.find(b=>b[0].test(s))||null}
 
 let S=blank(), demo=false, backup=null;
-let view='synthese', P=null, openCat=null, q='';
+let view='accueil', P=null, openCat=null, q='', FICHE=null, ONB=0;
 let UNIV='all', OPACC='';
 const reports=[];
 const HAS_CLAUDE=!!(window.claude&&window.claude.use);
 
-function blank(){return{schemaVersion:SCHEMA,game:{seenLevel:null,backups:0,cagnotte:{nom:'',montant:0}},accounts:[],categories:CATS0.map(c=>({...c})),rules:{},sugg:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
+function blank(){return{schemaVersion:SCHEMA,onboarded:false,accounts:[],categories:CATS0.map(c=>({...c})),rules:{},virements:{},sugg:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
 const fmt0=new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0});
-const eur=n=>fmt.format(n), eur0=n=>fmt0.format(n);
+const eur=n=>fmt.format(n), eur0=n=>fmt0.format(n), signed=n=>(n<0?'−':'')+fmt0.format(Math.abs(n));
 const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const catById=id=>S.categories.find(c=>c.id===id);
 const newId=p=>p+Math.random().toString(36).slice(2,10);
@@ -157,6 +173,11 @@ function detectInternal(){
     if(m){INTERNAL[d.id]=m.id;INTERNAL[m.id]=d.id}
   }
 }
+/* Nature d'un virement du compte pro vers le perso : 'ndf' (frais remboursés), 'remu' (rémunération) ou null (inconnue) */
+function virKind(debit,credit){
+  if(NDF_RE.test(norm(debit.label))||NDF_RE.test(norm(credit.label))) return 'ndf';
+  return (S.virements||{})[debit.merchant]||null;
+}
 /* Sens d'un virement interne : +1 si c'est une rémunération (pro vers perso), −1 pour un apport (perso vers pro), 0 sinon */
 function remuDir(debit,credit){
   const a=acctType(debit), b=acctType(credit);
@@ -188,14 +209,16 @@ function isRefund(o){
 }
 function waitingReturns(){return S.ops.filter(o=>o.awaiting&&!LINKED[o.id]).sort((a,b)=>a.date<b.date?-1:1)}
 function opExtra(o){
-  if(INTERNAL[o.id]&&!o.cat){const x=BYID[INTERNAL[o.id]];if(!x)return 'Virement interne, ni dépense ni rentrée';
+  if(INTERNAL[o.id]&&!o.cat){const x=BYID[INTERNAL[o.id]];if(!x)return 'Virement entre vos comptes';
     const [d,c]=o.amount<0?[o,x]:[x,o];const r=remuDir(d,c);
-    if(r>0) return o.amount<0?`Rémunération versée vers ${acctName(x.acct)}, ni dépense ni rentrée dans la vue d’ensemble`:`Rémunération reçue de ${acctName(x.acct)}`;
+    if(r>0&&virKind(d,c)==='ndf') return o.amount<0?`Remboursement de frais versé sur ${acctName(x.acct)}, compté dans les frais de l’activité`:`Remboursement de frais par votre activité, déduit de ${catById('transport')?.name||'vos dépenses'}`;
+    if(r>0) return o.amount<0?`Votre rémunération, versée sur ${acctName(x.acct)}`:`Votre rémunération, reçue de ${acctName(x.acct)}`;
     if(r<0) return o.amount<0?`Apport vers ${acctName(x.acct)}, votre compte pro`:`Apport reçu de ${acctName(x.acct)}, votre compte perso`;
-    return `Virement interne ${o.amount<0?'vers':'depuis'} ${acctName(x.acct)}, ni dépense ni rentrée`}
-  if(o.amount>0&&LINK[o.id]){const p=BYID[LINK[o.id]];return `Remboursement de l’achat du ${dfmt(p.date)}, ${eur(-p.amount)}`}
-  if(o.amount<0&&LINKED[o.id]){const r=BYID[LINKED[o.id]];return `Remboursé le ${dfmt(r.date)}, ${eur(r.amount)} ✅`}
-  if(o.awaiting){const d=Math.max(0,Math.round((Date.now()-new Date(o.date))/864e5));return `Retour signalé, remboursement attendu depuis ${d} jour${d>1?'s':''}${d>30?' ⚠️':''}`}
+    return `Virement ${o.amount<0?'vers':'depuis'} ${acctName(x.acct)}, entre vos comptes`}
+  if(o.amount>0&&LINK[o.id]){const p=BYID[LINK[o.id]];return `Remboursement de votre achat du ${p.date.slice(8,10)}/${p.date.slice(5,7)}`}
+  if(o.amount<0&&LINKED[o.id]){const r=BYID[LINKED[o.id]];return `Remboursé le ${r.date.slice(8,10)}/${r.date.slice(5,7)}`}
+  if(o.awaiting){const d=Math.max(0,Math.round((Date.now()-new Date(o.date))/864e5));return `Retour signalé : remboursement attendu depuis ${d} jour${d>1?'s':''}`}
   if(isRefund(o)){const c=catById(catOf(o));return c?`Remboursement, déduit de ${c.name}`:'Remboursement'}
+  if(o.amount>0&&catOf(o)==='fraisrembourses') return `Remboursement de frais par votre activité, déduit de ${catById('transport')?.name||'vos dépenses'}`;
   return '';
 }

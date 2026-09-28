@@ -23,6 +23,8 @@ export const test=base.extend({
 export {expect};
 /* Ouvre l'application avec un état déjà enregistré (format libre, ancien ou nouveau) */
 export async function openWith(page,state,url=APP){
+  if(state===null&&url===APP) state={onboarded:true};
+  if(state==='vierge') state=null;
   await page.addInitScript(([s])=>{if(!sessionStorage.getItem('seeded')){localStorage.clear();if(s)localStorage.setItem('mes-comptes-v1',JSON.stringify(s));sessionStorage.setItem('seeded','1')}},[state||null]);
   await page.goto(url);
   await page.waitForFunction(()=>typeof render==='function'&&document.querySelector('#view').innerHTML.length>0);

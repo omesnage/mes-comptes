@@ -19,6 +19,8 @@ function merchantOf(label){
 function kwSuggest(m,label,atype,amount){
   const t=norm(m+' '+label);
   if(atype==='pro'&&amount<0&&/\b(VIR|VIREMENT)\b/.test(t)&&/\b(PERSO|PERSONNEL|REMUNERATION|PRELEVEMENT EXPLOITANT)\b/.test(t)) return 'remu';
+  if(amount>0&&NDF_RE.test(t)) return 'fraisrembourses';
+  if(/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|\bCFE\b/.test(t)&&atype!=='perso') return 'impots';
   for(const [re,c] of KW_PRO) if(re.test(t)) return c;
   if(atype==='pro') for(const [re,c] of KW_PROACC) if(re.test(t)) return c;
   for(const [re,c] of KW) if(re.test(t)) return c==='revenus'&&atype==='perso'&&/HONORAIRES/.test(t)?'revenus':c;
