@@ -21,8 +21,6 @@ test('démo, mois affiché : gagné au-dessus de l’objectif, mon activité, o�
   // Les montants sont triés du plus cher au moins cher
   const m=await page.locator('.rub .rub-amt').allTextContents(); const v=m.map(x=>+x.replace(/[^\d]/g,''));
   expect(v).toEqual([...v].sort((a,b)=>b-a));
-  await expect(page.locator('.defi')).toContainText('Défi réussi, vous avez économisé');
-  await expect(page.locator('.defi')).toContainText('Vos dépenses en restaurants et cafés ont augmenté de');
   await expect(page.locator('.conseil')).toHaveCount(2);
   await expect(page.locator('.conseil').first()).toContainText('de côté ce mois-ci');
 });
@@ -33,17 +31,12 @@ test('démo, mois précédent : sous l’objectif, en rouge',async({page})=>{
   await expect(page.locator('.gagne .etiquette.ko')).toContainText('pour atteindre votre objectif de 2 000 €');
   await expect(page.locator('.gagne .salaire')).toHaveClass(/rouge/);
   await expect(page.locator('.gagne .sal-manque')).toContainText('de l’heure pour atteindre votre objectif');
-  await expect(page.locator('.defi')).toContainText('de trop');
 });
 
-test('toucher une rubrique ouvre ses opérations du mois ; accepter le défi',async({page})=>{
+test('toucher une rubrique ouvre ses opérations du mois',async({page})=>{
   await demo(page);
   await page.click('.rub[data-cat="courses"]');
   await expect(page.locator('.rub-ops .op')).toHaveCount(4);
-  await page.click('[data-defiok]');
-  await expect(page.locator('.defi')).toContainText('Défi accepté pour');
-  await page.click('.defi [data-undefi]');
-  await expect(page.locator('[data-defiok]')).toHaveCount(1);
 });
 
 /* Dérapage : moyenne des 3 mois précédents avec données, +25 % ET +30 €, au moins 2 mois d'historique, ou le budget s'il existe */
@@ -59,16 +52,6 @@ test('règle du dérapage',async({page})=>{
   expect(await der(page,6)).toBeNull();                 // +15 %
   expect((await der(page,7)).txt).toBe('+69 % par rapport à d’habitude');
   expect((await der(page,4,100)).txt.replace(/\s/g,' ')).toBe('30 € au-dessus de votre budget');
-});
-
-test('défi : « Presque ! » quand il manque peu, résultat en cours tant que le mois n’est pas complet',async({page})=>{
-  const e=etat([200,160,160]); e.challenges=[{id:'auto',key:'k',month:'2026-03',cat:'resto',pct:.25,base:200}];
-  await openWith(page,e);
-  await page.evaluate(()=>{S.ops.push({id:'z',date:'2026-03-30',label:'X',amount:-1,merchant:'X',acct:'pe'});P={lvl:'M',y:2026,m:3};render()});
-  await expect(page.locator('.defi')).toContainText('Presque ! 10 € de trop.');
-  await page.evaluate(()=>{S.ops=S.ops.filter(o=>o.id!=='z');render()});
-  await expect(page.locator('.defi')).toContainText('Défi en cours : 160 € dépensés');
-  await expect(page.locator('.gagne')).toHaveCount(0);
 });
 
 test('mois incomplet signalé',async({page})=>{

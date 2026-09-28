@@ -4,24 +4,18 @@ async function demo(page){await openWith(page,null);await page.click('[data-act=
 test('À vérifier : une question par marchand, gros boutons, la réponse devient une règle',async({page})=>{
   await demo(page);
   const v=page.locator('.verifier');
-  await expect(v.locator('h3')).toContainText('À vérifier (2)');
-  await expect(page.locator('nav.tabs .badge')).toHaveText('2');
+  await expect(v.locator('h3')).toContainText('À vérifier (1)');
+  await expect(page.locator('nav.tabs .badge')).toHaveText('1');
   const q=v.locator('.question',{hasText:'ATELIER CERAMIQUE'});
   await q.locator('.choix-btn',{hasText:'Loisirs'}).click();
   expect(await page.evaluate(()=>S.rules['ATELIER CERAMIQUE'])).toBe('loisirs');
-  await expect(v.locator('h3')).toContainText('À vérifier (1)');
-  // Virement du compte pro inconnu
-  await expect(v).toContainText('Ce virement de votre compte pro, c’est votre rémunération ou un remboursement de frais ?');
-  await v.locator('[data-k="ndf"]').click();
   await expect(page.locator('.verifier')).toHaveCount(0);
-  expect(await page.evaluate(()=>S.virements['COMPTE JOINT'])).toBe('ndf');
 });
 
 test('liste du mois : deux lignes lisibles, mentions claires, recherche',async({page})=>{
   await demo(page);
   const z=page.locator('.op',{hasText:'ZALANDO'}).first();
   await expect(z).toContainText('Remboursement de votre achat du');
-  await expect(page.locator('.op',{hasText:'INDEMNITES KM'}).first()).toContainText('Remboursement de frais versé');
   await expect(page.locator('.op .op-x',{hasText:'Votre rémunération'}).first()).toBeVisible();
   await page.fill('#search','netflix');
   await expect(page.locator('.op')).toHaveCount(12);
@@ -49,10 +43,3 @@ test('fiche : changer la rubrique pour une opération ou pour tout le marchand, 
   await expect(page.locator('.fiche')).toHaveCount(0);
 });
 
-test('fiche d’un virement du compte pro : rémunération ou remboursement de frais',async({page})=>{
-  await demo(page);
-  await page.locator('.op',{hasText:'MARTIN PERSO'}).first().click();
-  await expect(page.locator('.fiche')).toContainText('Ce virement de votre compte pro, c’est :');
-  await page.click('.fiche [data-k="ndf"]');
-  expect(await page.evaluate(()=>S.virements['MARTIN PERSO'])).toBe('ndf');
-});

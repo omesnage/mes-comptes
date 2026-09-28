@@ -8,7 +8,8 @@ function vReglages(){
   const annees=[...new Set(S.ops.map(o=>o.date.slice(0,4)))].sort().reverse();
   const perso=S.categories.filter(c=>c.type==='expense'&&c.univers!=='pro'), act=S.categories.filter(c=>c.type==='expense'&&c.univers==='pro');
   const rub=c=>`<div class="rub-reg"><i data-lucide="${c.icon}"></i><span class="rr-nom">${esc(c.name)}</span>
-    ${c.univers!=='pro'?`<label class="rr-budget">Budget<input type="number" inputmode="numeric" min="0" step="10" placeholder="—" value="${c.budget||''}" data-budget="${c.id}" aria-label="Budget mensuel ${esc(c.name)}"></label>`:''}
+    ${c.univers!=='pro'?`<span class="rr-budgets"><label class="rr-budget">Budget par mois<input type="number" inputmode="numeric" min="0" step="10" placeholder="—" value="${c.budget||''}" data-budget="${c.id}" aria-label="Budget par mois ${esc(c.name)}"></label>
+    <label class="rr-budget">Budget pour l’année<input type="number" inputmode="numeric" min="0" step="50" placeholder="—" value="${c.budgetAn||''}" data-budgetan-reg="${c.id}" aria-label="Budget pour l’année ${esc(c.name)}"></label></span>`:''}
     <button class="lien" data-rencat="${c.id}">Renommer</button>${c.custom?`<button class="lien danger" data-delcat="${c.id}">Supprimer</button>`:''}</div>`;
   return `<h2 class="titre-page">Réglages</h2>
   <section class="carte" id="objectif"><h3>Votre activité</h3>
@@ -51,8 +52,6 @@ function vReglages(){
     <label class="champ">La part à mettre de côté se calcule sur<select class="grand" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>ce que vous encaissez</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>ce qui reste après les frais</option></select></label>
     ${S.accounts.filter(a=>a.type==='pro').map(a=>`<label class="champ">Solde du compte ${esc(a.name)} (€)<input type="number" inputmode="decimal" step="0.01" data-solde="${a.id}" value="${a.solde!=null?a.solde:''}"></label>
       <label class="champ">À la date du<input type="date" data-soldedate="${a.id}" value="${esc(a.soldeDate||'')}"></label>`).join('')}
-    <h4>Virements de votre compte pro</h4>
-    ${Object.keys(S.virements||{}).length?Object.entries(S.virements).map(([m,k])=>`<div class="regle"><span>${esc(m)}</span><span>${k==='ndf'?'Remboursement de frais':'Rémunération'}</span><button class="lien" data-delvir="${esc(m)}">Oublier</button></div>`).join(''):'<p class="aide">Aucun pour l’instant.</p>'}
     <h4>Règles apprises</h4>
     ${r.length?r.map(([m,c])=>`<div class="regle"><span>${esc(ruleName(m))}</span><select class="grand" data-rule="${esc(m)}" aria-label="Rubrique pour ${esc(m)}">${catOptions(c)}</select><button class="lien" data-delrule="${esc(m)}">Oublier</button></div>`).join(''):'<p class="aide">Aucune pour l’instant.</p>'}
     <h4 id="lecteurs">Lecteurs de relevés</h4>

@@ -341,6 +341,30 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 .cas.final .cas-v{font-weight:500;font-size:26px;color:var(--gold)}
 .alerte-taux{border:1px solid var(--alert);border-left-width:4px;background:var(--alert-soft);padding:14px 16px;margin:12px 0}
 .alerte-taux p{margin:0 0 10px;color:var(--alert);font-size:17px;font-weight:500}
+
+/* Défi du mois et budgets de l'année */
+.defi .d-res.presque{color:var(--amber)}
+.d-prog{font-size:17px;margin:10px 0 6px;font-variant-numeric:tabular-nums}
+.barre-defi,.barre-an{position:relative;height:10px;background:var(--line);border-radius:5px;margin:0 0 10px}
+.barre-defi span,.barre-an span{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--gold)}
+.barre-defi.trop span{background:var(--alert)}
+.budget-an{padding:12px 0 6px;border-bottom:1px solid var(--line)}
+.budget-an:last-child{border-bottom:0}
+.budget-an .phrase{margin:0 0 10px}
+.barre-an em{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--muted);opacity:.6}
+.budget-an.orange .barre-an span{background:var(--amber)}
+.budget-an.rouge .barre-an span{background:var(--alert)}
+.ba-msg{font-size:16px;font-weight:500;margin:0 0 6px}
+.budget-an.orange .ba-msg{color:var(--amber)}.budget-an.rouge .ba-msg{color:var(--alert)}
+.ajout-budget{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}
+.ajout-budget .champ{margin:0}
+.rub-sous{font-size:15px;color:var(--muted)}
+.rr-budgets{display:flex;flex-wrap:wrap;gap:8px 14px}
+.ecart{align-items:flex-start}
+.e-nom{flex:1}
+.e-fleche{font-size:24px;line-height:1;font-weight:500}
+.ecart.hausse .e-fleche{color:var(--amber)}.ecart.baisse .e-fleche{color:var(--gold)}
+@media (max-width:520px){.ajout-budget{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -356,7 +380,7 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 
 <script>
 /* ============ Données de base ============ */
-const SCHEMA=6;
+const SCHEMA=7;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
@@ -364,16 +388,16 @@ const CATS0=[
  ['energie','Énergie','zap','expense','perso',1],
  ['courses','Courses','shopping-basket','expense','perso'],
  ['resto','Restaurants et cafés','utensils','expense','perso'],
- ['transport','Voiture et transports','car','expense','auto'],
+ ['transport','Transports','car','expense','perso'],
  ['abonnements','Abonnements et téléphone','smartphone','expense','auto',1],
  ['sante','Santé','heart-pulse','expense','perso'],
- ['loisirs','Loisirs','ticket','expense','perso'],
+ ['loisirs','Sorties et loisirs','ticket','expense','perso'],
  ['shopping','Vêtements et shopping','shirt','expense','perso'],
  ['maison','Maison et équipement','sofa','expense','perso'],
  ['enfants','Enfants','baby','expense','perso'],
  ['animaux','Animaux','paw-print','expense','perso'],
  ['cadeaux','Cadeaux','gift','expense','perso'],
- ['voyages','Voyages','luggage','expense','perso'],
+ ['voyages','Vacances','luggage','expense','perso'],
  ['frais','Banque','landmark','expense','auto',1],
  ['impotsfoyer','Impôts et taxes du foyer','receipt','expense','perso',1],
  ['pret','Remboursement d’emprunt','banknote','expense','perso',1],
@@ -385,7 +409,6 @@ const CATS0=[
  ['conseils','Conseils et services','messages-square','expense','pro'],
  ['cotisations','Versements de ce qui est mis de côté','piggy-bank','expense','pro'],
  ['impots','Impôts de l’activité','receipt-text','expense','pro'],
- ['fraisrembourses','Frais remboursés par l’activité','car-front','expense','pro'],
  ['empruntpro','Remboursement d’emprunt de l’activité','banknote','expense','pro',1],
  ['pro','Autres frais de l’activité','briefcase','expense','pro'],
  ['remb','Remboursements','rotate-ccw','expense','auto'],
@@ -393,11 +416,9 @@ const CATS0=[
  ['revenus','Revenus et encaissements','arrow-down-left','income','auto'],
  ['remu','Votre rémunération','arrow-left-right','remu','auto'],
  ['interne','Virements entre vos comptes','repeat','transfer','auto']
-].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,budget:0,fixed:!!fixed}));
+].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,budget:0,budgetAn:0,fixed:!!fixed}));
 /* Anciens noms par défaut, remplacés par les nouveaux lors de la migration (un nom personnalisé est gardé) */
 const OLD_NAMES={courses:'Courses alimentaires',resto:'Restaurants & cafés',transport:'Transport & carburant',logement:'Logement & énergie',sante:'Santé',abonnements:'Abonnements & téléphonie',loisirs:'Loisirs & culture',shopping:'Shopping',frais:'Frais bancaires',pret:'Remboursement de prêt',logiciels:'Logiciels & outils',materiel:'Matériel & fournitures',deplacements:'Déplacements professionnels',soustraitance:'Sous-traitance',cotisations:'Cotisations sociales',impots:'Impôts sur l’activité',pro:'Autres frais professionnels',remb:'Remboursements',rentrees:'Rentrées d’argent',revenus:'Revenus',remu:'Rémunération (pro vers perso)',interne:'Virements internes',divers:'Divers'};
-/* Remboursement de frais par l'activité (indemnités kilométriques, notes de frais) */
-const NDF_RE=/\b(IK|INDEMNITES? (KM|KILOMETRIQUES?)|FRAIS KM|NOTES? DE FRAIS|NDF|REMBOURSEMENT( DE)? FRAIS|REMB FRAIS)\b/;
 /* Rubriques qui correspondent au paiement de la provision (cotisations, impôts) */
 const PROV_CATS=new Set(['cotisations','impots']);
 const typeOf=id=>(S.categories.find(c=>c.id===id)||{}).type||'expense';
@@ -471,7 +492,7 @@ let UNIV='all', OPACC='';
 const reports=[];
 const HAS_CLAUDE=!!(window.claude&&window.claude.use);
 
-function blank(){return{schemaVersion:SCHEMA,onboarded:false,accounts:[],categories:CATS0.map(c=>({...c})),rules:{},virements:{},sugg:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
+function blank(){return{schemaVersion:SCHEMA,onboarded:false,accounts:[],categories:CATS0.map(c=>({...c})),rules:{},sugg:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
@@ -507,7 +528,7 @@ function univOf(o,c){
 }
 const hasPro=()=>S.accounts.some(a=>a.type==='pro');
 
-let LINK={}, LINKED={}, BYID={}, INTERNAL={}, BYMONTH={};
+let LINK={}, LINKED={}, BYID={}, INTERNAL={}, BYMONTH={}, REFMOIS={};
 function catOf(o){
   if(o.cat) return o.cat;
   if(INTERNAL[o.id]) return 'interne';
@@ -532,11 +553,6 @@ function detectInternal(){
     if(m){INTERNAL[d.id]=m.id;INTERNAL[m.id]=d.id}
   }
 }
-/* Nature d'un virement du compte pro vers le perso : 'ndf' (frais remboursés), 'remu' (rémunération) ou null (inconnue) */
-function virKind(debit,credit){
-  if(NDF_RE.test(norm(debit.label))||NDF_RE.test(norm(credit.label))) return 'ndf';
-  return (S.virements||{})[debit.merchant]||null;
-}
 /* Sens d'un virement interne : +1 si c'est une rémunération (pro vers perso), −1 pour un apport (perso vers pro), 0 sinon */
 function remuDir(debit,credit){
   const a=acctType(debit), b=acctType(credit);
@@ -559,6 +575,9 @@ function relink(){
     cand.sort((x,y)=>score(x)-score(y));
     LINK[r.id]=cand[0].id; LINKED[cand[0].id]=r.id;
   }
+  /* Remboursements rattachés à un achat d'un autre mois : comptés dans le mois de l'achat */
+  REFMOIS={};
+  for(const rid in LINK){const r=BYID[rid], p=BYID[LINK[rid]], k=p.date.slice(0,7); if(k!==r.date.slice(0,7))(REFMOIS[k]||(REFMOIS[k]=[])).push(r)}
 }
 function isRefund(o){
   if(o.amount<=0||o.src==='rev') return false;
@@ -570,15 +589,13 @@ function waitingReturns(){return S.ops.filter(o=>o.awaiting&&!LINKED[o.id]).sort
 function opExtra(o){
   if(INTERNAL[o.id]&&!o.cat){const x=BYID[INTERNAL[o.id]];if(!x)return 'Virement entre vos comptes';
     const [d,c]=o.amount<0?[o,x]:[x,o];const r=remuDir(d,c);
-    if(r>0&&virKind(d,c)==='ndf') return o.amount<0?`Remboursement de frais versé sur ${acctName(x.acct)}, compté dans les frais de l’activité`:`Remboursement de frais par votre activité, déduit de ${catById('transport')?.name||'vos dépenses'}`;
     if(r>0) return o.amount<0?`Votre rémunération, versée sur ${acctName(x.acct)}`:`Votre rémunération, reçue de ${acctName(x.acct)}`;
     if(r<0) return o.amount<0?`Apport vers ${acctName(x.acct)}, votre compte pro`:`Apport reçu de ${acctName(x.acct)}, votre compte perso`;
     return `Virement ${o.amount<0?'vers':'depuis'} ${acctName(x.acct)}, entre vos comptes`}
-  if(o.amount>0&&LINK[o.id]){const p=BYID[LINK[o.id]];return `Remboursement de votre achat du ${p.date.slice(8,10)}/${p.date.slice(5,7)}`}
+  if(o.amount>0&&LINK[o.id]){const p=BYID[LINK[o.id]];return `Remboursement de votre achat du ${p.date.slice(8,10)}/${p.date.slice(5,7)}${p.date.slice(0,7)!==o.date.slice(0,7)?`, compté en ${MOIS[+p.date.slice(5,7)-1]}`:''}`}
   if(o.amount<0&&LINKED[o.id]){const r=BYID[LINKED[o.id]];return `Remboursé le ${r.date.slice(8,10)}/${r.date.slice(5,7)}`}
   if(o.awaiting){const d=Math.max(0,Math.round((Date.now()-new Date(o.date))/864e5));return `Retour signalé : remboursement attendu depuis ${d} jour${d>1?'s':''}`}
   if(isRefund(o)){const c=catById(catOf(o));return c?`Remboursement, déduit de ${c.name}`:'Remboursement'}
-  if(o.amount>0&&catOf(o)==='fraisrembourses') return `Remboursement de frais par votre activité, déduit de ${catById('transport')?.name||'vos dépenses'}`;
   return '';
 }
 /* ============ Libellés → marchand ============ */
@@ -602,7 +619,6 @@ function merchantOf(label){
 function kwSuggest(m,label,atype,amount){
   const t=norm(m+' '+label);
   if(atype==='pro'&&amount<0&&/\b(VIR|VIREMENT)\b/.test(t)&&/\b(PERSO|PERSONNEL|REMUNERATION|PRELEVEMENT EXPLOITANT)\b/.test(t)) return 'remu';
-  if(amount>0&&NDF_RE.test(t)) return 'fraisrembourses';
   if(/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|\bCFE\b/.test(t)&&atype!=='perso') return 'impots';
   for(const [re,c] of KW_PRO) if(re.test(t)) return c;
   if(atype==='pro') for(const [re,c] of KW_PROACC) if(re.test(t)) return c;
@@ -868,8 +884,7 @@ async function importFiles(files){
         const op={id:Math.random().toString(36).slice(2,10),date:o.date,label:o.label,amount:o.amount,merchant:merchantOf(o.label),acct:rep.acct,imp:rep.imp};
         S.ops.push(op); rep.added++; rep.sample.push(op); dirtyMonths.add(o.date.slice(0,7));
         const ac=autoCatOf(op.label,atype); if(ac&&!S.rules[op.merchant]){S.rules[op.merchant]=ac;delete S.sugg[op.merchant];stateDirty=true}
-        if(op.amount>0&&atype!=='pro'&&NDF_RE.test(norm(op.label))&&!S.rules[op.merchant+'|+']){S.rules[op.merchant+'|+']='fraisrembourses';stateDirty=true}
-        else if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const c=kwSuggest(op.merchant,op.label,atype,op.amount); if(c){S.sugg[op.merchant]={c,src:'kw'};stateDirty=true}}
+        if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const c=kwSuggest(op.merchant,op.label,atype,op.amount); if(c){S.sugg[op.merchant]={c,src:'kw'};stateDirty=true}}
       }
     }catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
     reports.unshift(rep);
@@ -908,28 +923,24 @@ function prevLabel(p){
 }
 let AGG={}, RAW={};
 function monthKeys(a,b){const out=[];let y=+a.slice(0,4),m=+a.slice(5,7);const by=+b.slice(0,4),bm=+b.slice(5,7);while(y<by||(y===by&&m<=bm)){out.push(y+'-'+pad(m));if(++m>12){m=1;y++}}return out}
-/* Frais remboursés par l'activité : comptés dans les frais de l'activité, et déduits de la rubrique perso (Voiture et transports) */
-function frais(R,debit,credit,amt){
-  if(debit){const e=R.pro.by.fraisrembourses||(R.pro.by.fraisrembourses={spent:0,ref:0,ops:[]});e.spent+=amt;e.ops.push(debit);R.pro.any=true}
-  const p=R.perso.by.transport||(R.perso.by.transport={spent:0,ref:0,ops:[]});p.ref+=amt;p.ops.push(credit);R.perso.any=true;
-}
-/* Calcul de base d'une période : un seau par univers (pro, perso) et la rémunération pro → perso */
+/* Calcul de base d'un mois : un seau par univers (pro, perso) et la rémunération pro → perso.
+   Un remboursement rattaché à un achat est compté dans le mois de l'achat. Une rubrique n'est jamais négative :
+   le surplus de remboursements est gardé à part (surplus). Trimestres et années = somme des mois. */
 function aggRaw(p){
   const ck=p.lvl+p.y+'-'+p.m+(p.lvl==='Q'?Math.ceil(p.m/3):''); if(RAW[ck]) return RAW[ck];
+  if(p.lvl!=='M') return RAW[ck]=sommeMois(p);
   const [a,b,months]=bounds(p); const fileInc=S.incomeSource==='file';
   const mk=()=>({by:{},inc:{},income:0,net:0,fixed:0,any:false});
   const R={pro:mk(),perso:mk(),remu:0,remuOps:[],months,any:false};
   const proAcct=hasPro();
-  for(const k of monthKeys(a,b)) for(const o of (BYMONTH[k]||[])){
+  const liste=(BYMONTH[a]||[]).filter(o=>!(o.amount>0&&LINK[o.id]&&BYID[LINK[o.id]].date.slice(0,7)!==a)).concat(REFMOIS[a]||[]);
+  for(const o of liste){
     R.any=true;
     if(o.src==='rev'){R.pro.any=true;if(fileInc){R.pro.income+=o.amount;R.pro.inc.revenus=(R.pro.inc.revenus||0)+o.amount}continue}
     const x=!o.cat&&INTERNAL[o.id]?BYID[INTERNAL[o.id]]:null;
-    if(x){ if(o.amount<0){const r=remuDir(o,x);
-        if(r>0&&virKind(o,x)==='ndf'){frais(R,o,x,-o.amount)}
-        else if(r){R.remu+=r*-o.amount;R.remuOps.push(o)}} continue }
+    if(x){ if(o.amount<0){const r=remuDir(o,x);if(r){R.remu+=r*-o.amount;R.remuOps.push(o)}} continue }
     const c=catOf(o)||'_pending';
     if(c==='_pending'&&o.amount>0) continue;
-    if(c==='fraisrembourses'&&o.amount>0){frais(R,hasPro()?null:o,o,o.amount);continue}
     const ty=c==='_pending'?'expense':typeOf(c);
     if(ty==='transfer') continue;
     if(ty==='remu'){
@@ -943,13 +954,26 @@ function aggRaw(p){
     if(o.amount<0) e.spent+=-o.amount; else e.ref+=o.amount;
     e.ops.push(o);
   }
-  for(const B of [R.pro,R.perso]){for(const c in B.by){B.by[c].net=B.by[c].spent-B.by[c].ref;B.net+=B.by[c].net;if(catById(c)?.fixed)B.fixed+=B.by[c].net}}
+  for(const B of [R.pro,R.perso]){for(const c in B.by){const e=B.by[c],n=e.spent-e.ref;e.net=Math.max(0,n);e.surplus=Math.max(0,-n);B.net+=e.net;if(catById(c)?.fixed)B.fixed+=e.net}}
   /* Pro : les cotisations et impôts payés sont la provision elle-même, on ne les compte pas deux fois */
   const X=R.pro; X.provPaid=0; for(const c in X.by) if(PROV_CATS.has(c)||catById(c)?.prov) X.provPaid+=X.by[c].net;
   X.fraisExpl=X.net-X.provPaid; X.resultat=X.income-X.fraisExpl;
   const base=S.settings.assiette==='resultat'?Math.max(0,X.resultat):Math.max(0,X.income);
   X.provision=base*(+S.settings.taux||0)/100; X.revenuNet=X.income-X.fraisExpl-X.provision;
   return RAW[ck]=R;
+}
+/* Trimestre ou année : somme exacte des mois qui la composent */
+function sommeMois(p){
+  const [a,b,months]=bounds(p), mk=()=>({by:{},inc:{},income:0,net:0,fixed:0,any:false});
+  const R={pro:mk(),perso:mk(),remu:0,remuOps:[],months,any:false};
+  for(const k of monthKeys(a,b)){const M=aggRaw({lvl:'M',y:+k.slice(0,4),m:+k.slice(5,7)});
+    R.any=R.any||M.any; R.remu+=M.remu; R.remuOps=R.remuOps.concat(M.remuOps);
+    for(const u of ['pro','perso']){const S1=M[u],T=R[u];T.any=T.any||S1.any;T.income+=S1.income;T.net+=S1.net;T.fixed+=S1.fixed;
+      for(const c in S1.inc)T.inc[c]=(T.inc[c]||0)+S1.inc[c];
+      for(const c in S1.by){const e=T.by[c]||(T.by[c]={spent:0,ref:0,net:0,surplus:0,ops:[]});const f=S1.by[c];e.spent+=f.spent;e.ref+=f.ref;e.net+=f.net;e.surplus+=f.surplus;e.ops=e.ops.concat(f.ops)}}
+    for(const k2 of ['provPaid','fraisExpl','resultat','provision','revenuNet']) R.pro[k2]=(R.pro[k2]||0)+M.pro[k2];
+  }
+  return R;
 }
 /* Vue d'une période pour un univers : 'pro', 'perso' ou 'all' (vue d'ensemble) */
 function agg(p,U){
@@ -961,7 +985,7 @@ function agg(p,U){
   else if(U==='perso'){const inc={...R.perso.inc};if(R.remu)inc.remu=R.remu;
     v={...R.perso,inc,income:R.perso.income+R.remu,...pro,months:R.months,any:R.perso.any||R.remu!==0}}
   else{
-    const by={}; for(const B of [R.perso,R.pro]) for(const c in B.by){const e=by[c]||(by[c]={spent:0,ref:0,net:0,ops:[]});e.spent+=B.by[c].spent;e.ref+=B.by[c].ref;e.net+=B.by[c].net;e.ops=e.ops.concat(B.by[c].ops)}
+    const by={}; for(const B of [R.perso,R.pro]) for(const c in B.by){const e=by[c]||(by[c]={spent:0,ref:0,net:0,surplus:0,ops:[]});e.spent+=B.by[c].spent;e.ref+=B.by[c].ref;e.net+=B.by[c].net;e.surplus+=B.by[c].surplus||0;e.ops=e.ops.concat(B.by[c].ops)}
     const inc={}; for(const B of [R.perso,R.pro]) for(const c in B.inc) inc[c]=(inc[c]||0)+B.inc[c];
     v={by,inc,income:R.perso.income+X.income,net:R.perso.net+X.net,fixed:R.perso.fixed,...pro,months:R.months,any:R.any};
   }
@@ -1007,7 +1031,6 @@ function merge(x){
   const st={...x,schemaVersion:x.schemaVersion||1,accounts:x.accounts||[],categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]};
   if(!st.since&&st.ops.length){st.since=Date.now();MIGRATED=true}
   if(!st.masked) st.masked={};
-  if(!st.virements) st.virements={};
   if(st.onboarded==null) st.onboarded=st.ops.length>0;
   st.challenges.forEach(c=>{if(!c.key)c.key=newId('d_')});
   if(migrateSchema(st)){MIGRATED=true;st.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)))}
@@ -1058,7 +1081,7 @@ function migrateSchema(st){
   }
   if(st.schemaVersion<6){
     /* v5 → v6 : une rubrique par défaut retirée est remplacée par « Conseils et services », sans perte */
-    const ids=new Set(CATS0.map(c=>c.id)), retirees=new Set(st.categories.filter(c=>!c.custom&&!ids.has(c.id)).map(c=>c.id));
+    const ids=new Set(CATS0.map(c=>c.id)), retirees=new Set(st.categories.filter(c=>!c.custom&&!ids.has(c.id)&&c.id!=='fraisrembourses').map(c=>c.id));
     if(retirees.size){
       st.categories=st.categories.filter(c=>!retirees.has(c.id));
       for(const m in st.rules) if(retirees.has(st.rules[m])) st.rules[m]='conseils';
@@ -1066,6 +1089,20 @@ function migrateSchema(st){
       st.ops.forEach(o=>{if(retirees.has(o.cat))o.cat='conseils'});
     }
     st.schemaVersion=6;
+  }
+  if(st.schemaVersion<7){
+    /* v6 → v7 : plus de frais remboursés par l'activité ; leurs règles et opérations redeviennent ordinaires,
+       et un virement du compte pro vers le perso redevient une rémunération. Rubriques renommées. */
+    const F='fraisrembourses';
+    st.categories=st.categories.filter(c=>c.id!==F);
+    for(const m in st.rules) if(st.rules[m]===F) delete st.rules[m];
+    for(const m in st.sugg) if(st.sugg[m].c===F) delete st.sugg[m];
+    st.ops.forEach(o=>{if(o.cat===F)delete o.cat});
+    delete st.virements;
+    const ren={transport:['Voiture et transports','Transport & carburant','Transports'],loisirs:['Loisirs','Loisirs & culture','Sorties et loisirs'],voyages:['Voyages','Vacances']};
+    for(const [id,noms] of Object.entries(ren)){const c=st.categories.find(k=>k.id===id);if(!c)continue;const nv=noms[noms.length-1];if(noms.includes(c.name))c.name=nv;if(id==='transport')c.univers='perso'}
+    st.categories.forEach(c=>{if(c.budgetAn==null)c.budgetAn=0});
+    st.schemaVersion=7;
   }
   return st.schemaVersion!==v0;
 }
@@ -1147,15 +1184,7 @@ function pendingGroups(){
     e.accts.push(o.acct); e.n++; e.total+=o.amount; }
   return Object.values(g).sort((a,b)=>b.n-a.n||Math.abs(b.total)-Math.abs(a.total));
 }
-/* Virements du compte pro vers le perso dont on ne sait pas encore s'ils sont une rémunération ou des frais remboursés */
-function virementsInconnus(){
-  const g={};
-  for(const o of S.ops){ if(o.amount>=0||o.cat) continue; const x=INTERNAL[o.id]?BYID[INTERNAL[o.id]]:null;
-    if(!x||remuDir(o,x)<=0||virKind(o,x)) continue;
-    const e=g[o.merchant]||(g[o.merchant]={m:o.merchant,n:0,total:0,label:o.label}); e.n++; e.total+=-o.amount }
-  return Object.values(g);
-}
-const nbAVerifier=()=>pendingGroups().length+virementsInconnus().length;
+const nbAVerifier=()=>pendingGroups().length;
 function icons(){ if(window.lucide&&lucide.createIcons) lucide.createIcons({icons:lucide.icons,attrs:{'stroke-width':1.5}}) }
 const CAT_GROUPS=[['perso','Rubriques du foyer'],['auto','Rubriques communes'],['pro','Rubriques de l’activité'],['in','Rentrées et virements']];
 const catGroup=c=>c.type==='expense'?(c.univers||'perso'):'in';
@@ -1215,18 +1244,15 @@ function choixRubriques(x){
   if(x.credit) ids=['revenus','rentrees','remb'];
   else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','conseils','pro'];
   else ids=['courses','resto','transport','shopping','maison','loisirs','sante','divers'];
-  if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','pro','fraisrembourses','divers'];
+  if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','logiciels','materiel','pro','divers'];
   if(s) ids=[s,...ids.filter(i=>i!==s)];
   const noms={revenus:'Encaissement de l’activité',rentrees:'Autre rentrée',remb:'Un remboursement'};
   return ids.filter(catById).map(id=>`<button class="choix-btn${id===s?' suggere':''}" data-qcat="${esc(x.m)}" data-c="${id}">${esc(noms[id]||catById(id).name)}</button>`).join('');
 }
 function aVerifier(){
-  const g=pendingGroups(), vi=virementsInconnus(), n=g.length+vi.length; if(!n) return '';
+  const g=pendingGroups(), n=g.length; if(!n) return '';
   return `<section class="carte verifier"><h3>À vérifier <span class="compte">(${n})</span></h3>
   <p class="aide">Une seule réponse par marchand : elle vaudra pour toutes ses opérations, passées et futures.</p>
-  ${vi.map(x=>`<div class="question"><p class="q-t">Ce virement de votre compte pro, c’est votre rémunération ou un remboursement de frais ?</p>
-    <p class="q-s">${esc(x.label)}, ${x.n>1?`${x.n} virements, `:''}${eur(x.total)}</p>
-    <div class="choix"><button class="choix-btn" data-vir="${esc(x.m)}" data-k="remu">Ma rémunération</button><button class="choix-btn" data-vir="${esc(x.m)}" data-k="ndf">Un remboursement de frais</button></div></div>`).join('')}
   ${g.map(x=>`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
     <p class="q-s">${x.n>1?`${x.n} opérations, `:''}${x.total<0?'−':'+'}${eur(Math.abs(x.total))}. ${esc(x.label)}</p>
     <div class="choix">${choixRubriques(x)}</div>
@@ -1250,14 +1276,12 @@ function vOps(){
 /* Fiche d'une opération : rubrique, retour d'achat, suppression */
 function fiche(id){
   const o=BYID[id]; if(!o) return '';
-  const c=catOf(o), x=INTERNAL[o.id]&&!o.cat?BYID[INTERNAL[o.id]]:null, deb=o.amount<0?o:x, cre=o.amount<0?x:o;
-  const vir=x&&remuDir(deb,cre)>0;
+  const c=catOf(o), x=INTERNAL[o.id]&&!o.cat?BYID[INTERNAL[o.id]]:null;
   return `<div class="fiche-fond" data-act="closefiche"></div><div class="fiche" role="dialog" aria-modal="true" aria-label="Opération ${esc(o.merchant)}">
     <button class="fermer" data-act="closefiche" aria-label="Fermer"><i data-lucide="x"></i></button>
     <p class="f-m">${esc(o.merchant)}</p><p class="f-amt${o.amount>0?' cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</p>
     <p class="aide">${esc(o.label)}<br>${dfmt(o.date).replace(/(\d\d)\/(\d\d)\/(\d\d)/,'$1/$2/20$3')}${o.src!=='rev'&&ACCN>1?`, ${esc(acctName(o.acct))}`:''}</p>
     ${opExtra(o)?`<p class="f-x">${esc(opExtra(o))}</p>`:''}
-    ${vir?`<p class="f-lbl">Ce virement de votre compte pro, c’est :</p><div class="choix"><button class="choix-btn${virKind(deb,cre)!=='ndf'?' suggere':''}" data-vir="${esc(deb.merchant)}" data-k="remu">Ma rémunération</button><button class="choix-btn${virKind(deb,cre)==='ndf'?' suggere':''}" data-vir="${esc(deb.merchant)}" data-k="ndf">Un remboursement de frais</button></div>`:''}
     ${o.src==='rev'||x?'':`<label class="f-lbl" for="ficheCat">Rubrique</label>
     <select class="grand" id="ficheCat">${c||FICHESEL?'':'<option value="">À vérifier</option>'}${catOptions(FICHESEL||c,false,'',true)}</select>
     <div class="radios"><label><input type="radio" name="portee" value="tout" checked> Pour toutes les opérations de ce marchand</label>
@@ -1660,9 +1684,8 @@ document.addEventListener('click',async e=>{
   if(d.op){FICHE=d.op;FICHESEL=null;render();setTimeout(()=>$('.fiche .fermer')?.focus(),30);return}
   if(d.cat){openCat=openCat===d.cat?null:d.cat;render();return}
   if(d.qcat){setRule(d.qcat,d.c);render();return}
-  if(d.vir){S.virements=S.virements||{};S.virements[d.vir]=d.k;stateDirty=true;save();render();return}
-  if(d.delvir){delete S.virements[d.delvir];stateDirty=true;save();render();return}
-  if(d.defiok){S.challenges=S.challenges.filter(c=>!(c.id==='auto'&&c.month===d.month));S.challenges.push({id:'auto',key:newId('d_'),month:d.month,cat:d.defiok,pct:.25,base:+d.base});save();render();return}
+  if(d.defiok){S.challenges=S.challenges.filter(c=>!(c.id==='auto'&&c.month===d.month));S.challenges.push({id:'auto',key:newId('d_'),month:d.month,cat:d.defiok,limite:+d.limite,habitude:+d.hab});save();render();return}
+  if(d.budgetan){const c=catById(d.budgetan),i=$('#budgetAnRapide');const v=Math.max(0,+(i&&i.value)||0);if(c&&v){c.budgetAn=v;save();render()}else i&&i.focus();return}
   if(d.undefi){S.challenges=S.challenges.filter(c=>c.key!==d.undefi);save();render();return}
   if(d.act==='savefiche'){const o=BYID[d.id], v=$('#ficheCat').value, tout=document.querySelector('input[name="portee"]:checked')?.value!=='une';
     if(o&&v){if(tout){delete o.cat;const k=S.rules[o.merchant]&&typeOf(v)!==typeOf(S.rules[o.merchant])?o.merchant+(o.amount>0?'|+':'|-'):o.merchant;setRule(k,v);S.ops.forEach(x=>{if(x.merchant===o.merchant&&x.cat){delete x.cat;dirtyMonths.add(x.date.slice(0,7))}})}else{o.cat=v;dirtyMonths.add(o.date.slice(0,7))}save()}
@@ -1696,6 +1719,7 @@ document.addEventListener('click',async e=>{
 document.addEventListener('change',e=>{
   const t=e.target, d=t.dataset;
   if(d.rule){S.rules[d.rule]=t.value;save();render();return}
+  if(d.budgetanReg){const c=catById(d.budgetanReg);if(c){c.budgetAn=Math.max(0,+t.value||0);save()}return}
   if(d.qsel){if(t.value==='__new'){t.value='';ouvrirRubrique({de:'question',m:d.qsel});return}if(t.value){setRule(d.qsel,t.value);render()}return}
   if(t.id==='ficheCat'){if(t.value==='__new'){t.value=FICHESEL||'';ouvrirRubrique({de:'fiche',id:FICHE})}else FICHESEL=t.value||null;return}
   if(d.budget){const c=catById(d.budget);c.budget=Math.max(0,+t.value||0);save();return}
@@ -1754,8 +1778,6 @@ function demoData(){
     const remu=ca<3000?1400:2000;
     add(k,1,'VIR SEPA EMIS VERS O MARTIN PERSO',-remu,null,pr.id);
     add(k,2,'VIR SEPA RECU DE QONTO',remu,null,pe.id);
-    /* Frais kilométriques remboursés par l'activité, tous les deux mois */
-    if(k%2===0){const ik=vary(140,.2);add(k,24,'VIR SEPA EMIS INDEMNITES KM',-ik,null,pr.id);add(k,25,'VIR SEPA RECU DE QONTO',ik,null,pe.id)}
     /* Foyer */
     add(k,5,'PRLV SEPA LOYER SCI OCEAN',-820,'logement');
     add(k,11,'PRLV SEPA EDF CLIENTS PARTICULIERS',-vary(k>2&&k<8?118:78,.08),'energie');
@@ -1783,18 +1805,15 @@ function demoData(){
   add(1,9,'CB ZALANDO',-129,'shopping',pe.id,{awaiting:true});
   add(0,14,'VIR ZALANDO REMBOURSEMENT',129,null);
   add(2,10,'CB AMAZON PAYMENTS',-89.9,null,pe.id,{awaiting:true});
-  /* Un virement du compte pro encore inconnu : l'application demandera ce que c'est */
-  add(0,21,'VIR SEPA EMIS VERS COMPTE JOINT',-300,null,pr.id);
-  add(0,22,'VIR SEPA RECU DE QONTO',300,null,pe.id);
   st.ops=ops.sort((a,b)=>a.date<b.date?1:-1);
-  st.rules=cats; st.virements={'MARTIN PERSO':'remu'};
-  st.categories.find(c=>c.id==='courses').budget=0;
+  st.rules=cats;
+  /* Budgets de l'année : vacances dans les clous, shopping trop rapide, cadeaux dépassés */
+  const ba={voyages:2000,shopping:500,cadeaux:30}; for(const id in ba) st.categories.find(c=>c.id===id).budgetAn=ba[id];
   const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
   st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);
-  /* Défis : le mois dernier (manqué de peu), ce mois-ci (réussi) ; le prochain sera proposé */
-  const courses=k=>ops.filter(o=>o.date.startsWith(mk(k))&&cats[o.merchant]==='courses').reduce((s,o)=>s-o.amount,0);
-  st.challenges=[{id:'auto',month:mk(1),cat:'shopping',pct:.25,base:52},{id:'auto',month:mk(0),cat:'courses',pct:.25,base:+courses(1).toFixed(2)}].map(c=>({...c,key:newId('d_')}));
+  /* Défi du mois dernier sur les courses (réussi) ; celui du mois en cours sera proposé */
+  st.challenges=[{id:'auto',month:mk(0),cat:'courses',limite:265,habitude:350}].map(c=>({...c,key:newId('d_')}));
   st.onboarded=true; st.since=Date.now(); st.lastBackup=Date.now();
   return st;
 }
@@ -1827,37 +1846,66 @@ function derapage(cid,net,p){
   return null;
 }
 
-/* ---------- Défi du mois ---------- */
+/* ---------- Défi du mois : deux blocs, le mois précédent (résultat) et le mois en cours ---------- */
 const defiDe=ym=>S.challenges.find(c=>c.id==='auto'&&c.month===ym);
+const moisCourant=()=>{const d=new Date();return {lvl:'M',y:d.getFullYear(),m:d.getMonth()+1}};
+const dizaine=n=>Math.max(10,Math.round(n/10)*10);
 function depCat(cid,ym){const [y,m]=ym.split('-').map(Number);return agg({lvl:'M',y,m},'perso').by[cid]?.net||0}
+/* Limite du défi : fixée à l'acceptation ; les anciens défis la déduisent de leur base */
+const limiteDe=c=>c.limite!=null?+c.limite:+c.base*(1-(c.pct||0));
 function evalDefi(c){
   if(!c||c.id!=='auto') return null;
-  const k=catById(c.cat), target=c.base*(1-c.pct), v=depCat(c.cat,c.month), fini=couvert(c.month);
-  const status=!fini?'en cours':v<=target?'réussi':'manqué';
-  return {name:k?k.name:'',month:c.month,status,v,target,economie:Math.max(0,c.base-v),trop:Math.max(0,v-target)};
+  const k=catById(c.cat), limite=limiteDe(c), v=depCat(c.cat,c.month), fini=couvert(c.month);
+  const status=!fini?'en cours':v<=limite+0.005?'réussi':'manqué';
+  return {name:k?k.name:'',month:c.month,status,v,limite,marge:Math.max(0,limite-v),trop:Math.max(0,v-limite),economie:Math.max(0,(c.habitude||c.base||limite)-v)};
 }
-function propositionDefi(p){
-  const A=agg(p,'perso'), rows=Object.entries(A.by).filter(([cid,e])=>variable(cid)&&e.net>0);
-  const der=rows.map(([cid,e])=>({cid,net:e.net,d:derapage(cid,e.net,p)})).filter(x=>x.d).sort((a,b)=>b.d.ecart-a.d.ecart)[0];
-  const x=der||rows.map(([cid,e])=>({cid,net:e.net})).sort((a,b)=>b.net-a.net)[0];
-  if(!x||x.net<40) return null;
-  const nx=shift(p,1), nom=catById(x.cid).name.toLowerCase(), eco=x.net*.25;
-  const debut=der&&catById(x.cid).budget>0?`Vos dépenses en ${nom} ont dépassé votre budget.`:der?`Vos dépenses en ${nom} ont augmenté de ${der.d.pct} %.`:`Les ${nom} sont votre plus grosse dépense variable : ${eur0(x.net)} ce mois-ci.`;
-  return {cat:x.cid,pct:.25,base:x.net,month:ymOf(nx),texte:`${debut} Essayez d’en dépenser un quart de moins en ${MOIS[nx.m-1]} : ${eur0(eco)} d’économie.`};
+/* Proposition pour un mois : la rubrique variable la plus lourde d'habitude ; limite = habitude × 0,75, arrondie à la dizaine */
+function propositionDefi(ym){
+  const p={lvl:'M',y:+ym.slice(0,4),m:+ym.slice(5,7)};
+  const cs=S.categories.filter(c=>variable(c.id)).map(c=>({cid:c.id,h:habitude(c.id,p)})).filter(x=>x.h&&x.h>=40).sort((a,b)=>b.h-a.h);
+  if(!cs.length) return null;
+  const x=cs[0]; return {cat:x.cid,hab:x.h,limite:dizaine(x.h*.75),month:ym};
 }
-function blocDefi(){
-  const ym=ymOf(P), cur=evalDefi(defiDe(ym)), nx=shift(P,1), nym=ymOf(nx), nxt=defiDe(nym);
-  const dernier=ym>=lastOpDate().slice(0,7);
+function blocsDefi(){
+  if(ymOf(P)<lastOpDate().slice(0,7)) return '';
+  const cur=moisCourant(), prev=shift(cur,-1), cym=ymOf(cur), pym=ymOf(prev), nomC=MOIS[cur.m-1], nomP=MOIS[prev.m-1];
   let h='';
-  if(cur){const nom=cur.name.toLowerCase();
-    h+=cur.status==='réussi'?`<p class="d-res ok">Défi réussi, vous avez économisé ${eur0(cur.economie)}.</p><p class="aide">Objectif : ${eur0(cur.target)} au plus en ${nom}. Dépensé : ${eur0(cur.v)}.</p>`
-      :cur.status==='manqué'?`<p class="d-res">${cur.trop<=Math.max(15,cur.target*.25)?`Presque ! ${eur0(cur.trop)} de trop.`:`Pas cette fois : ${eur0(cur.trop)} de trop.`}</p><p class="aide">Objectif : ${eur0(cur.target)} au plus en ${nom}. Dépensé : ${eur0(cur.v)}.</p>`
-      :`<p class="d-res">Défi en cours : ${eur0(cur.v)} dépensés en ${nom}, pour ${eur0(cur.target)} au plus.</p><p class="aide">Le résultat s’affichera quand le relevé de ${MOIS[P.m-1]} sera complet.</p>`}
-  if(dernier){
-    if(nxt){const k=catById(nxt.cat);h+=`<p class="d-t${cur?' sep':''}">Défi accepté pour ${MOIS[nx.m-1]} : dépenser au plus ${eur0(nxt.base*(1-nxt.pct))} en ${esc((k?k.name:'').toLowerCase())}.</p><p class="aide">Le résultat s’affichera avec votre relevé de ${MOIS[nx.m-1]}. <button class="lien" data-undefi="${nxt.key}">Annuler le défi</button></p>`}
-    else{const pr=propositionDefi(P);if(pr)h+=`<p class="d-t${cur?' sep':''}">${esc(pr.texte)}</p><button class="btn" data-defiok="${pr.cat}" data-base="${pr.base.toFixed(2)}" data-month="${pr.month}">Je relève le défi</button>`}
+  const r=evalDefi(defiDe(pym));
+  if(r){
+    const phrase=`${esc(r.name)} : vous vous étiez fixé ${eur0(r.limite)} maximum, vous avez dépensé ${eur0(r.v)}`;
+    h+=`<section class="carte defi"><h3><i data-lucide="flag"></i>Défi ${/^[aeiou]/.test(nomP)?'d’':'de '}${nomP}</h3>
+      ${r.status==='réussi'?`<p class="d-res ok">Réussi ✓</p><p class="phrase">${phrase}.${r.marge>=1?` ${eur0(r.marge)} de marge.`:''}</p>`
+       :r.status==='manqué'?`<p class="d-res presque">Pas tout à fait</p><p class="phrase">${phrase}, soit ${eur0(r.trop)} de trop.</p>`
+       :`<p class="phrase">${esc(r.name)} : ${eur0(r.v)} dépensés pour l’instant, sur ${eur0(r.limite)} maximum.</p><p class="aide">Le résultat s’affichera avec votre relevé complet de ${nomP}.</p>`}</section>`;
   }
-  return h?`<section class="carte defi"><h3><i data-lucide="target"></i>Défi du mois</h3>${h}</section>`:'';
+  const c=defiDe(cym);
+  if(c){const e=evalDefi(c), k=catById(c.cat), pc=e.limite>0?Math.min(100,e.v/e.limite*100):0;
+    h+=`<section class="carte defi"><h3><i data-lucide="target"></i>Défi pour ${nomC}</h3>
+      <p class="phrase">${esc(k?k.name:'')} : ne pas dépasser ${eur0(e.limite)} ce mois-ci.</p>
+      <p class="d-prog">${eur0(e.v)} dépensés sur ${eur0(e.limite)}</p><div class="barre-defi${e.v>e.limite?' trop':''}"><span style="width:${pc}%"></span></div>
+      ${aDesDonnees(cym)?'':`<p class="aide">Vos dépenses de ${nomC} apparaîtront quand vous ajouterez ce relevé.</p>`}
+      <button class="lien" data-undefi="${c.key}">Annuler le défi</button></section>`}
+  else{const pr=propositionDefi(cym);
+    if(pr){const k=catById(pr.cat);h+=`<section class="carte defi"><h3><i data-lucide="target"></i>Défi pour ${nomC}</h3>
+      <p class="phrase">${esc(k.name)} : ne pas dépasser ${eur0(pr.limite)} ce mois-ci. D’habitude, vous dépensez environ ${eur0(dizaine(pr.hab))}.</p>
+      <button class="btn" data-defiok="${pr.cat}" data-limite="${pr.limite}" data-hab="${pr.hab.toFixed(2)}" data-month="${cym}">Je relève le défi</button></section>`}}
+  return h;
+}
+
+/* ---------- Budgets de l'année ---------- */
+function blocBudgets(){
+  const cs=S.categories.filter(c=>c.budgetAn>0&&c.type==='expense');
+  if(!cs.length){const v=catById('voyages');return v?`<section class="carte budgets-propose"><h3><i data-lucide="luggage"></i>Fixez-vous un budget vacances pour l’année</h3>
+    <p class="aide">Un budget pour l’année vous montre, mois après mois, si vous êtes dans les clous.</p>
+    <div class="ajout-budget"><label class="champ">Budget vacances pour l’année (€)<input id="budgetAnRapide" type="number" inputmode="numeric" min="0" step="50" placeholder="2000"></label>
+    <button class="btn" data-budgetan="voyages">Enregistrer</button></div>
+    <button class="lien" data-tab="reglages" data-ancre="rubriques">Fixer d’autres budgets dans les réglages</button></section>`:''}
+  return `<section class="carte budgets"><h3>Vos budgets de l’année</h3>${cs.map(c=>{
+    let dep=0; for(let m=1;m<=P.m;m++) dep+=agg({lvl:'M',y:P.y,m},'perso').by[c.id]?.net||0;
+    const b=c.budgetAn, prorata=b*P.m/12, etat=dep>b?'rouge':dep>prorata+0.005?'orange':'or';
+    return `<div class="budget-an ${etat}"><p class="phrase">${esc(c.name)} : ${eur0(dep)} dépensés sur ${eur0(b)} prévus cette année.${dep<=b?` Il vous reste ${eur0(b-dep)}.`:''}</p>
+      <div class="barre-an"><span style="width:${Math.min(100,dep/b*100)}%"></span><em style="left:${Math.min(100,P.m/12*100)}%" title="Prorata des mois écoulés"></em></div>
+      ${etat==='rouge'?`<p class="ba-msg">Budget dépassé de ${eur0(dep-b)}</p>`:etat==='orange'?'<p class="ba-msg">Vous dépensez plus vite que prévu</p>':''}</div>`}).join('')}</section>`;
 }
 
 /* ---------- Conseils : deux au plus, par ordre d'importance ---------- */
@@ -1878,7 +1926,7 @@ function conseils(){
 /* ---------- Page d'accueil ---------- */
 function vAccueil(){
   const X=agg(P,'pro'), Pe=agg(P,'perso'), part=moisPartiel(P), V=netVise(), H=heures();
-  const lignes=Object.entries(Pe.by).filter(([,e])=>e.net>0.005).sort((a,b)=>b[1].net-a[1].net), max=Math.max(1,...lignes.map(([,e])=>e.net));
+  const lignes=Object.entries(Pe.by).filter(([,e])=>e.net>0.005||e.surplus>0.005).sort((a,b)=>b[1].net-a[1].net), max=Math.max(1,...lignes.map(([,e])=>e.net));
   const cs=conseils(), revue=(P.m===12||P.m===1)&&S.ops.some(o=>o.date.startsWith((P.m===12?P.y:P.y-1)+'-'));
   let gagne='';
   if(X.any){const n=X.revenuNet, d=n-V, t=n/H;
@@ -1900,11 +1948,12 @@ function vAccueil(){
     <p class="phrase">${eur0(Pe.net)} dépensés côté perso</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend?null:derapage(cid,e.net,P), open=openCat===cid;
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
-        <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}</span>
+        <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}${e.surplus>0.005?`<span class="rub-sous">dont ${eur0(e.ref)} de remboursements</span>`:''}</span>
         <span class="rub-amt">${eur0(e.net)}</span><span class="barre"><span style="width:${Math.max(1.5,e.net/max*100)}%"></span></span></button>
         ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div>
     <button class="lien ajout-rub" data-act="nouvrub"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>`:''}
-  ${blocDefi()}
+  ${S.ops.length?blocBudgets():''}
+  ${blocsDefi()}
   ${cs.length?`<section class="conseils">${cs.map(c=>`<button class="conseil ${c.lvl}" ${c.go}><i data-lucide="${c.lvl==='ko'?'triangle-alert':'lightbulb'}"></i><span>${esc(c.t)}</span><i data-lucide="chevron-right"></i></button>`).join('')}</section>`:''}
   ${revue?`<button class="carte revue" data-act="review" data-year="${P.m===12?P.y:P.y-1}"><span><span class="r-t">Votre année ${P.m===12?P.y:P.y-1} en revue</span><span class="aide">Vos meilleurs et vos pires moments, en quelques écrans.</span></span><i data-lucide="sparkles"></i></button>`:''}`;
 }
@@ -1918,7 +1967,8 @@ function vReglages(){
   const annees=[...new Set(S.ops.map(o=>o.date.slice(0,4)))].sort().reverse();
   const perso=S.categories.filter(c=>c.type==='expense'&&c.univers!=='pro'), act=S.categories.filter(c=>c.type==='expense'&&c.univers==='pro');
   const rub=c=>`<div class="rub-reg"><i data-lucide="${c.icon}"></i><span class="rr-nom">${esc(c.name)}</span>
-    ${c.univers!=='pro'?`<label class="rr-budget">Budget<input type="number" inputmode="numeric" min="0" step="10" placeholder="—" value="${c.budget||''}" data-budget="${c.id}" aria-label="Budget mensuel ${esc(c.name)}"></label>`:''}
+    ${c.univers!=='pro'?`<span class="rr-budgets"><label class="rr-budget">Budget par mois<input type="number" inputmode="numeric" min="0" step="10" placeholder="—" value="${c.budget||''}" data-budget="${c.id}" aria-label="Budget par mois ${esc(c.name)}"></label>
+    <label class="rr-budget">Budget pour l’année<input type="number" inputmode="numeric" min="0" step="50" placeholder="—" value="${c.budgetAn||''}" data-budgetan-reg="${c.id}" aria-label="Budget pour l’année ${esc(c.name)}"></label></span>`:''}
     <button class="lien" data-rencat="${c.id}">Renommer</button>${c.custom?`<button class="lien danger" data-delcat="${c.id}">Supprimer</button>`:''}</div>`;
   return `<h2 class="titre-page">Réglages</h2>
   <section class="carte" id="objectif"><h3>Votre activité</h3>
@@ -1961,8 +2011,6 @@ function vReglages(){
     <label class="champ">La part à mettre de côté se calcule sur<select class="grand" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>ce que vous encaissez</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>ce qui reste après les frais</option></select></label>
     ${S.accounts.filter(a=>a.type==='pro').map(a=>`<label class="champ">Solde du compte ${esc(a.name)} (€)<input type="number" inputmode="decimal" step="0.01" data-solde="${a.id}" value="${a.solde!=null?a.solde:''}"></label>
       <label class="champ">À la date du<input type="date" data-soldedate="${a.id}" value="${esc(a.soldeDate||'')}"></label>`).join('')}
-    <h4>Virements de votre compte pro</h4>
-    ${Object.keys(S.virements||{}).length?Object.entries(S.virements).map(([m,k])=>`<div class="regle"><span>${esc(m)}</span><span>${k==='ndf'?'Remboursement de frais':'Rémunération'}</span><button class="lien" data-delvir="${esc(m)}">Oublier</button></div>`).join(''):'<p class="aide">Aucun pour l’instant.</p>'}
     <h4>Règles apprises</h4>
     ${r.length?r.map(([m,c])=>`<div class="regle"><span>${esc(ruleName(m))}</span><select class="grand" data-rule="${esc(m)}" aria-label="Rubrique pour ${esc(m)}">${catOptions(c)}</select><button class="lien" data-delrule="${esc(m)}">Oublier</button></div>`).join(''):'<p class="aide">Aucune pour l’instant.</p>'}
     <h4 id="lecteurs">Lecteurs de relevés</h4>
@@ -2034,17 +2082,16 @@ function barres(mois,val,actif,cls){
 function vBilan(){
   if(!PB) PB={lvl:'M',y:P.y,m:P.m};
   const U=bilanU(), B=bilan(PB,U), prev=bilan(shift(PB,-1),U);
-  const pos=B.rows.filter(([,v])=>v>0.005).sort((a,b)=>b[1]-a[1]), neg=B.rows.filter(([,v])=>v<-0.005);
+  const pos=B.rows.filter(([,v])=>v>0.005).sort((a,b)=>b[1]-a[1]), surp=cid=>B.A.by[cid]?.surplus>0.005?`<span class="leg-sous">dont ${eur0(B.A.by[cid].ref)} de remboursements</span>`:'';
+  const zeros=B.rows.filter(([c,v])=>v<=0.005&&B.A.by[c]?.surplus>0.005);
   let parts=pos.map(([cid,v])=>({cid,v,nom:nomRub(cid)}));
   if(parts.length>PALETTE){const rest=parts.slice(PALETTE-1);parts=parts.slice(0,PALETTE-1);parts.push({cid:null,v:rest.reduce((s,x)=>s+x.v,0),nom:`Autres (${rest.length} rubriques)`,autres:rest})}
   const sumPos=parts.reduce((s,x)=>s+x.v,0);
-  /* Écarts avec la période précédente */
+  /* Écarts avec la période précédente : en euros seulement, au-delà de 30 € */
   const ids=[...new Set([...B.rows,...prev.rows].map(r=>r[0]))];
-  const ecarts=ids.map(cid=>{const a=B.rows.find(r=>r[0]===cid)?.[1]||0, b=prev.rows.find(r=>r[0]===cid)?.[1]||0, d=a-b, c=catById(cid);
-    const bud=c&&c.budget>0?c.budget*B.A.months:0;
-    const derape=bud?a>bud&&d>0:d>30&&b>0&&a>b*1.25, baisse=d<-30&&b>0&&a<b*.75;
-    return {cid,a,b,d,pct:b>0?Math.round(d/b*100):null,derape,baisse}}).filter(x=>Math.abs(x.d)>=1).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
-  const vus=BTOUT?ecarts:ecarts.slice(0,5);
+  const ecarts=ids.map(cid=>{const a=B.rows.find(r=>r[0]===cid)?.[1]||0, b=prev.rows.find(r=>r[0]===cid)?.[1]||0;return {cid,a,b,d:a-b}})
+    .filter(x=>Math.abs(x.d)>30).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
+  const vus=BTOUT?ecarts:ecarts.slice(0,5), [L0,L1]=motsPeriode(PB);
   const lvl=[['M','Mois'],['Q','Trimestre'],['Y','Année']];
   return `<div class="seg" role="group" aria-label="Période">${lvl.map(([k,l])=>`<button data-blvl="${k}" aria-pressed="${PB.lvl===k}">${l}</button>`).join('')}</div>
   <div class="mois"><button class="fleche" data-bshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${nomPeriode(PB)}</h2><button class="fleche" data-bshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>
@@ -2052,16 +2099,23 @@ function vBilan(){
   ${U==='pro'?`<section class="carte salaire-bilan">${salaireBloc(PB,'bilan')||'<p class="aide">Aucune activité sur cette période.</p>'}</section>${justePrixBloc()}`:''}
   <section class="carte"><h3>Répartition</h3>
     ${pos.length?`${anneau(parts,B.total)}
-    <div class="legende">${parts.map((x,i)=>`<button class="leg"${x.cid?` data-bcat="${x.cid}"`:' data-autres="1"'}><span class="pastille" style="background:var(--c${i+1})"></span><span class="leg-nom">${esc(x.nom)}</span><span class="leg-amt">${eur0(x.v)}</span><span class="leg-pc">${Math.round(x.v/sumPos*100)} %</span></button>
-      ${x.autres&&BTOUT?x.autres.map(y=>`<button class="leg sous" data-bcat="${y.cid}"><span class="pastille" style="background:var(--c${i+1})"></span><span class="leg-nom">${esc(y.nom)}</span><span class="leg-amt">${eur0(y.v)}</span><span class="leg-pc">${Math.round(y.v/sumPos*100)} %</span></button>`).join(''):''}`).join('')}
-    ${neg.map(([cid,v])=>`<button class="leg" data-bcat="${cid}"><span class="pastille vide"></span><span class="leg-nom">${esc(nomRub(cid))}<span class="leg-sous">plus de remboursements que de dépenses</span></span><span class="leg-amt">${signed(v)}</span><span class="leg-pc"></span></button>`).join('')}</div>`
+    <div class="legende">${parts.map((x,i)=>`<button class="leg"${x.cid?` data-bcat="${x.cid}"`:' data-autres="1"'}><span class="pastille" style="background:var(--c${i+1})"></span><span class="leg-nom">${esc(x.nom)}${x.cid?surp(x.cid):''}</span><span class="leg-amt">${eur0(x.v)}</span><span class="leg-pc">${Math.round(x.v/sumPos*100)} %</span></button>
+      ${x.autres&&BTOUT?x.autres.map(y=>`<button class="leg sous" data-bcat="${y.cid}"><span class="pastille" style="background:var(--c${i+1})"></span><span class="leg-nom">${esc(y.nom)}${surp(y.cid)}</span><span class="leg-amt">${eur0(y.v)}</span><span class="leg-pc">${Math.round(y.v/sumPos*100)} %</span></button>`).join(''):''}`).join('')}
+    ${zeros.map(([cid])=>`<button class="leg" data-bcat="${cid}"><span class="pastille vide"></span><span class="leg-nom">${esc(nomRub(cid))}${surp(cid)}</span><span class="leg-amt">${eur0(0)}</span><span class="leg-pc"></span></button>`).join('')}</div>`
     :'<p class="aide">Aucune dépense sur cette période.</p>'}</section>
   <section class="carte"><h3>Évolution</h3>${barres(moisBilan(PB),q=>bilan(q,U).total,q=>PB.lvl==='M'&&q.y===PB.y&&q.m===PB.m,moisBilan(PB).length>6?'defile':'')}
     <p class="aide">Touchez une barre pour voir ce mois.</p></section>
   <section class="carte ecarts"><h3>Par rapport ${PB.lvl==='M'?'au mois':PB.lvl==='Q'?'au trimestre':'à l’année'} précédent${PB.lvl==='Y'?'e':''}</h3>
-    ${vus.length?vus.map(x=>`<button class="ecart${x.derape?' derape':x.baisse?' baisse':''}" data-bcat="${x.cid}"><span class="e-nom">${esc(nomRub(x.cid))}</span><span class="e-val">${x.d>0?'+':'−'}${eur0(Math.abs(x.d))}, ${x.pct==null?'nouveau':`${x.pct>0?'+':'−'}${Math.abs(x.pct)} %`}</span></button>`).join('')
+    ${vus.length?vus.map(x=>`<button class="ecart ${x.d>0?'hausse':'baisse'}" data-bcat="${x.cid}"><span class="e-nom">${esc(nomRub(x.cid))} : ${x.a>0.005?`${eur0(x.a)} ${L0}`:`rien ${L0}`}${x.b>0.005?`, contre ${eur0(x.b)} ${L1}`:`, rien ${L1}`}</span><span class="e-fleche" aria-label="${x.d>0?'en hausse':'en baisse'}">${x.d>0?'↑':'↓'}</span></button>`).join('')
       +(ecarts.length>5?`<button class="lien" data-btout="1">${BTOUT?'Voir moins':`Voir tout (${ecarts.length})`}</button>`:'')
-      :'<p class="aide">Rien à comparer.</p>'}</section>`;
+      :'<p class="aide">Aucun écart de plus de 30 €.</p>'}</section>`;
+}
+/* Mots de la période affichée et de la précédente : « ce mois-ci / le mois dernier », ou les noms si ce n'est pas la période en cours */
+function motsPeriode(p){
+  const d=new Date(), y=d.getFullYear(), m=d.getMonth()+1, pr=shift(p,-1);
+  if(p.lvl==='M') return p.y===y&&p.m===m?['ce mois-ci','le mois dernier']:[`en ${MOIS[p.m-1]}`,`en ${MOIS[pr.m-1]}${pr.y!==p.y?' '+pr.y:''}`];
+  if(p.lvl==='Q') return p.y===y&&Math.ceil(p.m/3)===Math.ceil(m/3)?['ce trimestre','le trimestre dernier']:[`au ${plabel(p)}`,`au ${plabel(pr)}`];
+  return p.y===y?['cette année','l’an dernier']:[`en ${p.y}`,`en ${p.y-1}`];
 }
 /* Fiche d'une rubrique sur la période */
 function ficheRub(cid){
@@ -2072,9 +2126,9 @@ function ficheRub(cid){
   const quoi=PB.lvl==='M'?'au mois précédent':PB.lvl==='Q'?'au trimestre précédent':'à l’année précédente';
   return `<div class="fiche-fond" data-act="closefiche"></div><div class="fiche" role="dialog" aria-modal="true" aria-label="${esc(nomRub(cid))}">
     <button class="fermer" data-act="closefiche" aria-label="Fermer"><i data-lucide="x"></i></button>
-    <p class="f-m">${esc(nomRub(cid))}</p><p class="f-amt">${signed(a)}</p><p class="aide">${esc(nomPeriode(PB))}</p>
+    <p class="f-m">${esc(nomRub(cid))}</p><p class="f-amt">${eur0(a)}</p><p class="aide">${esc(nomPeriode(PB))}${B.A.by[cid]?.surplus>0.005?`, dont ${eur0(B.A.by[cid].ref)} de remboursements`:''}</p>
     <div class="ligne"><span>En moyenne par mois</span><b>${eur0(moy)}</b></div>
-    <div class="ligne"><span>Par rapport ${quoi}</span><b class="${d>0?'m-hausse':d<0?'m-baisse':''}">${d>0?'+':d<0?'−':''}${eur0(Math.abs(d))}${b>0?`, ${d>=0?'+':'−'}${Math.abs(Math.round(d/b*100))} %`:''}</b></div>
+    <div class="ligne"><span>Par rapport ${quoi}</span><b class="${d>0?'m-hausse':d<0?'m-baisse':''}">${d>0?'↑ +':d<0?'↓ −':''}${eur0(Math.abs(d))}</b></div>
     ${barres(mois,q=>agg(q,U).by[cid]?.net||0,q=>PB.lvl==='M'&&q.y===PB.y&&q.m===PB.m,mois.length>6?'defile petit':'petit')}
     <p class="f-lbl">${ops.length} opération${ops.length>1?'s':''}</p>
     <div class="ops">${ops.map(o=>opLine(o).replace(/^<button class="op" data-op="[^"]*">/,'<div class="op">').replace(/<\/button>$/,'</div>')).join('')}</div></div>`;

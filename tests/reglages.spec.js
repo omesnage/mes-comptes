@@ -22,5 +22,5 @@ test('réglages : une page simple, tout l’avancé replié',async({page})=>{
 test('toutes les rubriques du foyer demandées existent',async({page})=>{
   await openWith(page,null);
   const noms=await page.evaluate(()=>S.categories.filter(c=>c.type==='expense'&&c.univers!=='pro').map(c=>c.name));
-  expect(noms).toEqual(expect.arrayContaining(['Logement','Énergie','Courses','Restaurants et cafés','Voiture et transports','Abonnements et téléphone','Santé','Loisirs','Vêtements et shopping','Maison et équipement','Enfants','Animaux','Cadeaux','Voyages','Banque','Impôts et taxes du foyer','Remboursement d’emprunt','Autres']));
+  expect(noms).toEqual(expect.arrayContaining(['Logement','Énergie','Courses','Restaurants et cafés','Transports','Abonnements et téléphone','Santé','Sorties et loisirs','Vêtements et shopping','Maison et équipement','Enfants','Animaux','Cadeaux','Vacances','Banque','Impôts et taxes du foyer','Remboursement d’emprunt','Autres']));
 });

@@ -1,5 +1,5 @@
 /* ============ Données de base ============ */
-const SCHEMA=6;
+const SCHEMA=7;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
@@ -7,16 +7,16 @@ const CATS0=[
  ['energie','Énergie','zap','expense','perso',1],
  ['courses','Courses','shopping-basket','expense','perso'],
  ['resto','Restaurants et cafés','utensils','expense','perso'],
- ['transport','Voiture et transports','car','expense','auto'],
+ ['transport','Transports','car','expense','perso'],
  ['abonnements','Abonnements et téléphone','smartphone','expense','auto',1],
  ['sante','Santé','heart-pulse','expense','perso'],
- ['loisirs','Loisirs','ticket','expense','perso'],
+ ['loisirs','Sorties et loisirs','ticket','expense','perso'],
  ['shopping','Vêtements et shopping','shirt','expense','perso'],
  ['maison','Maison et équipement','sofa','expense','perso'],
  ['enfants','Enfants','baby','expense','perso'],
  ['animaux','Animaux','paw-print','expense','perso'],
  ['cadeaux','Cadeaux','gift','expense','perso'],
- ['voyages','Voyages','luggage','expense','perso'],
+ ['voyages','Vacances','luggage','expense','perso'],
  ['frais','Banque','landmark','expense','auto',1],
  ['impotsfoyer','Impôts et taxes du foyer','receipt','expense','perso',1],
  ['pret','Remboursement d’emprunt','banknote','expense','perso',1],
@@ -28,7 +28,6 @@ const CATS0=[
  ['conseils','Conseils et services','messages-square','expense','pro'],
  ['cotisations','Versements de ce qui est mis de côté','piggy-bank','expense','pro'],
  ['impots','Impôts de l’activité','receipt-text','expense','pro'],
- ['fraisrembourses','Frais remboursés par l’activité','car-front','expense','pro'],
  ['empruntpro','Remboursement d’emprunt de l’activité','banknote','expense','pro',1],
  ['pro','Autres frais de l’activité','briefcase','expense','pro'],
  ['remb','Remboursements','rotate-ccw','expense','auto'],
@@ -36,11 +35,9 @@ const CATS0=[
  ['revenus','Revenus et encaissements','arrow-down-left','income','auto'],
  ['remu','Votre rémunération','arrow-left-right','remu','auto'],
  ['interne','Virements entre vos comptes','repeat','transfer','auto']
-].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,budget:0,fixed:!!fixed}));
+].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,budget:0,budgetAn:0,fixed:!!fixed}));
 /* Anciens noms par défaut, remplacés par les nouveaux lors de la migration (un nom personnalisé est gardé) */
 const OLD_NAMES={courses:'Courses alimentaires',resto:'Restaurants & cafés',transport:'Transport & carburant',logement:'Logement & énergie',sante:'Santé',abonnements:'Abonnements & téléphonie',loisirs:'Loisirs & culture',shopping:'Shopping',frais:'Frais bancaires',pret:'Remboursement de prêt',logiciels:'Logiciels & outils',materiel:'Matériel & fournitures',deplacements:'Déplacements professionnels',soustraitance:'Sous-traitance',cotisations:'Cotisations sociales',impots:'Impôts sur l’activité',pro:'Autres frais professionnels',remb:'Remboursements',rentrees:'Rentrées d’argent',revenus:'Revenus',remu:'Rémunération (pro vers perso)',interne:'Virements internes',divers:'Divers'};
-/* Remboursement de frais par l'activité (indemnités kilométriques, notes de frais) */
-const NDF_RE=/\b(IK|INDEMNITES? (KM|KILOMETRIQUES?)|FRAIS KM|NOTES? DE FRAIS|NDF|REMBOURSEMENT( DE)? FRAIS|REMB FRAIS)\b/;
 /* Rubriques qui correspondent au paiement de la provision (cotisations, impôts) */
 const PROV_CATS=new Set(['cotisations','impots']);
 const typeOf=id=>(S.categories.find(c=>c.id===id)||{}).type||'expense';
@@ -114,7 +111,7 @@ let UNIV='all', OPACC='';
 const reports=[];
 const HAS_CLAUDE=!!(window.claude&&window.claude.use);
 
-function blank(){return{schemaVersion:SCHEMA,onboarded:false,accounts:[],categories:CATS0.map(c=>({...c})),rules:{},virements:{},sugg:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
+function blank(){return{schemaVersion:SCHEMA,onboarded:false,accounts:[],categories:CATS0.map(c=>({...c})),rules:{},sugg:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
@@ -150,7 +147,7 @@ function univOf(o,c){
 }
 const hasPro=()=>S.accounts.some(a=>a.type==='pro');
 
-let LINK={}, LINKED={}, BYID={}, INTERNAL={}, BYMONTH={};
+let LINK={}, LINKED={}, BYID={}, INTERNAL={}, BYMONTH={}, REFMOIS={};
 function catOf(o){
   if(o.cat) return o.cat;
   if(INTERNAL[o.id]) return 'interne';
@@ -175,11 +172,6 @@ function detectInternal(){
     if(m){INTERNAL[d.id]=m.id;INTERNAL[m.id]=d.id}
   }
 }
-/* Nature d'un virement du compte pro vers le perso : 'ndf' (frais remboursés), 'remu' (rémunération) ou null (inconnue) */
-function virKind(debit,credit){
-  if(NDF_RE.test(norm(debit.label))||NDF_RE.test(norm(credit.label))) return 'ndf';
-  return (S.virements||{})[debit.merchant]||null;
-}
 /* Sens d'un virement interne : +1 si c'est une rémunération (pro vers perso), −1 pour un apport (perso vers pro), 0 sinon */
 function remuDir(debit,credit){
   const a=acctType(debit), b=acctType(credit);
@@ -202,6 +194,9 @@ function relink(){
     cand.sort((x,y)=>score(x)-score(y));
     LINK[r.id]=cand[0].id; LINKED[cand[0].id]=r.id;
   }
+  /* Remboursements rattachés à un achat d'un autre mois : comptés dans le mois de l'achat */
+  REFMOIS={};
+  for(const rid in LINK){const r=BYID[rid], p=BYID[LINK[rid]], k=p.date.slice(0,7); if(k!==r.date.slice(0,7))(REFMOIS[k]||(REFMOIS[k]=[])).push(r)}
 }
 function isRefund(o){
   if(o.amount<=0||o.src==='rev') return false;
@@ -213,14 +208,12 @@ function waitingReturns(){return S.ops.filter(o=>o.awaiting&&!LINKED[o.id]).sort
 function opExtra(o){
   if(INTERNAL[o.id]&&!o.cat){const x=BYID[INTERNAL[o.id]];if(!x)return 'Virement entre vos comptes';
     const [d,c]=o.amount<0?[o,x]:[x,o];const r=remuDir(d,c);
-    if(r>0&&virKind(d,c)==='ndf') return o.amount<0?`Remboursement de frais versé sur ${acctName(x.acct)}, compté dans les frais de l’activité`:`Remboursement de frais par votre activité, déduit de ${catById('transport')?.name||'vos dépenses'}`;
     if(r>0) return o.amount<0?`Votre rémunération, versée sur ${acctName(x.acct)}`:`Votre rémunération, reçue de ${acctName(x.acct)}`;
     if(r<0) return o.amount<0?`Apport vers ${acctName(x.acct)}, votre compte pro`:`Apport reçu de ${acctName(x.acct)}, votre compte perso`;
     return `Virement ${o.amount<0?'vers':'depuis'} ${acctName(x.acct)}, entre vos comptes`}
-  if(o.amount>0&&LINK[o.id]){const p=BYID[LINK[o.id]];return `Remboursement de votre achat du ${p.date.slice(8,10)}/${p.date.slice(5,7)}`}
+  if(o.amount>0&&LINK[o.id]){const p=BYID[LINK[o.id]];return `Remboursement de votre achat du ${p.date.slice(8,10)}/${p.date.slice(5,7)}${p.date.slice(0,7)!==o.date.slice(0,7)?`, compté en ${MOIS[+p.date.slice(5,7)-1]}`:''}`}
   if(o.amount<0&&LINKED[o.id]){const r=BYID[LINKED[o.id]];return `Remboursé le ${r.date.slice(8,10)}/${r.date.slice(5,7)}`}
   if(o.awaiting){const d=Math.max(0,Math.round((Date.now()-new Date(o.date))/864e5));return `Retour signalé : remboursement attendu depuis ${d} jour${d>1?'s':''}`}
   if(isRefund(o)){const c=catById(catOf(o));return c?`Remboursement, déduit de ${c.name}`:'Remboursement'}
-  if(o.amount>0&&catOf(o)==='fraisrembourses') return `Remboursement de frais par votre activité, déduit de ${catById('transport')?.name||'vos dépenses'}`;
   return '';
 }

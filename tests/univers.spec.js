@@ -22,10 +22,11 @@ test('deux comptes : virement pro → perso reconnu comme rémunération, calcul
   // Perso : la rémunération est la rentrée principale ; le remboursement CPAM est déduit de Santé
   expect(r.perso.income).toBe(1500);
   expect(r.perso.inc).toEqual({remu:1500});
-  expect(r2(r.perso.net)).toBe(128.5);
+  // Le remboursement CPAM (23 €) dépasse la dépense Santé (12,30 €) : la rubrique reste à 0 €
+  expect(r2(r.perso.net)).toBe(139.2);
   // Vue d'ensemble : les virements entre comptes ne sont ni une dépense ni une rentrée
   expect(r.all.income).toBe(3650);
-  expect(r2(r.all.net)).toBe(r2(985.89+128.5));
+  expect(r2(r.all.net)).toBe(r2(985.89+139.2));
   // Trésorerie : solde lu sur le relevé, provision de l'année moins ce qui est payé
   expect(r.treso.t).toBe(5000);
   expect(r2(r.du.du)).toBe(300.5);

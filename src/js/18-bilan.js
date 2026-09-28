@@ -38,17 +38,16 @@ function barres(mois,val,actif,cls){
 function vBilan(){
   if(!PB) PB={lvl:'M',y:P.y,m:P.m};
   const U=bilanU(), B=bilan(PB,U), prev=bilan(shift(PB,-1),U);
-  const pos=B.rows.filter(([,v])=>v>0.005).sort((a,b)=>b[1]-a[1]), neg=B.rows.filter(([,v])=>v<-0.005);
+  const pos=B.rows.filter(([,v])=>v>0.005).sort((a,b)=>b[1]-a[1]), surp=cid=>B.A.by[cid]?.surplus>0.005?`<span class="leg-sous">dont ${eur0(B.A.by[cid].ref)} de remboursements</span>`:'';
+  const zeros=B.rows.filter(([c,v])=>v<=0.005&&B.A.by[c]?.surplus>0.005);
   let parts=pos.map(([cid,v])=>({cid,v,nom:nomRub(cid)}));
   if(parts.length>PALETTE){const rest=parts.slice(PALETTE-1);parts=parts.slice(0,PALETTE-1);parts.push({cid:null,v:rest.reduce((s,x)=>s+x.v,0),nom:`Autres (${rest.length} rubriques)`,autres:rest})}
   const sumPos=parts.reduce((s,x)=>s+x.v,0);
-  /* Écarts avec la période précédente */
+  /* Écarts avec la période précédente : en euros seulement, au-delà de 30 € */
   const ids=[...new Set([...B.rows,...prev.rows].map(r=>r[0]))];
-  const ecarts=ids.map(cid=>{const a=B.rows.find(r=>r[0]===cid)?.[1]||0, b=prev.rows.find(r=>r[0]===cid)?.[1]||0, d=a-b, c=catById(cid);
-    const bud=c&&c.budget>0?c.budget*B.A.months:0;
-    const derape=bud?a>bud&&d>0:d>30&&b>0&&a>b*1.25, baisse=d<-30&&b>0&&a<b*.75;
-    return {cid,a,b,d,pct:b>0?Math.round(d/b*100):null,derape,baisse}}).filter(x=>Math.abs(x.d)>=1).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
-  const vus=BTOUT?ecarts:ecarts.slice(0,5);
+  const ecarts=ids.map(cid=>{const a=B.rows.find(r=>r[0]===cid)?.[1]||0, b=prev.rows.find(r=>r[0]===cid)?.[1]||0;return {cid,a,b,d:a-b}})
+    .filter(x=>Math.abs(x.d)>30).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
+  const vus=BTOUT?ecarts:ecarts.slice(0,5), [L0,L1]=motsPeriode(PB);
   const lvl=[['M','Mois'],['Q','Trimestre'],['Y','Année']];
   return `<div class="seg" role="group" aria-label="Période">${lvl.map(([k,l])=>`<button data-blvl="${k}" aria-pressed="${PB.lvl===k}">${l}</button>`).join('')}</div>
   <div class="mois"><button class="fleche" data-bshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${nomPeriode(PB)}</h2><button class="fleche" data-bshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>
@@ -56,16 +55,23 @@ function vBilan(){
   ${U==='pro'?`<section class="carte salaire-bilan">${salaireBloc(PB,'bilan')||'<p class="aide">Aucune activité sur cette période.</p>'}</section>${justePrixBloc()}`:''}
   <section class="carte"><h3>Répartition</h3>
     ${pos.length?`${anneau(parts,B.total)}
-    <div class="legende">${parts.map((x,i)=>`<button class="leg"${x.cid?` data-bcat="${x.cid}"`:' data-autres="1"'}><span class="pastille" style="background:var(--c${i+1})"></span><span class="leg-nom">${esc(x.nom)}</span><span class="leg-amt">${eur0(x.v)}</span><span class="leg-pc">${Math.round(x.v/sumPos*100)} %</span></button>
-      ${x.autres&&BTOUT?x.autres.map(y=>`<button class="leg sous" data-bcat="${y.cid}"><span class="pastille" style="background:var(--c${i+1})"></span><span class="leg-nom">${esc(y.nom)}</span><span class="leg-amt">${eur0(y.v)}</span><span class="leg-pc">${Math.round(y.v/sumPos*100)} %</span></button>`).join(''):''}`).join('')}
-    ${neg.map(([cid,v])=>`<button class="leg" data-bcat="${cid}"><span class="pastille vide"></span><span class="leg-nom">${esc(nomRub(cid))}<span class="leg-sous">plus de remboursements que de dépenses</span></span><span class="leg-amt">${signed(v)}</span><span class="leg-pc"></span></button>`).join('')}</div>`
+    <div class="legende">${parts.map((x,i)=>`<button class="leg"${x.cid?` data-bcat="${x.cid}"`:' data-autres="1"'}><span class="pastille" style="background:var(--c${i+1})"></span><span class="leg-nom">${esc(x.nom)}${x.cid?surp(x.cid):''}</span><span class="leg-amt">${eur0(x.v)}</span><span class="leg-pc">${Math.round(x.v/sumPos*100)} %</span></button>
+      ${x.autres&&BTOUT?x.autres.map(y=>`<button class="leg sous" data-bcat="${y.cid}"><span class="pastille" style="background:var(--c${i+1})"></span><span class="leg-nom">${esc(y.nom)}${surp(y.cid)}</span><span class="leg-amt">${eur0(y.v)}</span><span class="leg-pc">${Math.round(y.v/sumPos*100)} %</span></button>`).join(''):''}`).join('')}
+    ${zeros.map(([cid])=>`<button class="leg" data-bcat="${cid}"><span class="pastille vide"></span><span class="leg-nom">${esc(nomRub(cid))}${surp(cid)}</span><span class="leg-amt">${eur0(0)}</span><span class="leg-pc"></span></button>`).join('')}</div>`
     :'<p class="aide">Aucune dépense sur cette période.</p>'}</section>
   <section class="carte"><h3>Évolution</h3>${barres(moisBilan(PB),q=>bilan(q,U).total,q=>PB.lvl==='M'&&q.y===PB.y&&q.m===PB.m,moisBilan(PB).length>6?'defile':'')}
     <p class="aide">Touchez une barre pour voir ce mois.</p></section>
   <section class="carte ecarts"><h3>Par rapport ${PB.lvl==='M'?'au mois':PB.lvl==='Q'?'au trimestre':'à l’année'} précédent${PB.lvl==='Y'?'e':''}</h3>
-    ${vus.length?vus.map(x=>`<button class="ecart${x.derape?' derape':x.baisse?' baisse':''}" data-bcat="${x.cid}"><span class="e-nom">${esc(nomRub(x.cid))}</span><span class="e-val">${x.d>0?'+':'−'}${eur0(Math.abs(x.d))}, ${x.pct==null?'nouveau':`${x.pct>0?'+':'−'}${Math.abs(x.pct)} %`}</span></button>`).join('')
+    ${vus.length?vus.map(x=>`<button class="ecart ${x.d>0?'hausse':'baisse'}" data-bcat="${x.cid}"><span class="e-nom">${esc(nomRub(x.cid))} : ${x.a>0.005?`${eur0(x.a)} ${L0}`:`rien ${L0}`}${x.b>0.005?`, contre ${eur0(x.b)} ${L1}`:`, rien ${L1}`}</span><span class="e-fleche" aria-label="${x.d>0?'en hausse':'en baisse'}">${x.d>0?'↑':'↓'}</span></button>`).join('')
       +(ecarts.length>5?`<button class="lien" data-btout="1">${BTOUT?'Voir moins':`Voir tout (${ecarts.length})`}</button>`:'')
-      :'<p class="aide">Rien à comparer.</p>'}</section>`;
+      :'<p class="aide">Aucun écart de plus de 30 €.</p>'}</section>`;
+}
+/* Mots de la période affichée et de la précédente : « ce mois-ci / le mois dernier », ou les noms si ce n'est pas la période en cours */
+function motsPeriode(p){
+  const d=new Date(), y=d.getFullYear(), m=d.getMonth()+1, pr=shift(p,-1);
+  if(p.lvl==='M') return p.y===y&&p.m===m?['ce mois-ci','le mois dernier']:[`en ${MOIS[p.m-1]}`,`en ${MOIS[pr.m-1]}${pr.y!==p.y?' '+pr.y:''}`];
+  if(p.lvl==='Q') return p.y===y&&Math.ceil(p.m/3)===Math.ceil(m/3)?['ce trimestre','le trimestre dernier']:[`au ${plabel(p)}`,`au ${plabel(pr)}`];
+  return p.y===y?['cette année','l’an dernier']:[`en ${p.y}`,`en ${p.y-1}`];
 }
 /* Fiche d'une rubrique sur la période */
 function ficheRub(cid){
@@ -76,9 +82,9 @@ function ficheRub(cid){
   const quoi=PB.lvl==='M'?'au mois précédent':PB.lvl==='Q'?'au trimestre précédent':'à l’année précédente';
   return `<div class="fiche-fond" data-act="closefiche"></div><div class="fiche" role="dialog" aria-modal="true" aria-label="${esc(nomRub(cid))}">
     <button class="fermer" data-act="closefiche" aria-label="Fermer"><i data-lucide="x"></i></button>
-    <p class="f-m">${esc(nomRub(cid))}</p><p class="f-amt">${signed(a)}</p><p class="aide">${esc(nomPeriode(PB))}</p>
+    <p class="f-m">${esc(nomRub(cid))}</p><p class="f-amt">${eur0(a)}</p><p class="aide">${esc(nomPeriode(PB))}${B.A.by[cid]?.surplus>0.005?`, dont ${eur0(B.A.by[cid].ref)} de remboursements`:''}</p>
     <div class="ligne"><span>En moyenne par mois</span><b>${eur0(moy)}</b></div>
-    <div class="ligne"><span>Par rapport ${quoi}</span><b class="${d>0?'m-hausse':d<0?'m-baisse':''}">${d>0?'+':d<0?'−':''}${eur0(Math.abs(d))}${b>0?`, ${d>=0?'+':'−'}${Math.abs(Math.round(d/b*100))} %`:''}</b></div>
+    <div class="ligne"><span>Par rapport ${quoi}</span><b class="${d>0?'m-hausse':d<0?'m-baisse':''}">${d>0?'↑ +':d<0?'↓ −':''}${eur0(Math.abs(d))}</b></div>
     ${barres(mois,q=>agg(q,U).by[cid]?.net||0,q=>PB.lvl==='M'&&q.y===PB.y&&q.m===PB.m,mois.length>6?'defile petit':'petit')}
     <p class="f-lbl">${ops.length} opération${ops.length>1?'s':''}</p>
     <div class="ops">${ops.map(o=>opLine(o).replace(/^<button class="op" data-op="[^"]*">/,'<div class="op">').replace(/<\/button>$/,'</div>')).join('')}</div></div>`;

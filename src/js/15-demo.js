@@ -27,8 +27,6 @@ function demoData(){
     const remu=ca<3000?1400:2000;
     add(k,1,'VIR SEPA EMIS VERS O MARTIN PERSO',-remu,null,pr.id);
     add(k,2,'VIR SEPA RECU DE QONTO',remu,null,pe.id);
-    /* Frais kilométriques remboursés par l'activité, tous les deux mois */
-    if(k%2===0){const ik=vary(140,.2);add(k,24,'VIR SEPA EMIS INDEMNITES KM',-ik,null,pr.id);add(k,25,'VIR SEPA RECU DE QONTO',ik,null,pe.id)}
     /* Foyer */
     add(k,5,'PRLV SEPA LOYER SCI OCEAN',-820,'logement');
     add(k,11,'PRLV SEPA EDF CLIENTS PARTICULIERS',-vary(k>2&&k<8?118:78,.08),'energie');
@@ -56,18 +54,15 @@ function demoData(){
   add(1,9,'CB ZALANDO',-129,'shopping',pe.id,{awaiting:true});
   add(0,14,'VIR ZALANDO REMBOURSEMENT',129,null);
   add(2,10,'CB AMAZON PAYMENTS',-89.9,null,pe.id,{awaiting:true});
-  /* Un virement du compte pro encore inconnu : l'application demandera ce que c'est */
-  add(0,21,'VIR SEPA EMIS VERS COMPTE JOINT',-300,null,pr.id);
-  add(0,22,'VIR SEPA RECU DE QONTO',300,null,pe.id);
   st.ops=ops.sort((a,b)=>a.date<b.date?1:-1);
-  st.rules=cats; st.virements={'MARTIN PERSO':'remu'};
-  st.categories.find(c=>c.id==='courses').budget=0;
+  st.rules=cats;
+  /* Budgets de l'année : vacances dans les clous, shopping trop rapide, cadeaux dépassés */
+  const ba={voyages:2000,shopping:500,cadeaux:30}; for(const id in ba) st.categories.find(c=>c.id===id).budgetAn=ba[id];
   const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
   st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);
-  /* Défis : le mois dernier (manqué de peu), ce mois-ci (réussi) ; le prochain sera proposé */
-  const courses=k=>ops.filter(o=>o.date.startsWith(mk(k))&&cats[o.merchant]==='courses').reduce((s,o)=>s-o.amount,0);
-  st.challenges=[{id:'auto',month:mk(1),cat:'shopping',pct:.25,base:52},{id:'auto',month:mk(0),cat:'courses',pct:.25,base:+courses(1).toFixed(2)}].map(c=>({...c,key:newId('d_')}));
+  /* Défi du mois dernier sur les courses (réussi) ; celui du mois en cours sera proposé */
+  st.challenges=[{id:'auto',month:mk(0),cat:'courses',limite:265,habitude:350}].map(c=>({...c,key:newId('d_')}));
   st.onboarded=true; st.since=Date.now(); st.lastBackup=Date.now();
   return st;
 }

@@ -8,15 +8,7 @@ function pendingGroups(){
     e.accts.push(o.acct); e.n++; e.total+=o.amount; }
   return Object.values(g).sort((a,b)=>b.n-a.n||Math.abs(b.total)-Math.abs(a.total));
 }
-/* Virements du compte pro vers le perso dont on ne sait pas encore s'ils sont une rémunération ou des frais remboursés */
-function virementsInconnus(){
-  const g={};
-  for(const o of S.ops){ if(o.amount>=0||o.cat) continue; const x=INTERNAL[o.id]?BYID[INTERNAL[o.id]]:null;
-    if(!x||remuDir(o,x)<=0||virKind(o,x)) continue;
-    const e=g[o.merchant]||(g[o.merchant]={m:o.merchant,n:0,total:0,label:o.label}); e.n++; e.total+=-o.amount }
-  return Object.values(g);
-}
-const nbAVerifier=()=>pendingGroups().length+virementsInconnus().length;
+const nbAVerifier=()=>pendingGroups().length;
 function icons(){ if(window.lucide&&lucide.createIcons) lucide.createIcons({icons:lucide.icons,attrs:{'stroke-width':1.5}}) }
 const CAT_GROUPS=[['perso','Rubriques du foyer'],['auto','Rubriques communes'],['pro','Rubriques de l’activité'],['in','Rentrées et virements']];
 const catGroup=c=>c.type==='expense'?(c.univers||'perso'):'in';
@@ -76,18 +68,15 @@ function choixRubriques(x){
   if(x.credit) ids=['revenus','rentrees','remb'];
   else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','conseils','pro'];
   else ids=['courses','resto','transport','shopping','maison','loisirs','sante','divers'];
-  if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','pro','fraisrembourses','divers'];
+  if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','logiciels','materiel','pro','divers'];
   if(s) ids=[s,...ids.filter(i=>i!==s)];
   const noms={revenus:'Encaissement de l’activité',rentrees:'Autre rentrée',remb:'Un remboursement'};
   return ids.filter(catById).map(id=>`<button class="choix-btn${id===s?' suggere':''}" data-qcat="${esc(x.m)}" data-c="${id}">${esc(noms[id]||catById(id).name)}</button>`).join('');
 }
 function aVerifier(){
-  const g=pendingGroups(), vi=virementsInconnus(), n=g.length+vi.length; if(!n) return '';
+  const g=pendingGroups(), n=g.length; if(!n) return '';
   return `<section class="carte verifier"><h3>À vérifier <span class="compte">(${n})</span></h3>
   <p class="aide">Une seule réponse par marchand : elle vaudra pour toutes ses opérations, passées et futures.</p>
-  ${vi.map(x=>`<div class="question"><p class="q-t">Ce virement de votre compte pro, c’est votre rémunération ou un remboursement de frais ?</p>
-    <p class="q-s">${esc(x.label)}, ${x.n>1?`${x.n} virements, `:''}${eur(x.total)}</p>
-    <div class="choix"><button class="choix-btn" data-vir="${esc(x.m)}" data-k="remu">Ma rémunération</button><button class="choix-btn" data-vir="${esc(x.m)}" data-k="ndf">Un remboursement de frais</button></div></div>`).join('')}
   ${g.map(x=>`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
     <p class="q-s">${x.n>1?`${x.n} opérations, `:''}${x.total<0?'−':'+'}${eur(Math.abs(x.total))}. ${esc(x.label)}</p>
     <div class="choix">${choixRubriques(x)}</div>
@@ -111,14 +100,12 @@ function vOps(){
 /* Fiche d'une opération : rubrique, retour d'achat, suppression */
 function fiche(id){
   const o=BYID[id]; if(!o) return '';
-  const c=catOf(o), x=INTERNAL[o.id]&&!o.cat?BYID[INTERNAL[o.id]]:null, deb=o.amount<0?o:x, cre=o.amount<0?x:o;
-  const vir=x&&remuDir(deb,cre)>0;
+  const c=catOf(o), x=INTERNAL[o.id]&&!o.cat?BYID[INTERNAL[o.id]]:null;
   return `<div class="fiche-fond" data-act="closefiche"></div><div class="fiche" role="dialog" aria-modal="true" aria-label="Opération ${esc(o.merchant)}">
     <button class="fermer" data-act="closefiche" aria-label="Fermer"><i data-lucide="x"></i></button>
     <p class="f-m">${esc(o.merchant)}</p><p class="f-amt${o.amount>0?' cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</p>
     <p class="aide">${esc(o.label)}<br>${dfmt(o.date).replace(/(\d\d)\/(\d\d)\/(\d\d)/,'$1/$2/20$3')}${o.src!=='rev'&&ACCN>1?`, ${esc(acctName(o.acct))}`:''}</p>
     ${opExtra(o)?`<p class="f-x">${esc(opExtra(o))}</p>`:''}
-    ${vir?`<p class="f-lbl">Ce virement de votre compte pro, c’est :</p><div class="choix"><button class="choix-btn${virKind(deb,cre)!=='ndf'?' suggere':''}" data-vir="${esc(deb.merchant)}" data-k="remu">Ma rémunération</button><button class="choix-btn${virKind(deb,cre)==='ndf'?' suggere':''}" data-vir="${esc(deb.merchant)}" data-k="ndf">Un remboursement de frais</button></div>`:''}
     ${o.src==='rev'||x?'':`<label class="f-lbl" for="ficheCat">Rubrique</label>
     <select class="grand" id="ficheCat">${c||FICHESEL?'':'<option value="">À vérifier</option>'}${catOptions(FICHESEL||c,false,'',true)}</select>
     <div class="radios"><label><input type="radio" name="portee" value="tout" checked> Pour toutes les opérations de ce marchand</label>

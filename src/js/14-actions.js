@@ -33,9 +33,8 @@ document.addEventListener('click',async e=>{
   if(d.op){FICHE=d.op;FICHESEL=null;render();setTimeout(()=>$('.fiche .fermer')?.focus(),30);return}
   if(d.cat){openCat=openCat===d.cat?null:d.cat;render();return}
   if(d.qcat){setRule(d.qcat,d.c);render();return}
-  if(d.vir){S.virements=S.virements||{};S.virements[d.vir]=d.k;stateDirty=true;save();render();return}
-  if(d.delvir){delete S.virements[d.delvir];stateDirty=true;save();render();return}
-  if(d.defiok){S.challenges=S.challenges.filter(c=>!(c.id==='auto'&&c.month===d.month));S.challenges.push({id:'auto',key:newId('d_'),month:d.month,cat:d.defiok,pct:.25,base:+d.base});save();render();return}
+  if(d.defiok){S.challenges=S.challenges.filter(c=>!(c.id==='auto'&&c.month===d.month));S.challenges.push({id:'auto',key:newId('d_'),month:d.month,cat:d.defiok,limite:+d.limite,habitude:+d.hab});save();render();return}
+  if(d.budgetan){const c=catById(d.budgetan),i=$('#budgetAnRapide');const v=Math.max(0,+(i&&i.value)||0);if(c&&v){c.budgetAn=v;save();render()}else i&&i.focus();return}
   if(d.undefi){S.challenges=S.challenges.filter(c=>c.key!==d.undefi);save();render();return}
   if(d.act==='savefiche'){const o=BYID[d.id], v=$('#ficheCat').value, tout=document.querySelector('input[name="portee"]:checked')?.value!=='une';
     if(o&&v){if(tout){delete o.cat;const k=S.rules[o.merchant]&&typeOf(v)!==typeOf(S.rules[o.merchant])?o.merchant+(o.amount>0?'|+':'|-'):o.merchant;setRule(k,v);S.ops.forEach(x=>{if(x.merchant===o.merchant&&x.cat){delete x.cat;dirtyMonths.add(x.date.slice(0,7))}})}else{o.cat=v;dirtyMonths.add(o.date.slice(0,7))}save()}
@@ -69,6 +68,7 @@ document.addEventListener('click',async e=>{
 document.addEventListener('change',e=>{
   const t=e.target, d=t.dataset;
   if(d.rule){S.rules[d.rule]=t.value;save();render();return}
+  if(d.budgetanReg){const c=catById(d.budgetanReg);if(c){c.budgetAn=Math.max(0,+t.value||0);save()}return}
   if(d.qsel){if(t.value==='__new'){t.value='';ouvrirRubrique({de:'question',m:d.qsel});return}if(t.value){setRule(d.qsel,t.value);render()}return}
   if(t.id==='ficheCat'){if(t.value==='__new'){t.value=FICHESEL||'';ouvrirRubrique({de:'fiche',id:FICHE})}else FICHESEL=t.value||null;return}
   if(d.budget){const c=catById(d.budget);c.budget=Math.max(0,+t.value||0);save();return}

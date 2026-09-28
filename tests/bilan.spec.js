@@ -67,16 +67,19 @@ test('évolution : 6 barres en Mois, 3 en Trimestre, 12 en Année, moyenne en po
   expect(await page.evaluate(()=>PB.m)).toBe(2);
 });
 
-test('par rapport à la période précédente : 5 plus gros écarts, voir tout, dérapage en orange',async({page})=>{
+test('par rapport à la période précédente : en euros seulement, écarts de plus de 30 €, flèches, voir tout',async({page})=>{
   await demo(page);
   const e=page.locator('.ecart');
-  await expect(e).toHaveCount(5);
-  await expect(page.locator('.ecart.derape',{hasText:'Restaurants et cafés'})).toHaveCount(1);
-  await expect(page.locator('.ecart',{hasText:'Restaurants et cafés'}).locator('.e-val')).toHaveText(/^\+\d[\d\s]*\s€, \+\d+\s%$/);
-  await page.click('[data-btout]');
-  expect(await e.count()).toBeGreaterThan(5);
-  const d=(await page.locator('.e-val').allTextContents()).map(t=>Math.abs(n(t.split(',')[0])));
-  expect(d).toEqual([...d].sort((a,b)=>b-a));
+  expect(await e.count()).toBeLessThanOrEqual(5);
+  const resto=page.locator('.ecart',{hasText:'Restaurants et cafés'});
+  await expect(resto.locator('.e-nom')).toHaveText(/^Restaurants et cafés : \d[\d\s]*\s€ en \S+, contre \d[\d\s]*\s€ en \S+$/);
+  await expect(resto).toHaveClass(/hausse/); await expect(resto.locator('.e-fleche')).toHaveText('↑');
+  await expect(page.locator('.ecarts')).not.toContainText('%');
+  const r=await page.evaluate(()=>{const U=bilanU(),B=bilan(PB,U),pr=bilan(shift(PB,-1),U);const ids=[...new Set([...B.rows,...pr.rows].map(x=>x[0]))];
+    return ids.map(c=>(B.rows.find(x=>x[0]===c)?.[1]||0)-(pr.rows.find(x=>x[0]===c)?.[1]||0)).filter(d=>Math.abs(d)>30).length});
+  if(r>5){await page.click('[data-btout]');await expect(e).toHaveCount(r)}
+  // Mots de la période en cours
+  expect(await page.evaluate(()=>{const d=new Date();return [motsPeriode({lvl:'M',y:d.getFullYear(),m:d.getMonth()+1}),motsPeriode({lvl:'Q',y:d.getFullYear(),m:d.getMonth()+1}),motsPeriode({lvl:'Y',y:d.getFullYear(),m:1})]})).toEqual([['ce mois-ci','le mois dernier'],['ce trimestre','le trimestre dernier'],['cette année','l’an dernier']]);
 });
 
 test('choix Perso / Activité : absent sans frais d’activité ; en Activité, total = frais de l’activité',async({page})=>{

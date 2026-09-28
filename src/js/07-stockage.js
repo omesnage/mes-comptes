@@ -19,7 +19,6 @@ function merge(x){
   const st={...x,schemaVersion:x.schemaVersion||1,accounts:x.accounts||[],categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]};
   if(!st.since&&st.ops.length){st.since=Date.now();MIGRATED=true}
   if(!st.masked) st.masked={};
-  if(!st.virements) st.virements={};
   if(st.onboarded==null) st.onboarded=st.ops.length>0;
   st.challenges.forEach(c=>{if(!c.key)c.key=newId('d_')});
   if(migrateSchema(st)){MIGRATED=true;st.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)))}
@@ -70,7 +69,7 @@ function migrateSchema(st){
   }
   if(st.schemaVersion<6){
     /* v5 → v6 : une rubrique par défaut retirée est remplacée par « Conseils et services », sans perte */
-    const ids=new Set(CATS0.map(c=>c.id)), retirees=new Set(st.categories.filter(c=>!c.custom&&!ids.has(c.id)).map(c=>c.id));
+    const ids=new Set(CATS0.map(c=>c.id)), retirees=new Set(st.categories.filter(c=>!c.custom&&!ids.has(c.id)&&c.id!=='fraisrembourses').map(c=>c.id));
     if(retirees.size){
       st.categories=st.categories.filter(c=>!retirees.has(c.id));
       for(const m in st.rules) if(retirees.has(st.rules[m])) st.rules[m]='conseils';
@@ -78,6 +77,20 @@ function migrateSchema(st){
       st.ops.forEach(o=>{if(retirees.has(o.cat))o.cat='conseils'});
     }
     st.schemaVersion=6;
+  }
+  if(st.schemaVersion<7){
+    /* v6 → v7 : plus de frais remboursés par l'activité ; leurs règles et opérations redeviennent ordinaires,
+       et un virement du compte pro vers le perso redevient une rémunération. Rubriques renommées. */
+    const F='fraisrembourses';
+    st.categories=st.categories.filter(c=>c.id!==F);
+    for(const m in st.rules) if(st.rules[m]===F) delete st.rules[m];
+    for(const m in st.sugg) if(st.sugg[m].c===F) delete st.sugg[m];
+    st.ops.forEach(o=>{if(o.cat===F)delete o.cat});
+    delete st.virements;
+    const ren={transport:['Voiture et transports','Transport & carburant','Transports'],loisirs:['Loisirs','Loisirs & culture','Sorties et loisirs'],voyages:['Voyages','Vacances']};
+    for(const [id,noms] of Object.entries(ren)){const c=st.categories.find(k=>k.id===id);if(!c)continue;const nv=noms[noms.length-1];if(noms.includes(c.name))c.name=nv;if(id==='transport')c.univers='perso'}
+    st.categories.forEach(c=>{if(c.budgetAn==null)c.budgetAn=0});
+    st.schemaVersion=7;
   }
   return st.schemaVersion!==v0;
 }

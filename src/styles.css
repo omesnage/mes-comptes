@@ -327,3 +327,27 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 .cas.final .cas-v{font-weight:500;font-size:26px;color:var(--gold)}
 .alerte-taux{border:1px solid var(--alert);border-left-width:4px;background:var(--alert-soft);padding:14px 16px;margin:12px 0}
 .alerte-taux p{margin:0 0 10px;color:var(--alert);font-size:17px;font-weight:500}
+
+/* Défi du mois et budgets de l'année */
+.defi .d-res.presque{color:var(--amber)}
+.d-prog{font-size:17px;margin:10px 0 6px;font-variant-numeric:tabular-nums}
+.barre-defi,.barre-an{position:relative;height:10px;background:var(--line);border-radius:5px;margin:0 0 10px}
+.barre-defi span,.barre-an span{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--gold)}
+.barre-defi.trop span{background:var(--alert)}
+.budget-an{padding:12px 0 6px;border-bottom:1px solid var(--line)}
+.budget-an:last-child{border-bottom:0}
+.budget-an .phrase{margin:0 0 10px}
+.barre-an em{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--muted);opacity:.6}
+.budget-an.orange .barre-an span{background:var(--amber)}
+.budget-an.rouge .barre-an span{background:var(--alert)}
+.ba-msg{font-size:16px;font-weight:500;margin:0 0 6px}
+.budget-an.orange .ba-msg{color:var(--amber)}.budget-an.rouge .ba-msg{color:var(--alert)}
+.ajout-budget{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}
+.ajout-budget .champ{margin:0}
+.rub-sous{font-size:15px;color:var(--muted)}
+.rr-budgets{display:flex;flex-wrap:wrap;gap:8px 14px}
+.ecart{align-items:flex-start}
+.e-nom{flex:1}
+.e-fleche{font-size:24px;line-height:1;font-weight:500}
+.ecart.hausse .e-fleche{color:var(--amber)}.ecart.baisse .e-fleche{color:var(--gold)}
+@media (max-width:520px){.ajout-budget{grid-template-columns:1fr}}
