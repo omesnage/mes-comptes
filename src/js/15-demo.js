@@ -72,6 +72,6 @@ function demoData(){
   return st;
 }
 function addAccountTo(st,x){const a={id:newId('a_'),name:x.name,bank:x.bank||'',no:'',type:x.type,confirmed:!!x.confirmed,solde:null,soldeDate:''};st.accounts.push(a);return a}
-function startDemo(){backup=S; demo=true; S=demoData(); P=null; view='accueil'; FICHE=null; render(); window.scrollTo({top:0})}
-function exitDemo(){demo=false;S=backup||blank();if(!backup)S.onboarded=true;backup=null;P=null;openCat=null;FICHE=null;view='accueil'}
+function startDemo(){backup=S; demo=true; S=demoData(); P=null; PB=null; view='accueil'; FICHE=null; render(); window.scrollTo({top:0})}
+function exitDemo(){PB=null;demo=false;S=backup||blank();if(!backup)S.onboarded=true;backup=null;P=null;openCat=null;FICHE=null;view='accueil'}
 

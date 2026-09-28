@@ -5,10 +5,18 @@ function aller(tab,ancre){
   const el=ancre&&document.getElementById(ancre);
   if(el){if(el.tagName==='DETAILS')el.open=true;el.scrollIntoView({block:'start'})}else window.scrollTo({top:0});
 }
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.bcat&&e.target.tagName==='circle'){e.preventDefault();BCAT=e.target.dataset.bcat;render()}});
 document.addEventListener('click',async e=>{
+  const part=e.target.closest&&e.target.closest('circle[data-bcat]'); if(part){BCAT=part.dataset.bcat;render();return}
   const t=e.target.closest&&e.target.closest('button,[data-act="closefiche"]'); if(!t) return;
   const d=t.dataset;
-  if(d.act==='closefiche'){FICHE=null;render();return}
+  if(d.act==='closefiche'){FICHE=null;BCAT=null;render();return}
+  if(d.blvl){PB.lvl=d.blvl;BTOUT=false;render();return}
+  if(d.bshift){PB=shift(PB,+d.bshift);BTOUT=false;render();return}
+  if(d.bu){BU=d.bu;BCAT=null;render();return}
+  if(d.bcat){BCAT=d.bcat;render();setTimeout(()=>$('.fiche .fermer')?.focus(),30);return}
+  if(d.autres||d.btout){BTOUT=!BTOUT;render();return}
+  if(d.bmois){const [y,m]=d.bmois.split('-').map(Number);PB={lvl:'M',y,m};BCAT=null;BTOUT=false;render();window.scrollTo({top:0});return}
   if(d.act==='onbfin'){S.onboarded=true;ONB=0;save();aller(d.tab||'accueil');return}
   if(d.onb){ONB=+d.onb;render();window.scrollTo({top:0});return}
   if(d.act==='relancer'){S.onboarded=false;ONB=0;save();render();window.scrollTo({top:0});return}
@@ -71,7 +79,7 @@ document.addEventListener('change',e=>{
   if(t.id==='revfile'&&t.files.length){if(demo)exitDemo();readRev(t.files[0]);t.value=''}
   if(d.rev){const v=+t.value;if(d.rev==='sheet'){revDraft.sheet=v;detect()}else revDraft[d.rev]=v;render()}
 });
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(FICHE){FICHE=null;render();return}if($('#review')){$('#review').remove();document.body.style.overflow=''}});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(FICHE||BCAT){FICHE=null;BCAT=null;render();return}if($('#review')){$('#review').remove();document.body.style.overflow=''}});
 document.addEventListener('input',e=>{
   const d=e.target.dataset||{};
   if(d.set==='netVise'||d.set==='heures'){const el=$('#cibleLive');if(el){const s={...S.settings,[d.set]:+e.target.value||0};el.textContent=eurH((+s.netVise||SET0.netVise)/(+s.heures||SET0.heures))}}

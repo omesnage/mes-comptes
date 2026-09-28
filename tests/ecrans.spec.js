@@ -1,5 +1,5 @@
 import {test,expect,openWith} from './helpers.js';
-const VUES=['accueil','operations','importer','reglages'];
+const VUES=['accueil','bilan','operations','importer','reglages'];
 
 /* 3 ans d'historique, environ 5 000 opérations sur trois comptes */
 function histoire(){
@@ -36,6 +36,10 @@ async function parcours(page,f){
   await openWith(page,null);
   await page.click('[data-act="demo"]');
   for(const k of [0,1]){await page.evaluate(k=>{view='accueil';P=shift(defaultPeriod(),-k);openCat='resto';render()},k);await f('accueil '+k)}
+  await page.click('nav.tabs [data-tab="bilan"]'); await f('bilan');
+  await page.click('[data-blvl="Y"]'); await page.click('[data-btout]'); await f('bilan annee');
+  await page.locator('.legende .leg[data-bcat]').first().click(); await f('fiche rubrique'); await page.click('.fiche .fermer');
+  await page.click('[data-bu="pro"]'); await f('bilan activite');
   await page.click('nav.tabs [data-tab="operations"]'); await f('operations');
   await page.locator('.ops .op').first().click(); await expect(page.locator('.fiche')).toBeVisible(); await f('fiche');
   await page.click('.fiche .fermer');
@@ -92,7 +96,7 @@ test('aucun défilement horizontal en largeur mobile',async({page})=>{
 test('trois onglets, en bas de l’écran sur mobile ; réglages derrière l’engrenage',async({page})=>{
   await page.setViewportSize({width:390,height:800});
   await openWith(page,null); await page.click('[data-act="demo"]');
-  await expect(page.locator('nav.tabs button')).toHaveText([/Accueil/,/Mes opérations/,/Importer/]);
+  await expect(page.locator('nav.tabs button')).toHaveText([/Accueil/,/Bilan/,/Mes opérations/,/Importer/]);
   const b=await page.locator('nav.tabs').boundingBox(); expect(b.y+b.height).toBeGreaterThan(790);
   await page.click('#gear'); await expect(page.locator('.titre-page')).toHaveText('Réglages');
 });

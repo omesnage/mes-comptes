@@ -28,7 +28,7 @@ const inUniv=o=>UNIV==='all'||opUniv(o)===UNIV;
 const moisNom=p=>{const s=MOIS[p.m-1]+' '+p.y;return s[0].toUpperCase()+s.slice(1)};
 
 let ACCN=0;
-const TABS=[['accueil','Accueil','house'],['operations','Mes opérations','list'],['importer','Importer','upload']];
+const TABS=[['accueil','Accueil','house'],['bilan','Bilan','chart-pie'],['operations','Mes opérations','list'],['importer','Importer','upload']];
 function render(){
   AGG={}; RAW={}; relink(); ACCN=S.accounts.length;
   if(!P||P.lvl!=='M') P=defaultPeriod(); P.lvl='M';
@@ -40,10 +40,11 @@ function render(){
   $('#demoBar').innerHTML=demo?`<div class="demo-bar"><span>Vous regardez un exemple.</span><button data-act="exitdemo">Quitter l’exemple</button></div>`:'';
   const v=$('#view');
   if(onb) v.innerHTML=vDemarrage();
-  else if(!S.ops.length&&(view==='accueil'||view==='operations')) v.innerHTML=libBanner()+vide();
-  else v.innerHTML=libBanner()+{accueil:vAccueil,operations:vOps,importer:vImport,reglages:vReglages}[view]();
-  v.insertAdjacentHTML('beforeend',FICHE?fiche(FICHE):'');
-  document.body.classList.toggle('fige',!!FICHE);
+  else if(!S.ops.length&&['accueil','bilan','operations'].includes(view)) v.innerHTML=libBanner()+vide();
+  else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,reglages:vReglages}[view]();
+  if(view!=='bilan') BCAT=null;
+  v.insertAdjacentHTML('beforeend',FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'');
+  document.body.classList.toggle('fige',!!(FICHE||BCAT));
   icons(); setStatus();
 }
 function libBanner(){return window.pdfjsLib&&window.XLSX?'':`<div class="note-box alerte-box" role="alert"><i data-lucide="wifi-off"></i><p>${MSG_RESEAU}</p></div>`}
