@@ -2085,53 +2085,76 @@ Réponds uniquement avec un tableau JSON, un objet par marchand, sous la forme [
 }
 
 /* ============ Exemple fictif ============ */
-function startDemo(){
-  backup=S; demo=true; S=blank();
-  const now=new Date(); const M=[
-   ['CB CARREFOUR MARKET {d} GUERANDE',-62,-38,4,'courses'],['CB BIOCOOP {d} LA BAULE',-41,-18,2,'courses'],['CB LECLERC {d} GUERANDE',-120,-45,2,'courses'],
-   ['CB BOULANGERIE DU PORT {d}',-9,-4,5,'resto'],['CB LE COMPTOIR {d} NANTES',-68,-24,2,'resto'],
-   ['CB TOTALENERGIES {d} ST NAZAIRE',-78,-52,2,'transport'],['PRLV SEPA SNCF VOYAGEURS',-96,-38,1,'transport'],
-   ['PRLV SEPA EDF CLIENTS PARTICULIERS',-94,-94,1,'logement'],['PRLV SEPA LOYER SCI OCEAN',-820,-820,1,'logement'],
-   ['CB PHARMACIE DES DUNES {d}',-32,-12,1,'sante'],['VIR CPAM LOIRE ATLANTIQUE REMB',18,38,1,'sante'],
-   ['PRLV SEPA FREE MOBILE',-19.99,-19.99,1,'abonnements'],['PRLV SEPA NETFLIX.COM',-13.49,-13.49,1,'abonnements'],['CB ANTHROPIC CLAUDE.AI',-21.6,-21.6,1,'abonnements'],
-   ['CB CINEMA PATHE {d} ST NAZAIRE',-24,-12,1,'loisirs'],['CB AMAZON EU {d}',-86,-15,2,'shopping'],['CB ATELIER CERAMIQUE {d}',-55,-35,1,null],
-   ['VIR SEPA RECU HONORAIRES CLIENT',2400,3900,2,'revenus'],
-   ['ECHEANCE PRET 00012345678',-642.18,-642.18,1,'pret'],
-   ['VIR SEPA RECU DE VINTED SAS',12,45,1,'rentrees'],['FRAIS TENUE DE COMPTE',-7.5,-7.5,1,'frais']
-  ];
-  for(let k=7;k>=0;k--){
-    const dt=new Date(now.getFullYear(),now.getMonth()-k,1), y=dt.getFullYear(), m=dt.getMonth()+1;
-    for(const [lab,a,b,n,c] of M){ for(let i=0;i<n;i++){
-      if(Math.random()<.12) continue;
-      const day=1+Math.floor(Math.random()*27), ds=`${pad(day)}/${pad(m)}`;
-      let amt=a+(b-a)*Math.random(); if(k===0&&c==='resto') amt*=1.9;
-      const label=lab.replace('{d}',ds);
-      S.ops.push({id:Math.random().toString(36).slice(2,10),date:`${y}-${pad(m)}-${pad(day)}`,label,amount:+amt.toFixed(2),merchant:merchantOf(label),_c:c});
-    }}
+/* Douze mois complets, jusqu'au mois dernier : un compte perso, un compte pro, des revenus irréguliers.
+   Les données sont fixes (tirage pseudo-aléatoire à graine) pour que les alertes soient toujours les mêmes :
+   le mois affiché montre des alertes des trois niveaux, les mois précédents montrent les autres. */
+function demoData(){
+  let seed=42; const rnd=()=>{seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296};
+  const vary=(a,p)=>+(a*(1-p+2*p*rnd())).toFixed(2);
+  const now=new Date(), ym=k=>{const d=new Date(now.getFullYear(),now.getMonth()-1-k,1);return [d.getFullYear(),d.getMonth()+1]};
+  const date=(k,day)=>{const [y,m]=ym(k);return `${y}-${pad(m)}-${pad(Math.min(day,new Date(y,m,0).getDate()))}`};
+  const ops=[], cats={}, st=blank();
+  const pe=addAccountTo(st,{name:'Crédit Agricole',bank:'Crédit Agricole',type:'perso',confirmed:true});
+  const pr=addAccountTo(st,{name:'Qonto',bank:'Qonto',type:'pro',confirmed:true});
+  const add=(k,day,label,amount,cat,acct,x)=>{const o={id:'d'+ops.length,date:date(k,day),label,amount:+amount.toFixed(2),merchant:merchantOf(label),acct:acct||pe.id,...(x||{})};ops.push(o);if(cat&&!cats[o.merchant])cats[o.merchant]=cat;return o};
+  /* Chiffre d'affaires mensuel, du plus ancien (k=11) au mois affiché (k=0) : un creux, un record, puis trois mois de baisse */
+  const CA=[3800,4600,2900,5100,1900,4200,7400,3300,5200,4300,3600,2400];
+  const CLIENTS=['ATELIER NORD','STUDIO MAREE','LIBRAIRIE DES QUAIS','CABINET ROLLAND'];
+  for(let k=11;k>=0;k--){
+    const ca=CA[11-k], n=ca>4000?3:2;
+    for(let i=0;i<n;i++) add(k,4+i*9,'VIR SEPA RECU '+CLIENTS[(k+i)%4],ca/n,'revenus',pr.id);
+    const caPrev=k<11?CA[10-k]:3500;
+    add(k,6,'PRLV SEPA URSSAF',-Math.round(caPrev*.212),'cotisations',pr.id);
+    add(k,3,'PRLV SEPA OVH CLOUD',-23.99,'logiciels',pr.id);
+    add(k,8,'PRLV SEPA ADOBE SYSTEMS',-71.99,'logiciels',pr.id);
+    add(k,10,'PRLV SEPA INDY COMPTABILITE',-24,'comptable',pr.id);
+    add(k,27,'FRAIS TENUE DE COMPTE QONTO',-11,'frais',pr.id);
+    if(k<=5) add(k,12,'PRLV SEPA CANVA',-11.99,'logiciels',pr.id);
+    if(k%3===1) add(k,15,'CB LDLC',-vary(260,.4),'materiel',pr.id);
+    if(k%4===2) add(k,18,'CB SNCF VOYAGEURS',-vary(95,.3),'deplacements',pr.id);
+    if(k===8) add(k,14,'PRLV SEPA DGFIP CFE',-356,'impots',pr.id);
+    /* Rémunération : virement du compte pro vers le compte perso */
+    const remu=ca<3000?1400:2000;
+    add(k,1,'VIR SEPA EMIS VERS O MARTIN PERSO',-remu,null,pr.id);
+    add(k,2,'VIR SEPA RECU DE QONTO',remu,null,pe.id);
+    /* Budget du foyer */
+    add(k,5,'PRLV SEPA LOYER SCI OCEAN',-820,'logement');
+    add(k,11,'PRLV SEPA EDF CLIENTS PARTICULIERS',-vary(k>2&&k<8?118:78,.08),'logement');
+    add(k,7,'PRLV SEPA FREE MOBILE',-19.99,'abonnements');
+    add(k,9,'PRLV SEPA NETFLIX.COM',-13.49,'abonnements');
+    add(k,13,'PRLV SEPA SPOTIFY',k>=3?-10.99:-12.99,'abonnements');
+    const courses=k===0?[118,96,121,94]:[vary(90,.25),vary(85,.25),vary(95,.25),vary(70,.3)];
+    courses.forEach((a,i)=>add(k,3+i*7,['CB CARREFOUR MARKET GUERANDE','CB BIOCOOP LA BAULE','CB LECLERC GUERANDE','CB CARREFOUR MARKET GUERANDE'][i],-a,'courses'));
+    if(k===0) add(k,21,'CB LE COMPTOIR DU PORT',-34,'resto');
+    else [0,1,2].forEach(i=>add(k,6+i*8,['CB LE COMPTOIR DU PORT','CB CREPERIE DU MARCHE','CB BOULANGERIE DU PORT'][i],-vary(i===2?18:52,.3),'resto'));
+    add(k,16,'CB TOTALENERGIES ST NAZAIRE',-vary(62,.2),'transport');
+    add(k,31,'CB BOULANGERIE DU PORT',-vary(9,.3),'resto');
+    if(k%2===0) add(k,19,'CB PHARMACIE DES DUNES',-vary(24,.4),'sante');
+    if(k%2===0) add(k,24,'VIR CPAM LOIRE ATLANTIQUE',vary(16,.3),'sante');
+    add(k,20,k===0?'CB FNAC SPECTACLES':'CB CINEMA PATHE ST NAZAIRE',-(k===0?186:vary(26,.3)),'loisirs');
+    if(k!==1) add(k,22,'CB AMAZON EU',-vary(58,.5),'shopping');
+    if(k%3===0) add(k,26,'VIR SEPA RECU LEBONCOIN',vary(45,.4),'rentrees');
+    if(k<=2) add(k,17,'CB ATELIER CERAMIQUE',-vary(45,.2),null);
   }
-  const mk=(k,day)=>{const dt=new Date(now.getFullYear(),now.getMonth()-k,1);return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(day)}`};
-  const add=(date,label,amount,x)=>S.ops.push({id:Math.random().toString(36).slice(2,10),date,label,amount,merchant:merchantOf(label),...(x||{})});
-  add(mk(1,4),'CB AMAZON PAYMENTS 04/'+mk(1,4).slice(5,7),-89.90,{awaiting:true});
-  add(mk(1,19),'REMBOURSEMENT AMAZON EU SARL',89.90);
-  add(mk(1,9),'PRLV SEPA PAYPAL EUROPE S.A.R.L. ET CIE S.C.A 1034829 PP.1034.PP ZALANDO',-129,{_c:'shopping'});
-  add(mk(0,2),'VIR PAYPAL REMB ZALANDO SE',64.50);
-  add(mk(0,1),'CB VINTED 01/'+mk(0,1).slice(5,7),-35,{awaiting:true});
-  add(mk(2,8),'CB FNAC 08/'+mk(2,8).slice(5,7)+' NANTES',-149,{awaiting:true,_c:'shopping'});
-  S.ops.forEach(o=>{if(o._c&&!/ATELIER|AMAZON/.test(o.merchant))S.rules[o.merchant]=o._c;delete o._c;
-    if(!S.rules[o.merchant]){const c=kwSuggest(o.merchant,o.label,'perso',o.amount);if(c)S.sugg[o.merchant]={c,src:'kw'}}});
-  S.categories.find(c=>c.id==='courses').budget=380;
-  for(let k=5;k>=0;k--){add(mk(k,6),'PRLV SEPA OVH CLOUD',-23.99,{_c:'pro'});if(k%2===0)add(mk(k,14),'CB LDLC 14/'+mk(k,14).slice(5,7),-(80+Math.random()*300),{_c:'pro'})}
-  S.ops.forEach(o=>{if(o._c==='pro'){S.rules[o.merchant]='pro';delete o._c}});
-  const perso=addAccount({name:'Crédit Agricole',bank:'Crédit Agricole',type:'perso',confirmed:true}).id;
-  const pro=addAccount({name:'Qonto pro',bank:'Qonto',type:'pro',confirmed:true}).id;
-  S.ops.forEach(o=>o.acct=perso);
-  S.ops.filter(o=>S.rules[o.merchant]==='pro'||/HONORAIRES/.test(o.label)).forEach(o=>o.acct=pro);
-  for(let k=5;k>=0;k--){const d=mk(k,5);add(d,'VIR SEPA EMIS VERS OLIVIER PERSO',-1500,{acct:pro});add(d,'VIR SEPA RECU DE QONTO SAS',1500,{acct:perso})}
-  const pa=acctById(pro); pa.solde=6400; pa.soldeDate=mk(2,28);
-  S.settings={epargne:9500,taux:25,heures:140,objectif:6,assiette:'ca'};
-  S.challenges=[{id:'courses10',month:thisMonth()},{id:'noshop',month:mk(1,1).slice(0,7)}];
-  S.ops.sort((a,b)=>a.date<b.date?1:-1);
-  P=null; view='synthese'; render();
+  /* Retours : un remboursé (il y a 4 mois), un en attente depuis plus de 30 jours (il y a 2 mois) */
+  add(4,9,'CB ZALANDO',-129,'shopping',pe.id,{awaiting:true});
+  add(4,23,'VIR ZALANDO REMBOURSEMENT',129,null);
+  add(2,10,'CB AMAZON PAYMENTS',-89.9,null,pe.id,{awaiting:true});
+  st.ops=ops.sort((a,b)=>a.date<b.date?1:-1);
+  st.rules=cats;
+  st.categories.find(c=>c.id==='courses').budget=380;
+  st.categories.find(c=>c.id==='loisirs').budget=0;
+  const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
+  st.settings={...SET0,epargne:7000,taux:22,heures:160,netVise:2000,objectif:6,assiette:'ca'};
+  const mk=k=>date(k,1).slice(0,7);
+  st.challenges=[{id:'noshop',month:mk(1)},{id:'courses10',month:mk(2)},{id:'noresto',month:mk(4)},{id:'lisse',month:thisMonth()}];
+  st.since=Date.now(); st.lastBackup=Date.now();
+  return st;
+}
+function addAccountTo(st,x){const a={id:newId('a_'),name:x.name,bank:x.bank||'',no:'',type:x.type,confirmed:!!x.confirmed,solde:null,soldeDate:''};st.accounts.push(a);return a}
+function startDemo(){
+  backup=S; demo=true; S=demoData();
+  P=null; view='synthese'; UNIV='all'; render();
 }
 function exitDemo(){OPACC='';demo=false;S=backup||blank();backup=null;P=null;openCat=null}
 
