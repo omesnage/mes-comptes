@@ -19,8 +19,9 @@ function vReglages(){
     ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:'<p class="aide">Elle indique combien de mois vous tiendriez sans rien encaisser.</p>'}</section>
   ${S.accounts.length?`<section class="carte" id="comptes"><h3>Vos comptes</h3>
     ${S.accounts.map(a=>`<div class="compte-reg"><p class="cr-nom">${esc(a.name)} <button class="lien" data-renacct="${a.id}">Renommer</button></p>
-      <div class="choix">${Object.entries({perso:'Perso',pro:'Pro',mixte:'Mélangé'}).map(([k,l])=>`<button class="choix-btn${a.type===k?' suggere':''}" data-settype="${a.id}:${k}" aria-pressed="${a.type===k}">${l}</button>`).join('')}</div></div>`).join('')}
-    <p class="aide">« Mélangé » : un seul compte pour votre activité et votre vie perso. Chaque dépense est alors rangée selon sa rubrique.</p></section>`:''}
+      <p class="aide">Ce compte est-il professionnel, personnel, ou les deux mélangés ?</p>
+      <div class="choix gros">${Object.entries(TYPES_LONG).map(([k,l])=>`<button class="choix-btn${a.type===k?' suggere':''}" data-settype="${a.id}:${k}" aria-pressed="${a.type===k}">${l}</button>`).join('')}</div></div>`).join('')}
+    <p class="aide">« Les deux mélangés » : un seul compte pour votre activité et votre vie perso. Chaque dépense est alors rangée selon sa rubrique.</p></section>`:''}
   <section class="carte" id="rubriques"><h3>Vos rubriques</h3>
     <p class="aide">Un budget est facultatif : sans budget, une rubrique est comparée à ce que vous dépensez d’habitude.</p>
     ${perso.map(rub).join('')}

@@ -60,10 +60,12 @@ function moisBar(){
   <h2>${moisNom(P)}</h2><button class="fleche" data-shift="1" aria-label="Mois suivant"><i data-lucide="chevron-right"></i></button></div>`;
 }
 /* Question sur le type d'un compte nouvellement ajouté */
+const TYPES_LONG={pro:'Professionnel',perso:'Personnel',mixte:'Les deux mélangés'};
 function acctAsk(a){
-  return `<div class="question"><p class="q-t">Nouveau compte : ${esc(a.name)}. C’est un compte :</p>
-  <div class="choix">${Object.entries({perso:'Perso',pro:'Pro',mixte:'Mélangé'}).map(([k,l])=>`<button class="choix-btn${a.type===k?' suggere':''}" data-settype="${a.id}:${k}">${l}</button>`).join('')}</div>
-  <p class="q-s">« Mélangé » : un seul compte pour votre activité et votre vie perso.</p></div>`;
+  return `<div class="question compte-q"><p class="q-t">Ce compte est-il professionnel, personnel, ou les deux mélangés ?</p>
+  <p class="q-s">${esc(a.name)}${a.no?` (n° se terminant par ${esc(a.no.slice(-4))})`:''}. Nous avons supposé : ${TYPES_LONG[a.type].toLowerCase()}.</p>
+  <div class="choix gros">${Object.entries(TYPES_LONG).map(([k,l])=>`<button class="choix-btn${a.type===k?' suggere':''}" data-settype="${a.id}:${k}">${l}</button>`).join('')}</div>
+  <p class="q-s">« Les deux mélangés » : un seul compte pour votre activité et votre vie perso. Chaque dépense est alors rangée selon sa rubrique.</p></div>`;
 }
 
 /* ============ Mes opérations ============ */

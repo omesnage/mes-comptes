@@ -90,7 +90,8 @@ function vAccueil(){
       ${+S.settings.taux?'':`<p class="aide">Indiquez le pourcentage à mettre de côté dans les <button class="lien" data-tab="reglages" data-ancre="objectif">réglages</button>.</p>`}
       <div class="ligne total"><span>Il vous reste</span><b>${signed(X.revenuNet)}</b></div></section>`}
   else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ce mois-ci.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p></section>`;
-  return moisBar()+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ce mois-ci.</p>`:'')+gagne+`
+  const q=S.accounts.filter(a=>!a.confirmed);
+  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+moisBar()+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ce mois-ci.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
     <p class="phrase">${eur0(Pe.net)} dépensés côté perso</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend?null:derapage(cid,e.net,P), open=openCat===cid;

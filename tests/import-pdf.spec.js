@@ -16,7 +16,9 @@ test('relevé à colonnes Débit et Crédit : signes, dates, libellé sur deux l
   const a=await page.evaluate(()=>S.accounts[0]);
   expect(a).toMatchObject({bank:'Crédit Agricole',type:'perso',confirmed:false,no:'34567890123',solde:2606.06,soldeDate:'2026-03-31'});
   // La question du type de compte est posée, avec la supposition
-  await expect(page.locator('.releve .question')).toContainText('Nouveau compte : Crédit Agricole. C’est un compte :');
+  await expect(page.locator('.releve .question')).toContainText('Ce compte est-il professionnel, personnel, ou les deux mélangés ?');
+  await expect(page.locator('.releve .question')).toContainText('Crédit Agricole');
+  await expect(page.locator('.releve .question .choix-btn')).toHaveText(['Professionnel','Personnel','Les deux mélangés']);
   await expect(page.locator('.releve [data-settype$=":perso"]')).toHaveClass(/suggere/);
   await page.click('.releve [data-settype$=":pro"]');
   expect(await page.evaluate(()=>[S.accounts[0].type,S.accounts[0].confirmed])).toEqual(['pro',true]);

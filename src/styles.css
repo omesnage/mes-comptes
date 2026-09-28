@@ -247,3 +247,7 @@ select.grand{max-width:100%;min-width:0;text-overflow:ellipsis}
 .regle .grand{flex:1 1 100%}
 .champ{display:grid;grid-template-columns:minmax(0,1fr)}
 select,input,textarea,button,label,details,summary{box-sizing:border-box}
+.choix.gros{flex-direction:column}
+.choix.gros .choix-btn{width:100%;min-height:56px;font-size:18px;text-align:center}
+.compte-q{border-top:0;padding-top:0}
+@media (min-width:701px){.choix.gros{flex-direction:row}.choix.gros .choix-btn{width:auto;flex:1}}

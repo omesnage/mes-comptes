@@ -3,7 +3,7 @@ const MOIS_N={JANV:1,JAN:1,FEVR:2,FEV:2,MARS:3,MAR:3,AVR:4,MAI:5,JUIN:6,JUIL:7,A
 function parseDateAny(s,Y){
   s=norm(String(s||'')).trim(); let m;
   if(m=s.match(/^(\d{1,2})[\/.\- ](\d{1,2})(?:[\/.\- ](\d{2,4}))?$/)){const y=m[3]?(m[3].length===2?2000+ +m[3]:+m[3]):Y;return `${y}-${pad(m[2])}-${pad(m[1])}`}
-  if(m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/)) return s;
+  if(m=s.match(/^(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})$/)) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
   if(m=s.match(/^(\d{1,2})\s+([A-Z]{3,9})\.?(?:\s+(\d{2,4}))?$/)){const k=m[2];const mo=MOIS_N[k]||MOIS_N[k.slice(0,4)]||MOIS_N[k.slice(0,3)];if(!mo)return null;const y=m[3]?(m[3].length===2?2000+ +m[3]:+m[3]):Y;return `${y}-${pad(mo)}-${pad(m[1])}`}
   return null;
 }
