@@ -39,6 +39,45 @@ function barres(mois,val,actif,cls){
       <span class="val">${x.any?esc(eur0(x.v)):''}</span><span class="b" style="height:${Math.round(x.v/max*H)}px"></span><span class="lbl">${MOIS[x.q.m-1].slice(0,3)}${v.length>6&&x.q.m===1?' '+String(x.q.y).slice(2):''}</span></button>`).join('')}
   </div></div><p class="aide legende-moy"><span class="tiret"></span>Ligne pointillée : votre moyenne, ${eur0(moy)} par mois</p>`;
 }
+/* L'essentiel de la période : quelques lignes colorées (vert, orange, rouge) avec un petit graphique chacune */
+function essentiel(U,B,prev){
+  const items=[], pc=(v,t)=>t>0?Math.round(v/t*100):0;
+  const barre=parts=>{const t=parts.reduce((s,x)=>s+Math.max(0,x.v),0)||1;return `<span class="ess-pile">${parts.filter(x=>x.v>0.5).map(x=>`<span class="${x.c}" style="width:${x.v/t*100}%"></span>`).join('')}</span>
+    <span class="ess-leg">${parts.filter(x=>x.v>0.5).map(x=>`<span><i class="${x.c}"></i>${esc(x.l)} ${eur0(x.v)} · ${pc(x.v,t)} %</span>`).join('')}</span>`};
+  const duo=(a,la,b,lb,ok)=>{const m=Math.max(a,b,1);return `<span class="ess-duo"><span class="ess-d"><span class="ess-dl">${la}</span><span class="ess-db"><span class="entree" style="width:${a/m*100}%"></span></span><b>${eur0(a)}</b></span>
+    <span class="ess-d"><span class="ess-dl">${lb}</span><span class="ess-db"><span class="${ok?'sortie':'sortie trop'}" style="width:${b/m*100}%"></span></span><b>${eur0(b)}</b></span></span>`};
+  const [L0,L1]=motsPeriode(PB);
+  if(U==='perso'){
+    const A=B.A, reste=A.income-A.net;
+    if(A.income>0||A.net>0) items.push({etat:reste>=0?'ok':'ko',icon:reste>=0?'circle-check':'circle-alert',
+      t:reste>=0?`Il vous reste ${eur0(reste)} ${L0} : vos rentrées couvrent vos dépenses.`:`Vous avez dépensé ${eur0(-reste)} de plus que vos rentrées ${L0}.`,
+      g:duo(A.income,'Rentrées',A.net,'Dépenses',reste>=0)});
+    const fin={lvl:'M',...endOf(PB)}, lim=avecLimite().map(c=>({c,e:etatLimite(c,fin)})).filter(x=>x.e);
+    if(lim.length){const r=lim.filter(x=>x.e.etat==='rouge'),o=lim.filter(x=>x.e.etat==='orange');
+      items.push({etat:r.length?'ko':o.length?'attention':'ok',icon:r.length?'circle-alert':o.length?'triangle-alert':'circle-check',
+        t:r.length?`${r.length>1?`${r.length} limites dépassées`:'Une limite dépassée'} : ${r.map(x=>`${esc(x.c.name)} (+${eur0(x.e.dep-x.e.lim)})`).join(', ')}.`
+          :o.length?`${o.length>1?`${o.length} limites presque atteintes`:'Une limite presque atteinte'} : ${o.map(x=>esc(x.c.name)).join(', ')}.`:`Toutes vos limites sont respectées.`,
+        g:`<span class="ess-lims">${lim.map(x=>`<span class="ess-lim ${x.e.etat}"><span class="ess-lim-n">${esc(x.c.name)}</span><span class="ess-lim-b"><span style="width:${Math.min(100,x.e.dep/x.e.lim*100)}%"></span></span><span class="ess-lim-v">${eur0(x.e.dep)} / ${eur0(x.e.lim)}</span></span>`).join('')}</span>`})}
+    if(A.net>0){const oblig=A.fixed, varia=A.net-A.fixed;
+      items.push({etat:'neutre',icon:'scale',t:`Vos dépenses obligatoires (logement, énergie, abonnements, emprunt…) pèsent ${pc(oblig,A.net)} % de vos dépenses.`,
+        g:barre([{v:oblig,l:'Obligatoires',c:'fixe'},{v:varia,l:'Variables',c:'var'}])})}
+  } else {
+    const X=B.A, ca=X.ca, V=netVise()*X.months;
+    if(ca>0){const ok=X.revenuNet>=V;
+      items.push({etat:ok?'ok':'ko',icon:ok?'circle-check':'circle-alert',
+        t:ok?`Il vous reste ${eur0(X.revenuNet)} de ${eur0(ca)} encaissés : ${eur0(X.revenuNet-V)} de plus que votre objectif.`:`Il vous reste ${signed(X.revenuNet)} de ${eur0(ca)} encaissés : il manque ${eur0(V-X.revenuNet)} pour votre objectif.`,
+        g:barre([{v:X.fraisExpl,l:'Frais',c:'frais'},{v:X.provision,l:'Cotisations et impôts',c:'cot'},{v:Math.max(0,X.revenuNet),l:'Il vous reste',c:'reste'}])});
+      const f=pc(X.fraisExpl,ca);
+      items.push({etat:f<15?'ok':f<30?'attention':'ko',icon:f<15?'circle-check':'triangle-alert',t:`Vos frais représentent ${f} % de vos encaissements${f<15?' : c’est raisonnable.':f<30?' : à surveiller.':' : c’est beaucoup.'}`})}
+  }
+  const ids=[...new Set([...B.rows,...prev.rows].map(r=>r[0]))], ec=ids.map(cid=>({cid,d:(B.rows.find(r=>r[0]===cid)?.[1]||0)-(prev.rows.find(r=>r[0]===cid)?.[1]||0)}));
+  const h=ec.filter(x=>x.d>30).sort((a,b)=>b.d-a.d)[0], bs=ec.filter(x=>x.d<-30).sort((a,b)=>a.d-b.d)[0];
+  const ref=PB.lvl==='M'?'au mois précédent':PB.lvl==='Q'?'au trimestre précédent':'à l’année précédente';
+  if(h) items.push({etat:'attention',icon:'trending-up',t:`Plus forte hausse : ${esc(nomRub(h.cid))}, +${eur0(h.d)} par rapport ${ref}.`});
+  if(bs) items.push({etat:'ok',icon:'trending-down',t:`Plus forte baisse : ${esc(nomRub(bs.cid))}, ${eur0(-bs.d)} de moins qu’${ref==='au mois précédent'?'au mois précédent':ref==='au trimestre précédent'?'au trimestre précédent':'à l’année précédente'}.`.replace('qu’au','qu’au').replace('qu’à','qu’à')});
+  if(!items.length) return '';
+  return `<section class="carte essentiel"><h3>L’essentiel ${esc(deP(PB))}</h3>${items.map(x=>`<div class="ess ${x.etat}"><i data-lucide="${x.icon}"></i><div class="ess-c"><p class="ess-t">${x.t}</p>${x.g||''}</div></div>`).join('')}</section>`;
+}
 function vBilan(){
   if(!PB) PB={lvl:'M',y:P.y,m:P.m};
   const U=bilanU(), B=bilan(PB,U), prev=bilan(shift(PB,-1),U);
@@ -53,6 +92,7 @@ function vBilan(){
   return `<div class="seg" role="group" aria-label="Période">${lvl.map(([k,l])=>`<button data-blvl="${k}" aria-pressed="${PB.lvl===k}">${l}</button>`).join('')}</div>
   <div class="mois"><button class="fleche" data-bshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${nomPeriode(PB)}</h2><button class="fleche" data-bshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>
   ${hasFraisPro()?`<div class="seg" role="group" aria-label="Dépenses montrées"><button data-bu="perso" aria-pressed="${U==='perso'}">Perso</button><button data-bu="pro" aria-pressed="${U==='pro'}">Activité</button></div>`:''}
+  ${essentiel(U,B,prev)}
   ${U==='pro'?`<section class="carte salaire-bilan">${salaireBloc(PB,'bilan')||'<p class="aide">Aucune activité sur cette période.</p>'}</section>${justePrixBloc()}`:''}
   ${U==='pro'?heuresPeriode(PB):''}
   <section class="carte repartition"><h3>Répartition de vos dépenses ${esc(deP(PB))}</h3>

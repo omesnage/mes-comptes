@@ -404,3 +404,34 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 .salaire.or,.phrase.or,.h-reel.or,.heures-bilan .phrase.or,.juste-prix .phrase.or{color:var(--ok)}
 .ecart.baisse .e-fleche,.m-baisse,.verif.ok{color:var(--ok)}
 .defi .d-res.ok{color:var(--ok)}
+
+/* L'essentiel du Bilan */
+.essentiel{border-top:3px solid var(--gold)}
+.ess{display:grid;grid-template-columns:26px 1fr;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.ess:last-child{border-bottom:0}
+.ess>svg{width:24px;height:24px;margin-top:2px}
+.ess.ok>svg{color:var(--ok)}.ess.attention>svg{color:var(--amber)}.ess.ko>svg{color:var(--alert)}.ess.neutre>svg{color:var(--gold)}
+.ess-t{margin:0 0 8px;font-size:18px;font-weight:500;line-height:1.45}
+.ess.ok .ess-t{color:var(--ok)}.ess.attention .ess-t{color:var(--amber)}.ess.ko .ess-t{color:var(--alert)}
+.ess-duo{display:flex;flex-direction:column;gap:6px}
+.ess-d{display:grid;grid-template-columns:92px 1fr auto;gap:10px;align-items:center;font-size:15px}
+.ess-dl{color:var(--muted)}
+.ess-d b{font-weight:500;font-variant-numeric:tabular-nums;font-size:16px}
+.ess-db{height:14px;background:var(--line);border-radius:7px;position:relative;overflow:hidden}
+.ess-db span{position:absolute;left:0;top:0;bottom:0;border-radius:7px}
+.ess-db .entree{background:var(--ok-bar)}.ess-db .sortie{background:var(--gold)}.ess-db .sortie.trop{background:var(--alert)}
+.ess-pile{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--line);margin-bottom:8px}
+.ess-pile span{height:100%}
+.fixe{background:var(--ink)}.var{background:var(--gold)}.frais{background:var(--muted)}.cot{background:var(--amber)}.reste{background:var(--ok-bar)}
+.ess-leg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:15px;color:var(--muted)}
+.ess-leg span{display:inline-flex;align-items:center;gap:6px}
+.ess-leg i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.ess-lims{display:flex;flex-direction:column;gap:6px}
+.ess-lim{display:grid;grid-template-columns:minmax(0,1.2fr) 1fr auto;gap:10px;align-items:center;font-size:15px}
+.ess-lim-n{overflow-wrap:anywhere}
+.ess-lim-b{height:10px;background:var(--line);border-radius:5px;position:relative;overflow:hidden}
+.ess-lim-b span{position:absolute;left:0;top:0;bottom:0;background:var(--ok-bar);border-radius:5px}
+.ess-lim.orange .ess-lim-b span{background:var(--amber)}.ess-lim.rouge .ess-lim-b span{background:var(--alert)}
+.ess-lim-v{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
+.ess-lim.rouge .ess-lim-v{color:var(--alert)}
+@media (max-width:420px){.ess-d{grid-template-columns:78px 1fr auto}.ess-lim{grid-template-columns:1fr auto}.ess-lim-b{grid-column:1/-1;grid-row:2}}
