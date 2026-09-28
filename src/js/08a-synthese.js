@@ -83,7 +83,7 @@ function retenirBox(ret){return ret.length?`<div class="retenir" aria-label="À 
 function askAccounts(){return S.accounts.filter(a=>!a.confirmed).map(a=>acctAsk(a,false)).join('')}
 function sortRows(by){return Object.entries(by).filter(([,e])=>e.spent||e.ref).sort((a,b)=>b[1].net-a[1].net)}
 
-function vSynth(){return askAccounts()+periodBar()+({pro:vSynthPro,perso:vSynthPerso}[UNIV]||vSynthAll)()}
+function vSynth(){return askAccounts()+periodBar()+(UNIV!=='perso'?alerteRevenu():'')+({pro:vSynthPro,perso:vSynthPerso}[UNIV]||vSynthAll)()}
 
 function vSynthPerso(){
   const A=agg(P,'perso'), B=agg(shift(P,-1),'perso');
@@ -133,6 +133,7 @@ function vSynthPro(){
     <div class="row total"><span>Revenu net</span><b style="color:${A.revenuNet<0?'var(--alert)':'inherit'}">${signed(A.revenuNet)}</b></div>
     ${hasPro()?`<div class="row"><span>Rémunération versée</span><b>${signed(A.remu)}</b><span class="sub">Les virements de votre compte pro vers votre compte perso. Ce n’est ni une dépense ni une rentrée : c’est votre salaire d’indépendant.</span></div>`:''}
   </section>
+  ${courbeTaux()}
   ${tr?`<section class="block"><h3 class="sec">Trésorerie</h3>
     ${tr.t==null?`<p class="lead">Indiquez le solde de votre compte pro dans Réglages : l’application en déduit la trésorerie dont vous disposez vraiment, une fois la provision mise de côté.</p><button class="btn" data-tab="regles">Indiquer le solde</button>`:`
     <div class="row"><span>Solde estimé du compte pro</span><b>${signed(tr.t)}</b><span class="sub">Au ${dfmt(tr.date)}, d’après le dernier solde connu et les opérations suivantes.${tr.missing.length?` Solde inconnu pour : ${esc(tr.missing.join(', '))}.`:''}</span></div>

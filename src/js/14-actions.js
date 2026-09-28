@@ -64,7 +64,7 @@ document.addEventListener('change',e=>{
   if(d.rev){const v=+t.value;if(d.rev==='sheet'){revDraft.sheet=v;detect()}else revDraft[d.rev]=v;render()}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#review')){$('#review').remove();document.body.style.overflow=''}});
-document.addEventListener('input',e=>{if(e.target.id==='search'){q=e.target.value;const pos=e.target.selectionStart;render();const s=$('#search');s.focus();s.setSelectionRange(pos,pos)}});
+document.addEventListener('input',e=>{if(e.target.dataset&&(e.target.dataset.set==='netVise'||e.target.dataset.set==='heures')){const el=$('#cibleLive');const v=+e.target.value||0;if(el){const s={...S.settings,[e.target.dataset.set]:v};el.textContent=eur((+s.netVise||SET0.netVise)/(+s.heures||SET0.heures))}}if(e.target.id==='search'){q=e.target.value;const pos=e.target.selectionStart;render();const s=$('#search');s.focus();s.setSelectionRange(pos,pos)}});
 ['dragover','dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{
   const z=e.target.closest&&e.target.closest('[data-drop]'); if(!z) return; e.preventDefault();
   z.classList.toggle('over',ev==='dragover');

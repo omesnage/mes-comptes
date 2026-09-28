@@ -40,6 +40,12 @@ function migrateSchema(st){
     });
     st.schemaVersion=2;
   }
+  if(st.schemaVersion<3){
+    /* v2 → v3 : 160 heures par mois par défaut au lieu de 140, sauf si la valeur avait été modifiée */
+    if(+st.settings.heures===140) st.settings.heures=160;
+    if(!st.settings.netVise) st.settings.netVise=2000;
+    st.schemaVersion=3;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }

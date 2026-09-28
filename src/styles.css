@@ -256,3 +256,27 @@ textarea.anon{width:100%;min-height:180px;font:11px/1.45 ui-monospace,Menlo,mono
   .rule-cat{grid-template-columns:1fr auto;gap:6px 12px}
   .rule-cat .rule-tools{grid-column:1/-1;grid-row:2;justify-content:flex-start;padding-left:29px}
 }
+
+/* Alertes : critique (rouge), attention (ambre), bonne nouvelle (doré) */
+:root{--alert-soft:#F7ECE8;--alert-line:#E3C4BA;--amber:#9A6A1F;--amber-soft:#F6EEDD;--amber-line:#E6D2A8;--good-soft:#F3ECDD;--good-line:#E0D0AE}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--alert-soft:#2A1C18;--alert-line:#5A3329;--amber:#D8A95E;--amber-soft:#28221A;--amber-line:#5A4526;--good-soft:#231F17;--good-line:#4E4128}}
+:root[data-theme="dark"]{--alert-soft:#2A1C18;--alert-line:#5A3329;--amber:#D8A95E;--amber-soft:#28221A;--amber-line:#5A4526;--good-soft:#231F17;--good-line:#4E4128}
+.alerte{display:grid;grid-template-columns:20px 1fr;gap:14px;padding:18px 20px 16px;border:1px solid;border-left-width:3px;margin:0 0 28px}
+.alerte>svg{width:18px;height:18px;margin-top:3px}
+.alerte p{margin:0 0 6px}
+.alerte .t{font-size:16px;line-height:1.45}
+.alerte .t b,.alerte .d b{font-weight:500}
+.alerte .d{font-size:13.5px;line-height:1.5;color:var(--muted)}
+.alerte.crit{background:var(--alert-soft);border-color:var(--alert-line);border-left-color:var(--alert)}
+.alerte.crit>svg,.alerte.crit .t b{color:var(--alert)}
+.alerte.warn{background:var(--amber-soft);border-color:var(--amber-line);border-left-color:var(--amber)}
+.alerte.warn>svg,.alerte.warn .t b{color:var(--amber)}
+.alerte.good{background:var(--good-soft);border-color:var(--good-line);border-left-color:var(--gold)}
+.alerte.good>svg,.alerte.good .t b{color:var(--gold)}
+.pistes{margin:10px 0 4px;padding-left:18px;font-size:13.5px;line-height:1.5}
+.pistes li{margin-bottom:4px}
+.pistes li::marker{color:var(--alert)}
+.alerte .acts{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px}
+.alerte .acts button{font-size:12.5px;text-decoration:underline;text-underline-offset:3px;color:var(--ink)}
+.calc{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.calc b{font-family:var(--serif);font-weight:400;font-size:22px;color:var(--gold);line-height:1.3}

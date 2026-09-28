@@ -27,7 +27,7 @@ const V1={
   champFutur:{garde:true}
 };
 function checkMigrated(s){
-  expect(s.schemaVersion).toBe(2);
+  expect(s.schemaVersion).toBe(3);
   expect(s.ops).toHaveLength(6);
   expect(s.accounts.map(a=>[a.name,a.type,a.confirmed]).sort()).toEqual([['Compte principal','perso',false],['Crédit Agricole','perso',false],['Qonto pro','pro',false]]);
   const ids=new Set(s.accounts.map(a=>a.id));
@@ -43,7 +43,7 @@ function checkMigrated(s){
   expect(c.logiciels).toMatchObject({type:'expense',univers:'pro'});
   // Aucun champ perdu
   expect(s.rules).toEqual(V1.rules); expect(s.sugg).toEqual(V1.sugg); expect(s.readers).toEqual(V1.readers);
-  expect(s.challenges).toEqual(V1.challenges); expect(s.settings).toMatchObject(V1.settings); expect(s.champFutur).toEqual({garde:true});
+  expect(s.challenges).toEqual(V1.challenges); expect(s.settings).toMatchObject({...V1.settings,netVise:2000}); expect(s.champFutur).toEqual({garde:true});
   expect(s.ops.find(o=>o.id==='o5').awaiting).toBe(true);
   expect(s.ops.find(o=>o.id==='o4').cat).toBe('c_form');
 }
@@ -97,7 +97,7 @@ test('vraies données produites par l’ancienne version de l’application',asy
   // 2. La nouvelle version ouvre les mêmes données
   await page.goto(APP); await page.waitForSelector('.univ');
   const s=await page.evaluate(()=>S);
-  expect(s.schemaVersion).toBe(2);
+  expect(s.schemaVersion).toBe(3);
   expect(s.ops.length).toBe(v1.ops.length);
   expect(s.rules).toEqual(v1.rules);
   expect(s.settings).toMatchObject({taux:25,heures:150});
@@ -105,4 +105,9 @@ test('vraies données produites par l’ancienne version de l’application',asy
   const r=await page.evaluate(()=>({pro:agg({lvl:'M',y:2026,m:3},'pro'),perso:agg({lvl:'M',y:2026,m:3},'perso')}));
   expect(r.pro.remu).toBe(1500);
   expect(r.perso.inc.remu).toBe(1500);
+});
+
+test('heures : l’ancien réglage par défaut de 140 h passe à 160 h, une valeur modifiée est gardée',async({page})=>{
+  await openWith(page,{...V1,settings:{...V1.settings,heures:140}});
+  expect(await page.evaluate(()=>[S.settings.heures,S.settings.netVise,tauxCible()])).toEqual([160,2000,12.5]);
 });

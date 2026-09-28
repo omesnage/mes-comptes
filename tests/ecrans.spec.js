@@ -16,7 +16,7 @@ function histoire(){
     ops.push({id:'x'+(n++),date:`${y}-${mm}-10`,label:'VIREMENT RECU COMPTE',amount:200,merchant:'COMPTE',acct:'ep'});
   }
   ops.sort((a,b)=>a.date<b.date?1:-1);
-  return {schemaVersion:2,accounts:acc,ops,settings:{taux:22,epargne:12000},
+  return {schemaVersion:3,accounts:acc,ops,settings:{taux:22,epargne:12000},
     rules:{CARREFOUR:'courses','BOULANGERIE DU PORT':'resto','RESTAURANT LE QUAI':'resto',TOTALENERGIES:'transport',EDF:'logement',NETFLIX:'abonnements',AMAZON:'shopping','HONORAIRES CLIENT':'revenus',URSSAF:'cotisations',ADOBE:'logiciels',LDLC:'materiel'}};
 }
 

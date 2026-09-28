@@ -62,7 +62,7 @@ test('un seul compte mélangé : la rubrique décide du côté pro ou perso',asy
     {id:'4',date:'2026-05-07',label:'CB MAGASIN INCONNU',amount:-40,merchant:'MAGASIN INCONNU',acct:'a1'},
     {id:'5',date:'2026-05-08',label:'VIR CAF',amount:200,merchant:'CAF',acct:'a1'},
     {id:'6',date:'2026-05-09',label:'PRLV URSSAF',amount:-450,merchant:'URSSAF',acct:'a1'}];
-  await openWith(page,{schemaVersion:2,accounts:[{id:'a1',name:'Banque',type:'mixte',confirmed:true}],ops,
+  await openWith(page,{schemaVersion:3,accounts:[{id:'a1',name:'Banque',type:'mixte',confirmed:true}],ops,
     rules:{'CLIENT X':'revenus',CARREFOUR:'courses',ADOBE:'logiciels',CAF:'rentrees',URSSAF:'cotisations'},settings:{taux:20}});
   const r=await page.evaluate(()=>{const p={lvl:'M',y:2026,m:5};return {pro:agg(p,'pro'),perso:agg(p,'perso')}});
   expect(r.pro.ca).toBe(3000);
@@ -79,7 +79,7 @@ test('un seul compte mélangé : la rubrique décide du côté pro ou perso',asy
 });
 
 test('rubrique marquée pro sur un compte perso : comptée côté pro',async({page})=>{
-  await openWith(page,{schemaVersion:2,accounts:[{id:'p',name:'Perso',type:'perso',confirmed:true}],
+  await openWith(page,{schemaVersion:3,accounts:[{id:'p',name:'Perso',type:'perso',confirmed:true}],
     ops:[{id:'1',date:'2026-05-03',label:'PRLV OVH',amount:-30,merchant:'OVH',acct:'p'},{id:'2',date:'2026-05-04',label:'CB SNCF',amount:-80,merchant:'SNCF',acct:'p'}],
     rules:{OVH:'logiciels',SNCF:'transport'}});
   const r=await page.evaluate(()=>{const p={lvl:'M',y:2026,m:5};return [Object.keys(agg(p,'pro').by),Object.keys(agg(p,'perso').by)]});

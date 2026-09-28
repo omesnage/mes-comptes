@@ -123,16 +123,24 @@ function vQueue(){
 function vRules(){
   const r=Object.entries(S.rules).sort((a,b)=>a[0].localeCompare(b[0]));
   const s=S.settings;
-  return `<section class="block"><h3 class="sec">Votre situation</h3>
-  <p class="lead">Ces chiffres servent au matelas de sécurité, à la part à mettre de côté et au vrai prix de vos dépenses.</p>
+  return `<section class="block" id="activite"><h3 class="sec">Votre activité</h3>
+  <p class="lead">Le revenu net que vous visez chaque mois, une fois payés vos frais, vos cotisations et vos impôts, et le temps que vous y passez. L’application en déduit le taux horaire à atteindre.</p>
+  <div class="fields">
+    <label>Revenu net visé par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
+    <label>Heures travaillées par mois<input type="number" inputmode="numeric" min="1" step="5" data-set="heures" value="${s.heures||''}" placeholder="160"></label>
+    <div class="calc"><span>Taux horaire visé</span><b id="cibleLive">${eur(tauxCible())}</b></div>
+  </div>
+  <div class="fields">
+    <label>Part à mettre de côté pour les cotisations et impôts (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="selon votre statut"></label>
+    <label>Calculée sur<select class="quiet" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>le chiffre d’affaires encaissé</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>le résultat, après les frais</option></select></label>
+  </div>
+  <p class="note">La part à mettre de côté dépend de votre statut et de votre régime : vérifiez-la avec votre comptable ou sur le site de l’URSSAF. En micro-entreprise, elle se calcule sur le chiffre d’affaires encaissé ; dans les autres cas, le plus souvent sur le résultat.</p></section>
+  <section class="block"><h3 class="sec">Votre épargne</h3>
+  <p class="lead">Elle sert à calculer votre matelas de sécurité : le nombre de mois que vous tiendriez sans rien encaisser.</p>
   <div class="fields">
     <label>Épargne disponible (€)<input type="number" inputmode="numeric" min="0" step="100" data-set="epargne" value="${s.epargne||''}" placeholder="0"></label>
-    <label>Part des revenus à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="selon votre statut"></label>
-    <label>Calculée sur<select class="quiet" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>le chiffre d’affaires encaissé</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>le résultat, après les frais</option></select></label>
-    <label>Heures travaillées par mois<input type="number" inputmode="numeric" min="1" step="5" data-set="heures" value="${s.heures||''}" placeholder="140"></label>
     <label>Matelas visé (mois)<input type="number" inputmode="numeric" min="1" max="36" step="1" data-set="objectif" value="${s.objectif||''}" placeholder="6"></label>
-  </div>
-  <p class="note">La part à mettre de côté pour les cotisations et les impôts dépend de votre statut et de votre régime : vérifiez-la avec votre comptable ou sur le site de l’URSSAF. En micro-entreprise, elle se calcule sur le chiffre d’affaires encaissé ; dans les autres cas, le plus souvent sur le résultat.</p></section>
+  </div></section>
   ${S.accounts.length?`<section class="block"><h3 class="sec">Comptes</h3><p class="lead">Dites pour chaque compte s’il est professionnel ou personnel. Un compte pro alimente l’univers Pro, un compte perso l’univers Perso. Si vous n’avez qu’un seul compte pour tout, choisissez « Pro et perso mélangés » : chaque dépense est alors rangée selon sa rubrique.</p>
   ${S.accounts.map(a=>{const n=S.ops.filter(o=>o.acct===a.id).length;return `<div class="acct-card">
     <div class="acct-head"><span class="acct-name">${esc(a.name)}</span><span class="note">${a.no?'n° ····'+esc(a.no.slice(-4))+', ':''}${n} opération${n>1?'s':''}</span><button class="link" data-renacct="${a.id}">Renommer</button></div>

@@ -1,6 +1,6 @@
 /* ============ Données de base ============ */
-const SCHEMA=2;
-const SET0={epargne:0,taux:0,heures:140,objectif:6,assiette:'ca'};
+const SCHEMA=3;
+const SET0={epargne:0,taux:0,heures:160,netVise:2000,objectif:6,assiette:'ca'};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
  ['courses','Courses alimentaires','shopping-basket','expense','perso'],

@@ -56,7 +56,7 @@ function hoursTxt(eur,rate){const h=eur/rate;const H=Math.floor(h),M=Math.round(
 function vEco(){
   const A=agg(P), B=agg(shift(P,-1)), st=stats(P,'all'), rec=recurring();
   const recTot=rec.reduce((s,r)=>s+r.annual,0);
-  const rate=st.lisse>0?st.lisse/(+S.settings.heures||140):0;
+  const X=activite(P), rate=X.tauxLisse>0?X.tauxLisse:0;
   const top=Object.values(A.by).flatMap(e=>e.ops).filter(o=>o.amount<0&&!catById(catOf(o))?.fixed).sort((a,b)=>a.amount-b.amount).slice(0,6);
   const fixedCats=S.categories.filter(c=>c.fixed&&c.type==='expense');
   const l3=st.ms.filter(x=>x.a.any).slice(-3);
@@ -72,9 +72,9 @@ function vEco(){
     ${rec.map(r=>`<div class="row"><span>${esc(r.m)}</span><b>${eur0(r.annual)} / an</b><span class="sub">${esc(catById(r.c)?.name||'')}, environ ${eur(r.monthly)} par mois</span></div>`).join('')}`:'<p class="note">Rien de régulier repéré pour l’instant. Il faut au moins trois mois de relevés.</p>'}
   </section>
   <section class="block"><h3 class="sec">Le vrai prix de vos dépenses</h3>
-    ${rate?`<p class="lead">Votre heure de travail vaut environ ${eur(rate)}, d’après votre revenu lissé et ${+S.settings.heures||140} h travaillées par mois. Voici ce que vos plus grosses dépenses de la période, hors charges fixes, vous ont coûté en temps.</p>
+    ${rate?`<p class="lead">Votre heure de travail vous rapporte réellement ${eur(rate)}, d’après votre revenu net des ${X.nLisse} derniers mois et ${X.H} h travaillées par mois. Voici ce que vos plus grosses dépenses de la période, hors charges fixes, vous ont coûté en temps de travail.</p>
     ${top.map(o=>`<div class="row"><span>${esc(o.merchant)}</span><b>${hoursTxt(-o.amount,rate)}</b><span class="sub">${dfmt(o.date)}, ${eur(-o.amount)}</span></div>`).join('')||'<p class="note">Aucune dépense sur cette période.</p>'}`
-    :'<p class="note">Il faut des revenus importés pour calculer la valeur de votre heure de travail.</p>'}
+    :`<p class="note">${X.nLisse?'Votre revenu net est nul ou négatif sur les derniers mois : impossible de donner un prix à votre heure pour l’instant.':'Il faut des encaissements professionnels pour calculer ce que vous rapporte une heure de travail.'}</p>`}
   </section>
   ${rises.length?`<section class="block"><h3 class="sec">Postes en hausse</h3><p class="lead">Par rapport à la période précédente.</p>
     ${rises.map(x=>`<div class="row"><span>${esc(catById(x.c)?.name||x.c)} ${x.d/x.pb>.5?'🔥':'⚠️'}</span><b>+${eur0(x.d)}</b><span class="sub">${eur0(x.pb)} puis ${eur0(x.now)}</span></div>`).join('')}</section>`:''}`;

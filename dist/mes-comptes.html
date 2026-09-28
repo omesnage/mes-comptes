@@ -270,6 +270,30 @@ textarea.anon{width:100%;min-height:180px;font:11px/1.45 ui-monospace,Menlo,mono
   .rule-cat{grid-template-columns:1fr auto;gap:6px 12px}
   .rule-cat .rule-tools{grid-column:1/-1;grid-row:2;justify-content:flex-start;padding-left:29px}
 }
+
+/* Alertes : critique (rouge), attention (ambre), bonne nouvelle (doré) */
+:root{--alert-soft:#F7ECE8;--alert-line:#E3C4BA;--amber:#9A6A1F;--amber-soft:#F6EEDD;--amber-line:#E6D2A8;--good-soft:#F3ECDD;--good-line:#E0D0AE}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--alert-soft:#2A1C18;--alert-line:#5A3329;--amber:#D8A95E;--amber-soft:#28221A;--amber-line:#5A4526;--good-soft:#231F17;--good-line:#4E4128}}
+:root[data-theme="dark"]{--alert-soft:#2A1C18;--alert-line:#5A3329;--amber:#D8A95E;--amber-soft:#28221A;--amber-line:#5A4526;--good-soft:#231F17;--good-line:#4E4128}
+.alerte{display:grid;grid-template-columns:20px 1fr;gap:14px;padding:18px 20px 16px;border:1px solid;border-left-width:3px;margin:0 0 28px}
+.alerte>svg{width:18px;height:18px;margin-top:3px}
+.alerte p{margin:0 0 6px}
+.alerte .t{font-size:16px;line-height:1.45}
+.alerte .t b,.alerte .d b{font-weight:500}
+.alerte .d{font-size:13.5px;line-height:1.5;color:var(--muted)}
+.alerte.crit{background:var(--alert-soft);border-color:var(--alert-line);border-left-color:var(--alert)}
+.alerte.crit>svg,.alerte.crit .t b{color:var(--alert)}
+.alerte.warn{background:var(--amber-soft);border-color:var(--amber-line);border-left-color:var(--amber)}
+.alerte.warn>svg,.alerte.warn .t b{color:var(--amber)}
+.alerte.good{background:var(--good-soft);border-color:var(--good-line);border-left-color:var(--gold)}
+.alerte.good>svg,.alerte.good .t b{color:var(--gold)}
+.pistes{margin:10px 0 4px;padding-left:18px;font-size:13.5px;line-height:1.5}
+.pistes li{margin-bottom:4px}
+.pistes li::marker{color:var(--alert)}
+.alerte .acts{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px}
+.alerte .acts button{font-size:12.5px;text-decoration:underline;text-underline-offset:3px;color:var(--ink)}
+.calc{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.calc b{font-family:var(--serif);font-weight:400;font-size:22px;color:var(--gold);line-height:1.3}
 </style>
 </head>
 <body>
@@ -286,8 +310,8 @@ textarea.anon{width:100%;min-height:180px;font:11px/1.45 ui-monospace,Menlo,mono
 
 <script>
 /* ============ Données de base ============ */
-const SCHEMA=2;
-const SET0={epargne:0,taux:0,heures:140,objectif:6,assiette:'ca'};
+const SCHEMA=3;
+const SET0={epargne:0,taux:0,heures:160,netVise:2000,objectif:6,assiette:'ca'};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
  ['courses','Courses alimentaires','shopping-basket','expense','perso'],
@@ -889,6 +913,12 @@ function migrateSchema(st){
     });
     st.schemaVersion=2;
   }
+  if(st.schemaVersion<3){
+    /* v2 → v3 : 160 heures par mois par défaut au lieu de 140, sauf si la valeur avait été modifiée */
+    if(+st.settings.heures===140) st.settings.heures=160;
+    if(!st.settings.netVise) st.settings.netVise=2000;
+    st.schemaVersion=3;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }
@@ -1084,16 +1114,24 @@ function vQueue(){
 function vRules(){
   const r=Object.entries(S.rules).sort((a,b)=>a[0].localeCompare(b[0]));
   const s=S.settings;
-  return `<section class="block"><h3 class="sec">Votre situation</h3>
-  <p class="lead">Ces chiffres servent au matelas de sécurité, à la part à mettre de côté et au vrai prix de vos dépenses.</p>
+  return `<section class="block" id="activite"><h3 class="sec">Votre activité</h3>
+  <p class="lead">Le revenu net que vous visez chaque mois, une fois payés vos frais, vos cotisations et vos impôts, et le temps que vous y passez. L’application en déduit le taux horaire à atteindre.</p>
+  <div class="fields">
+    <label>Revenu net visé par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
+    <label>Heures travaillées par mois<input type="number" inputmode="numeric" min="1" step="5" data-set="heures" value="${s.heures||''}" placeholder="160"></label>
+    <div class="calc"><span>Taux horaire visé</span><b id="cibleLive">${eur(tauxCible())}</b></div>
+  </div>
+  <div class="fields">
+    <label>Part à mettre de côté pour les cotisations et impôts (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="selon votre statut"></label>
+    <label>Calculée sur<select class="quiet" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>le chiffre d’affaires encaissé</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>le résultat, après les frais</option></select></label>
+  </div>
+  <p class="note">La part à mettre de côté dépend de votre statut et de votre régime : vérifiez-la avec votre comptable ou sur le site de l’URSSAF. En micro-entreprise, elle se calcule sur le chiffre d’affaires encaissé ; dans les autres cas, le plus souvent sur le résultat.</p></section>
+  <section class="block"><h3 class="sec">Votre épargne</h3>
+  <p class="lead">Elle sert à calculer votre matelas de sécurité : le nombre de mois que vous tiendriez sans rien encaisser.</p>
   <div class="fields">
     <label>Épargne disponible (€)<input type="number" inputmode="numeric" min="0" step="100" data-set="epargne" value="${s.epargne||''}" placeholder="0"></label>
-    <label>Part des revenus à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="selon votre statut"></label>
-    <label>Calculée sur<select class="quiet" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>le chiffre d’affaires encaissé</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>le résultat, après les frais</option></select></label>
-    <label>Heures travaillées par mois<input type="number" inputmode="numeric" min="1" step="5" data-set="heures" value="${s.heures||''}" placeholder="140"></label>
     <label>Matelas visé (mois)<input type="number" inputmode="numeric" min="1" max="36" step="1" data-set="objectif" value="${s.objectif||''}" placeholder="6"></label>
-  </div>
-  <p class="note">La part à mettre de côté pour les cotisations et les impôts dépend de votre statut et de votre régime : vérifiez-la avec votre comptable ou sur le site de l’URSSAF. En micro-entreprise, elle se calcule sur le chiffre d’affaires encaissé ; dans les autres cas, le plus souvent sur le résultat.</p></section>
+  </div></section>
   ${S.accounts.length?`<section class="block"><h3 class="sec">Comptes</h3><p class="lead">Dites pour chaque compte s’il est professionnel ou personnel. Un compte pro alimente l’univers Pro, un compte perso l’univers Perso. Si vous n’avez qu’un seul compte pour tout, choisissez « Pro et perso mélangés » : chaque dépense est alors rangée selon sa rubrique.</p>
   ${S.accounts.map(a=>{const n=S.ops.filter(o=>o.acct===a.id).length;return `<div class="acct-card">
     <div class="acct-head"><span class="acct-name">${esc(a.name)}</span><span class="note">${a.no?'n° ····'+esc(a.no.slice(-4))+', ':''}${n} opération${n>1?'s':''}</span><button class="link" data-renacct="${a.id}">Renommer</button></div>
@@ -1252,7 +1290,7 @@ function retenirBox(ret){return ret.length?`<div class="retenir" aria-label="À 
 function askAccounts(){return S.accounts.filter(a=>!a.confirmed).map(a=>acctAsk(a,false)).join('')}
 function sortRows(by){return Object.entries(by).filter(([,e])=>e.spent||e.ref).sort((a,b)=>b[1].net-a[1].net)}
 
-function vSynth(){return askAccounts()+periodBar()+({pro:vSynthPro,perso:vSynthPerso}[UNIV]||vSynthAll)()}
+function vSynth(){return askAccounts()+periodBar()+(UNIV!=='perso'?alerteRevenu():'')+({pro:vSynthPro,perso:vSynthPerso}[UNIV]||vSynthAll)()}
 
 function vSynthPerso(){
   const A=agg(P,'perso'), B=agg(shift(P,-1),'perso');
@@ -1302,6 +1340,7 @@ function vSynthPro(){
     <div class="row total"><span>Revenu net</span><b style="color:${A.revenuNet<0?'var(--alert)':'inherit'}">${signed(A.revenuNet)}</b></div>
     ${hasPro()?`<div class="row"><span>Rémunération versée</span><b>${signed(A.remu)}</b><span class="sub">Les virements de votre compte pro vers votre compte perso. Ce n’est ni une dépense ni une rentrée : c’est votre salaire d’indépendant.</span></div>`:''}
   </section>
+  ${courbeTaux()}
   ${tr?`<section class="block"><h3 class="sec">Trésorerie</h3>
     ${tr.t==null?`<p class="lead">Indiquez le solde de votre compte pro dans Réglages : l’application en déduit la trésorerie dont vous disposez vraiment, une fois la provision mise de côté.</p><button class="btn" data-tab="regles">Indiquer le solde</button>`:`
     <div class="row"><span>Solde estimé du compte pro</span><b>${signed(tr.t)}</b><span class="sub">Au ${dfmt(tr.date)}, d’après le dernier solde connu et les opérations suivantes.${tr.missing.length?` Solde inconnu pour : ${esc(tr.missing.join(', '))}.`:''}</span></div>
@@ -1504,7 +1543,7 @@ function hoursTxt(eur,rate){const h=eur/rate;const H=Math.floor(h),M=Math.round(
 function vEco(){
   const A=agg(P), B=agg(shift(P,-1)), st=stats(P,'all'), rec=recurring();
   const recTot=rec.reduce((s,r)=>s+r.annual,0);
-  const rate=st.lisse>0?st.lisse/(+S.settings.heures||140):0;
+  const X=activite(P), rate=X.tauxLisse>0?X.tauxLisse:0;
   const top=Object.values(A.by).flatMap(e=>e.ops).filter(o=>o.amount<0&&!catById(catOf(o))?.fixed).sort((a,b)=>a.amount-b.amount).slice(0,6);
   const fixedCats=S.categories.filter(c=>c.fixed&&c.type==='expense');
   const l3=st.ms.filter(x=>x.a.any).slice(-3);
@@ -1520,14 +1559,78 @@ function vEco(){
     ${rec.map(r=>`<div class="row"><span>${esc(r.m)}</span><b>${eur0(r.annual)} / an</b><span class="sub">${esc(catById(r.c)?.name||'')}, environ ${eur(r.monthly)} par mois</span></div>`).join('')}`:'<p class="note">Rien de régulier repéré pour l’instant. Il faut au moins trois mois de relevés.</p>'}
   </section>
   <section class="block"><h3 class="sec">Le vrai prix de vos dépenses</h3>
-    ${rate?`<p class="lead">Votre heure de travail vaut environ ${eur(rate)}, d’après votre revenu lissé et ${+S.settings.heures||140} h travaillées par mois. Voici ce que vos plus grosses dépenses de la période, hors charges fixes, vous ont coûté en temps.</p>
+    ${rate?`<p class="lead">Votre heure de travail vous rapporte réellement ${eur(rate)}, d’après votre revenu net des ${X.nLisse} derniers mois et ${X.H} h travaillées par mois. Voici ce que vos plus grosses dépenses de la période, hors charges fixes, vous ont coûté en temps de travail.</p>
     ${top.map(o=>`<div class="row"><span>${esc(o.merchant)}</span><b>${hoursTxt(-o.amount,rate)}</b><span class="sub">${dfmt(o.date)}, ${eur(-o.amount)}</span></div>`).join('')||'<p class="note">Aucune dépense sur cette période.</p>'}`
-    :'<p class="note">Il faut des revenus importés pour calculer la valeur de votre heure de travail.</p>'}
+    :`<p class="note">${X.nLisse?'Votre revenu net est nul ou négatif sur les derniers mois : impossible de donner un prix à votre heure pour l’instant.':'Il faut des encaissements professionnels pour calculer ce que vous rapporte une heure de travail.'}</p>`}
   </section>
   ${rises.length?`<section class="block"><h3 class="sec">Postes en hausse</h3><p class="lead">Par rapport à la période précédente.</p>
     ${rises.map(x=>`<div class="row"><span>${esc(catById(x.c)?.name||x.c)} ${x.d/x.pb>.5?'🔥':'⚠️'}</span><b>+${eur0(x.d)}</b><span class="sub">${eur0(x.pb)} puis ${eur0(x.now)}</span></div>`).join('')}</section>`:''}`;
 }
 
+/* ============ Taux horaire et revenu net visé ============ */
+const heures=()=>+S.settings.heures||SET0.heures;
+const netVise=()=>+S.settings.netVise||SET0.netVise;
+const tauxCible=()=>netVise()/heures();
+/* Revenu net et taux horaire réel : sur la période affichée (moyenne par mois) et lissés sur 12 mois */
+function activite(p){
+  const H=heures(), V=netVise(), A=agg(p,'pro');
+  const net=A.revenuNet/A.months;
+  const e=endOf(p); const ms=monthsTo(e.y,e.m,12).map(q=>({q,a:agg(q,'pro')})).filter(x=>x.a.any);
+  const lisse=ms.length?ms.reduce((s,x)=>s+x.a.revenuNet,0)/ms.length:null;
+  return {H,V,cible:V/H,net,taux:net/H,manque:Math.max(0,V-net),ok:net>=V,any:A.any&&(A.ca>0||A.frais>0),
+    lisse,tauxLisse:lisse!=null?lisse/H:null,nLisse:ms.length,A};
+}
+/* Mois affiché encore incomplet : le dernier relevé s'arrête avant la fin du mois */
+function moisPartiel(p){
+  if(p.lvl!=='M') return null;
+  const k=p.y+'-'+pad(p.m), last=(BYMONTH[k]||[]).reduce((m,o)=>o.date>m?o.date:m,'');
+  const dim=new Date(p.y,p.m,0).getDate();
+  return last&&+last.slice(8,10)<dim-3&&lastOpDate().slice(0,7)===k?+last.slice(8,10):null;
+}
+/* Pistes chiffrées pour combler l'écart */
+function pistes(X){
+  const t=(+S.settings.taux||0)/100, ca=X.A.ca/X.A.months, frais=X.A.fraisExpl/X.A.months, out=[];
+  if(ca>0&&X.manque>0){const d=X.manque/(1-t);out.push(`Augmenter vos tarifs d’environ ${Math.ceil(d/ca*100)} %, soit ${eur0(d)} de chiffre d’affaires en plus par mois.`)}
+  if(X.net>0&&X.net/X.cible<X.H) out.push(`Ou travailler ${Math.round(X.net/X.cible)} h par mois au lieu de ${X.H} h : pour le même revenu, votre heure vaudrait ${eur(X.cible)}.`);
+  if(frais>0){const d=S.settings.assiette==='resultat'?X.manque/(1-t):X.manque;
+    out.push(d<=frais?`Ou réduire vos frais pro de ${eur0(d)} par mois, sur ${eur0(frais)} aujourd’hui.`:`Ou réduire vos frais pro, qui s’élèvent à ${eur0(frais)} par mois.`)}
+  return out;
+}
+/* Message en tête des synthèses Pro et Vue d'ensemble */
+function alerteRevenu(){
+  const X=activite(P); if(!X.any) return '';
+  const quand=P.lvl==='M'?'Ce mois-ci':P.lvl==='Q'?'Ce trimestre':'Cette année', moy=P.lvl==='M'?'':' en moyenne par mois';
+  const part=moisPartiel(P), note=part?` Le mois n’est pas terminé : votre dernier relevé s’arrête au ${part}.`:'';
+  const lis=X.tauxLisse!=null&&X.nLisse>=3?`Sur les ${X.nLisse} derniers mois, en moyenne : ${eur(X.tauxLisse)} de l’heure, soit ${eur0(X.lisse)} nets par mois${X.lisse>=X.V?', au-dessus de votre objectif : ce mois plus faible n’est pas une tendance':''}.`:'';
+  if(X.ok) return `<div class="alerte good" role="status"><i data-lucide="sparkles"></i><div>
+    <p class="t">${quand}, votre travail vous a rapporté <b>${eur(X.taux)} de l’heure</b>${moy}, pour ${eur(X.cible)} visés.</p>
+    <p class="d">Objectif de ${eur0(X.V)} nets atteint, avec ${eur0(X.net-X.V)} d’avance.${note}</p>${lis?`<p class="d">${lis}</p>`:''}</div></div>`;
+  const ps=pistes(X);
+  return `<div class="alerte crit" role="alert"><i data-lucide="triangle-alert"></i><div>
+    <p class="t">${X.net<=0?`${quand}, votre travail ne vous a rien rapporté : le revenu net est de ${signed(X.net)}${moy}.`:`${quand}, votre travail vous a rapporté <b>${eur(X.taux)} de l’heure</b>${moy}, pour ${eur(X.cible)} visés.`}</p>
+    <p class="d">Il manque <b>${eur0(X.manque)}</b>${moy} pour atteindre ${eur0(X.V)} nets, pour ${X.H} heures travaillées.${note}</p>
+    ${lis?`<p class="d">${lis}</p>`:''}
+    ${ps.length?`<ul class="pistes">${ps.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
+    <div class="acts">${UNIV!=='pro'?'<button data-univ="pro">Voir mes chiffres pro</button>':''}<button data-tab="regles">Ajuster mon objectif ou mes heures</button></div></div></div>`;
+}
+/* Taux horaire réel sur 12 mois, avec la ligne du taux visé */
+function courbeTaux(){
+  const e=endOf(P), ms=monthsTo(e.y,e.m,12).map(q=>{const a=agg(q,'pro');return {q,any:a.any,v:a.revenuNet/heures()}});
+  if(ms.filter(x=>x.any).length<2) return '';
+  const c=tauxCible(), vals=ms.filter(x=>x.any).map(x=>x.v);
+  const max=Math.max(c*1.25,...vals), min=Math.min(0,...vals);
+  const W=600,H=190,top=16,bh=150,gap=W/12,bw=gap*.5, y=v=>top+(max-v)/(max-min)*(bh-top), y0=y(0), yc=y(c);
+  return `<section class="block"><h3 class="sec">Votre taux horaire réel</h3>
+  <p class="lead">Chaque mois, votre revenu net divisé par ${heures()} heures. Les mois sous la ligne pointillée, votre taux visé de ${esc(eur(c))}, sont en rouge.</p>
+  <div class="chart" style="margin-bottom:0"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Taux horaire réel sur douze mois">
+  <line x1="0" x2="${W}" y1="${y0}" y2="${y0}" stroke="var(--line)"/>
+  ${ms.map((x,i)=>{const cx=i*gap+gap/2;if(!x.any)return `<text x="${cx}" y="${H-6}" text-anchor="middle" font-size="16" fill="var(--muted)" font-family="Jost, sans-serif">${MOIS[x.q.m-1][0]}</text>`;
+    const yy=y(x.v), low=x.v<c;return `<rect class="${low?'bas':'haut'}" x="${cx-bw/2}" y="${Math.min(yy,y0)}" width="${bw}" height="${Math.max(2,Math.abs(y0-yy))}" fill="${low?'var(--alert)':'var(--ink)'}" opacity="${low?.55:.85}"><title>${esc(MOIS[x.q.m-1]+' '+x.q.y+' : '+eur(x.v)+' de l’heure')}</title></rect>
+    <text x="${cx}" y="${H-6}" text-anchor="middle" font-size="16" fill="var(--muted)" font-family="Jost, sans-serif">${MOIS[x.q.m-1][0]}</text>`}).join('')}
+  <line x1="0" x2="${W}" y1="${yc}" y2="${yc}" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="${W}" y="${yc-6}" text-anchor="end" font-size="15" fill="var(--gold)" font-family="Jost, sans-serif">${esc(eur(c))}</text>
+  </svg></div></section>`;
+}
 /* ============ Défis et médailles ============ */
 const DEFIS=[
   {id:'noresto',name:'Un mois sans restaurant',desc:'Aucune dépense en Restaurants & cafés.',cat:'resto',zero:true},
@@ -1732,7 +1835,7 @@ document.addEventListener('change',e=>{
   if(d.rev){const v=+t.value;if(d.rev==='sheet'){revDraft.sheet=v;detect()}else revDraft[d.rev]=v;render()}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#review')){$('#review').remove();document.body.style.overflow=''}});
-document.addEventListener('input',e=>{if(e.target.id==='search'){q=e.target.value;const pos=e.target.selectionStart;render();const s=$('#search');s.focus();s.setSelectionRange(pos,pos)}});
+document.addEventListener('input',e=>{if(e.target.dataset&&(e.target.dataset.set==='netVise'||e.target.dataset.set==='heures')){const el=$('#cibleLive');const v=+e.target.value||0;if(el){const s={...S.settings,[e.target.dataset.set]:v};el.textContent=eur((+s.netVise||SET0.netVise)/(+s.heures||SET0.heures))}}if(e.target.id==='search'){q=e.target.value;const pos=e.target.selectionStart;render();const s=$('#search');s.focus();s.setSelectionRange(pos,pos)}});
 ['dragover','dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{
   const z=e.target.closest&&e.target.closest('[data-drop]'); if(!z) return; e.preventDefault();
   z.classList.toggle('over',ev==='dragover');
