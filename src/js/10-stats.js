@@ -28,7 +28,7 @@ function retenir(A,st,U){
     else if(mi<st.lisse*.7) items.push({e:'⚠️',t:`Période creuse : ${eur0(-d)} sous vos rentrées lissées.${st.autonomie!=null?` Votre matelas couvre ${fmt1(st.autonomie)} mois.`:''}`,go:'objectifs'})}
   const X=agg(P,'pro'), tx=+S.settings.taux||0;
   if(U!=='perso'&&X.ca>0) items.push(tx>0?{e:'',t:`À mettre de côté pour les cotisations et les impôts : ${eur0(X.provision)}, soit ${tx} % ${S.settings.assiette==='resultat'?`de votre résultat de ${eur0(Math.max(0,X.resultat))}`:`des ${eur0(X.ca)} encaissés`}.`,go:'regles'}:{e:'',t:'Indiquez dans Réglages la part de vos revenus à mettre de côté pour les cotisations et les impôts.',go:'regles'});
-  const ch=S.challenges.filter(c=>c.month===thisMonth()).map(evalDefi).find(x=>x.status==='en cours');
+  const ch=S.challenges.filter(c=>c.month===thisMonth()).map(evalDefi).find(x=>x&&x.status==='en cours');
   if(ch) items.push({e:'🎯',t:`Défi en cours : ${ch.name}. ${ch.progress}`,go:'objectifs'});
   if(st.autonomie!=null) items.push({e:'',t:`Votre matelas : ${fmt1(st.autonomie)} mois d’autonomie, pour ${S.settings.objectif||6} visés.`,go:'objectifs'});
   return items.slice(0,3);

@@ -96,7 +96,7 @@ let UNIV='all', OPACC='';
 const reports=[];
 const HAS_CLAUDE=!!(window.claude&&window.claude.use);
 
-function blank(){return{schemaVersion:SCHEMA,accounts:[],categories:CATS0.map(c=>({...c})),rules:{},sugg:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
+function blank(){return{schemaVersion:SCHEMA,game:{seenLevel:null,backups:0,cagnotte:{nom:'',montant:0}},accounts:[],categories:CATS0.map(c=>({...c})),rules:{},sugg:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});

@@ -311,3 +311,51 @@ textarea.anon{width:100%;min-height:180px;font:11px/1.45 ui-monospace,Menlo,mono
 nav.tabs .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--alert);margin-left:6px;vertical-align:2px}
 .m-crit{color:var(--alert)}.m-warn{color:var(--amber)}.m-good{color:var(--gold)}
 @media (max-width:520px){.alerte{padding:14px 14px 12px;gap:10px}.alerte .acts .mask{margin-left:0}}
+
+/* Défis, score, niveaux, médailles */
+.sous{font-weight:400;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:26px 0 6px}
+.kick{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:0 0 6px}
+.score-top{display:grid;grid-template-columns:180px 1fr;gap:26px;align-items:center;margin-bottom:6px}
+.jauge{width:180px;height:auto}
+.score-mot{font-family:var(--serif);font-size:22px;margin:0 0 6px}
+.niveau{border:1px solid var(--line);background:var(--surface);padding:22px 22px 14px}
+.niv-top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:12px}
+.niv-nom{font-family:var(--serif);font-weight:400;font-size:30px;margin:0 0 4px}
+.niv-xp{text-align:right}.niv-xp b{display:block;font-family:var(--serif);font-weight:400;font-size:28px;color:var(--gold)}.niv-xp span{font-size:12px;color:var(--muted)}
+.xp-detail{margin-top:6px}
+.serie-card{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px 0}
+.serie-n{font-family:var(--serif);font-size:56px;line-height:1;color:var(--gold)}
+.serie-card .t{margin:0 0 4px;font-size:15px}
+.propose{border:1px solid var(--gold);background:var(--gold-soft);padding:20px 22px}
+.propose .t{font-family:var(--serif);font-size:20px;line-height:1.35;margin:0 0 16px}
+.chip{display:inline-block;font-size:11px;color:var(--muted);border:1px solid var(--line);padding:1px 7px;margin-left:6px;vertical-align:2px;white-space:nowrap}
+.defi-card{display:grid;grid-template-columns:60px 1fr auto;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.defi-card .ring{color:var(--gold)}.defi-card.crit .ring{color:var(--alert)}.defi-card.wait .ring{color:var(--muted)}
+.defi-card .n{font-size:15px;font-weight:400}.defi-card .d{font-size:13px;margin-top:2px}
+.defi-card .meta{font-size:12px;color:var(--muted);margin-top:3px}
+.defi-card.good .meta{color:var(--gold)}.defi-card.crit .meta{color:var(--alert)}
+.medal .disc{position:relative}
+.medal .medal-ring{position:absolute;inset:-1px;color:var(--gold)}
+.medal.t1 .disc{border-color:#A8703F;color:#A8703F;background:transparent;box-shadow:none}
+.medal.t2 .disc{border-color:#8E959C;color:#8E959C;background:transparent;box-shadow:inset 0 0 0 4px var(--bg),inset 0 0 0 5px #8E959C}
+.medal.t3 .disc{border-color:var(--gold);color:var(--gold);background:var(--gold-soft);box-shadow:inset 0 0 0 4px var(--bg),inset 0 0 0 5px var(--gold)}
+.medal .prog{font-size:10.5px;margin-top:4px;line-height:1.35}
+#celebre{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:color-mix(in srgb,var(--ink) 72%,transparent);padding:24px}
+.celebre-in{background:var(--bg);max-width:420px;width:100%;text-align:center;padding:40px 30px 30px;border:1px solid var(--gold)}
+.celebre-in h2{font-family:var(--serif);font-weight:400;font-size:40px;margin:0 0 10px}
+.celebre-in .desc{font-size:15px;margin:0 0 12px}
+.celebre-in .note{margin:0 auto 22px}
+.anneau{width:96px;height:96px;margin:0 auto 18px;display:block}
+.anneau circle{fill:none;stroke-width:2}
+.anneau .fond{stroke:var(--line)}
+.anneau .trace{stroke:var(--gold);stroke-dasharray:327;stroke-dashoffset:0;transform:rotate(-90deg);transform-origin:center}
+@media (prefers-reduced-motion:no-preference){
+  .anneau .trace{animation:trace 1.6s cubic-bezier(.6,.1,.2,1) both}
+  .celebre-in .kick,.celebre-in h2,.celebre-in .desc,.celebre-in .note,.celebre-in .btn{animation:monte .8s cubic-bezier(.2,.7,.2,1) both}
+  .celebre-in h2{animation-delay:.5s}.celebre-in .desc{animation-delay:.75s}.celebre-in .note,.celebre-in .btn{animation-delay:1s}
+  .celebre-in{animation:ouvre .5s ease both}
+  @keyframes trace{from{stroke-dashoffset:327}to{stroke-dashoffset:0}}
+  @keyframes monte{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes ouvre{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+}
+@media (max-width:520px){.score-top{grid-template-columns:1fr;justify-items:center;text-align:center}.defi-card{grid-template-columns:48px 1fr}.defi-card .ring{width:48px;height:48px}.defi-card>.link,.defi-card>span:last-child{grid-column:2}}

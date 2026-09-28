@@ -61,7 +61,14 @@ function demoData(){
   const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
   st.settings={...SET0,epargne:7000,taux:22,heures:160,netVise:2000,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);
-  st.challenges=[{id:'noshop',month:mk(1)},{id:'courses10',month:mk(2)},{id:'noresto',month:mk(4)},{id:'lisse',month:thisMonth()}];
+  const lundi=k=>mondayOf(date(k,8)), tm=thisMonth(), key=()=>newId('d_');
+  st.challenges=[
+    {id:'noshop',month:mk(1)},{id:'p-taux',month:mk(1)},{id:'h-enligne',week:lundi(1)},{id:'courses10',month:mk(2)},
+    {id:'s-budget3',month:mk(3)},{id:'noresto',month:mk(4)},{id:'s-seuil3',month:mk(5)},{id:'h-resto',week:lundi(6)},
+    {id:'lisse',month:tm},{id:'p-encaisser',month:tm,montant:4000},{id:'h-courses',week:mondayOf(todayStr())},
+    ...(+tm.slice(5,7)===9?[{id:'sa-rentree',month:tm}]:[])
+  ].map(c=>({...c,key:key()}));
+  st.game={seenLevel:'demo',backups:2,cagnotte:{nom:'Voyage au Japon',montant:3000}};
   st.since=Date.now(); st.lastBackup=Date.now();
   return st;
 }

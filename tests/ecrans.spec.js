@@ -1,5 +1,5 @@
 import {test,expect,openWith} from './helpers.js';
-const TABS=['synthese','economies','objectifs','operations','remb','valider','regles','importer'];
+const TABS=['synthese','economies','objectifs','defis','operations','remb','valider','regles','importer'];
 
 /* 3 ans d'historique, environ 5 000 opérations sur trois comptes */
 function histoire(){
@@ -43,6 +43,7 @@ test('tous les écrans de la démo s’affichent sans erreur, dans les trois uni
     for(const t of TABS){
       await page.click(`nav.tabs [data-tab="${t}"]`);
       await expect(page.locator('#view')).not.toBeEmpty();
+      if(await page.locator('#celebre').count()) await page.click('[data-act="closecelebre"]');
     }
   }
   await page.click('nav.tabs [data-tab="synthese"]');

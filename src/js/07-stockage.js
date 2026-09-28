@@ -19,6 +19,8 @@ function merge(x){
   const st={...x,schemaVersion:x.schemaVersion||1,accounts:x.accounts||[],categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]};
   if(!st.since&&st.ops.length){st.since=Date.now();MIGRATED=true}
   if(!st.masked) st.masked={};
+  st.game={seenLevel:null,backups:0,cagnotte:{nom:'',montant:0},...(st.game||{})};
+  st.challenges.forEach(c=>{if(!c.key)c.key=newId('d_')});
   if(migrateSchema(st)){MIGRATED=true;st.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)))}
   return st;
 }
@@ -63,7 +65,7 @@ async function flush(){
   flushing=true; setStatus('saving');
   const months=[...dirtyMonths]; dirtyMonths.clear(); const st=stateDirty; stateDirty=false;
   try{
-    if(st) await db.doc(base()).set({schemaVersion:S.schemaVersion,accounts:S.accounts,categories:S.categories,rules:S.rules,sugg:S.sugg,incomeSource:S.incomeSource,settings:S.settings,challenges:S.challenges,readers:S.readers,updated:Date.now()});
+    if(st){const {ops,...etat}=S;await db.doc(base()).set({...JSON.parse(JSON.stringify(etat)),updated:Date.now()})}
     for(const mk of months){
       const ref=db.doc(base()).collection('months').doc(mk);
       const ops=S.ops.filter(o=>o.date.slice(0,7)===mk);

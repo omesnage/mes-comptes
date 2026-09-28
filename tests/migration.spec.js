@@ -43,7 +43,7 @@ function checkMigrated(s){
   expect(c.logiciels).toMatchObject({type:'expense',univers:'pro'});
   // Aucun champ perdu
   expect(s.rules).toEqual(V1.rules); expect(s.sugg).toEqual(V1.sugg); expect(s.readers).toEqual(V1.readers);
-  expect(s.challenges).toEqual(V1.challenges); expect(s.settings).toMatchObject({...V1.settings,netVise:2000}); expect(s.champFutur).toEqual({garde:true});
+  expect(s.challenges.map(({key,...c})=>c)).toEqual(V1.challenges); expect(s.challenges.every(c=>c.key)).toBe(true); expect(s.settings).toMatchObject({...V1.settings,netVise:2000}); expect(s.champFutur).toEqual({garde:true});
   expect(s.ops.find(o=>o.id==='o5').awaiting).toBe(true);
   expect(s.ops.find(o=>o.id==='o4').cat).toBe('c_form');
 }

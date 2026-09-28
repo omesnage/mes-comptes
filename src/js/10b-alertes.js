@@ -104,7 +104,7 @@ function computeAlerts(U){
       title:`Mois exceptionnel : <b>${eur0(X.ca)} encaissés</b>, ${Math.round((X.ca/moyCA-1)*100)} % de plus que votre moyenne.`,
       detail:X.provision>0?`Pensez à garder ${eur0(X.provision)} pour les cotisations et les impôts, et à renforcer votre matelas.`:'Pensez à mettre une partie de côté pour les mois plus calmes.'})}
   const pp=shift(P,-1), pk=pp.y+'-'+pad(pp.m);
-  S.challenges.filter(c=>c.month===pk||c.month===P.y+'-'+pad(P.m)).map(evalDefi).filter(x=>x.status==='réussi').forEach(x=>
+  S.challenges.filter(c=>c.month===pk||c.month===P.y+'-'+pad(P.m)).map(evalDefi).filter(x=>x&&x.status==='réussi').forEach(x=>
     add({id:'defi:'+x.id+':'+x.month,level:'good',icon:'target',tab:'objectifs',score:0,title:`Défi réussi : <b>${esc(x.name)}</b>. Bravo.`,acts:[btn('Voir mes défis','data-tab="objectifs"')]}));
   if(U!=='pro'&&st.autonomie!=null){const avant=stats(shift(P,-1),'all').autonomie, obj=+S.settings.objectif||6;
     const pal=[...new Set([1,3,6,obj])].sort((a,b)=>b-a).find(x=>st.autonomie>=x&&avant!=null&&avant<x);

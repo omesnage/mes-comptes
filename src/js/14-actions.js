@@ -23,8 +23,15 @@ document.addEventListener('click',async e=>{
   if(d.act==='review'){openReview();return}
   if(d.act==='closereview'){$('#review')?.remove();document.body.style.overflow='';return}
   if(d.act==='backup'){backup_();return}
-  if(d.defi){S.challenges=S.challenges.filter(c=>!(c.month===thisMonth()&&c.id===d.defi));S.challenges.push({id:d.defi,month:thisMonth()});save();render();return}
-  if(d.undefi){S.challenges=S.challenges.filter(c=>!(c.month===thisMonth()&&c.id===d.undefi));save();render();return}
+  if(d.defi){const D=d.defi==='auto'?{kind:'mois'}:DEFIS.find(x=>x.id===d.defi);if(!D)return;
+    const c={id:d.defi,key:newId('d_')};
+    if(D.kind==='semaine')c.week=mondayOf(todayStr());else c.month=thisMonth();
+    if(d.defi==='auto'){c.cat=d.cat;c.pct=+d.pct}
+    if(D.type==='encaisser'){const st=stats({lvl:'M',...endOf(defaultPeriod())},'pro');const prop=Math.max(500,Math.round(st.lisse*1.1/100)*100);
+      const v=prompt('Quel montant voulez-vous encaisser ce mois-ci, en euros ?',String(prop));if(v==null)return;c.montant=Math.max(1,+String(v).replace(/[^0-9]/g,'')||prop)}
+    S.challenges.push(c);save();render();return}
+  if(d.undefi){S.challenges=S.challenges.filter(c=>c.key!==d.undefi);save();render();return}
+  if(d.act==='closecelebre'){$('#celebre')?.remove();return}
   if(d.cat&&t.closest('.alerte')){openCat=d.cat;render();const el=document.querySelector(`.cat-row[data-cat="${CSS.escape(openCat)}"]`);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});return}
   if(d.cat){const fromLegend=!!t.closest('.legend');openCat=fromLegend?d.cat:(openCat===d.cat?null:d.cat);render();
     if(fromLegend){const el=document.querySelector(`.cat-row[data-cat="${CSS.escape(openCat)}"]`);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})}return}
@@ -61,6 +68,7 @@ document.addEventListener('change',e=>{
     if(v==='__new'){const n=(prompt('Nom du compte (par exemple « Qonto pro »)')||'').trim();if(!n){render();return}v=addAccount({name:n.slice(0,40),type:guessType('','',n)}).id;r.isNew=true}
     S.ops.forEach(o=>{if(o.imp===r.imp){o.acct=v;dirtyMonths.add(o.date.slice(0,7))}});r.acct=v;
     S.accounts=S.accounts.filter(a=>S.ops.some(o=>o.acct===a.id));stateDirty=true;save();render();return}
+  if(d.cag){S.game.cagnotte=S.game.cagnotte||{};S.game.cagnotte[d.cag]=d.cag==='montant'?Math.max(0,+t.value||0):t.value.trim().slice(0,40);save();render();return}
   if(d.set){S.settings[d.set]=Math.max(0,+t.value||0);save();return}
   if(t.id==='restorefile'&&t.files.length){restore_(t.files[0]);t.value='';return}
   if(t.id==='file'&&t.files.length){importFiles([...t.files]);t.value=''}
@@ -68,7 +76,7 @@ document.addEventListener('change',e=>{
   if(t.id==='revfile'&&t.files.length){if(demo)exitDemo();readRev(t.files[0]);t.value=''}
   if(d.rev){const v=+t.value;if(d.rev==='sheet'){revDraft.sheet=v;detect()}else revDraft[d.rev]=v;render()}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#review')){$('#review').remove();document.body.style.overflow=''}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#celebre')){$('#celebre').remove();return}if(e.key==='Escape'&&$('#review')){$('#review').remove();document.body.style.overflow=''}});
 document.addEventListener('input',e=>{if(e.target.dataset&&(e.target.dataset.set==='netVise'||e.target.dataset.set==='heures')){const el=$('#cibleLive');const v=+e.target.value||0;if(el){const s={...S.settings,[e.target.dataset.set]:v};el.textContent=eur((+s.netVise||SET0.netVise)/(+s.heures||SET0.heures))}}if(e.target.id==='search'){q=e.target.value;const pos=e.target.selectionStart;render();const s=$('#search');s.focus();s.setSelectionRange(pos,pos)}});
 ['dragover','dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{
   const z=e.target.closest&&e.target.closest('[data-drop]'); if(!z) return; e.preventDefault();
