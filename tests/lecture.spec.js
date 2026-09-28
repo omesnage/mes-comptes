@@ -15,7 +15,7 @@ test('relevé non reconnu : aide de lecture dépliée, puis lecteur personnalis�
   const r=page.locator('.releve.ko');
   await expect(r).toContainText('aucune opération n’a été reconnue');
   await expect(r.locator('details.detail')).toHaveAttribute('open','');
-  await expect(r.locator('textarea.anon')).toContainText('CARTE BOULANGERIE');
+  await expect(r.locator('textarea.anon').first()).toContainText('CARTE BOULANGERIE');
   await expect(r.locator('[data-prompt]')).toHaveCount(1);
   // Lecteur personnalisé, collé dans Réglages avancés
   await page.click('#gear'); await page.locator('#avances summary').click();

@@ -48,6 +48,7 @@ async function parcours(page,f){
   await page.locator('.ops .op').first().click(); await expect(page.locator('.fiche')).toBeVisible(); await f('fiche');
   await page.click('.fiche .fermer');
   await page.click('nav.tabs [data-tab="importer"]'); await f('importer');
+  await page.click('[data-act="coller"]'); await page.fill('#colleTxt','03/03/2026 CARREFOUR MARKET -45,20 €\n04/03/2026 CLIENT +300,00 €'); await page.click('[data-act="collelire"]'); await f('coller'); await page.click('[data-act="collefin"]');
   await page.click('nav.tabs [data-tab="objectifs"]'); await page.evaluate(()=>document.querySelectorAll('details').forEach(d=>d.open=true)); await f('objectifs');
   await page.click('#gear'); await page.evaluate(()=>document.querySelectorAll('details').forEach(d=>d.open=true)); await f('reglages');
   await page.evaluate(()=>{S.onboarded=false;demo=false;ONB=1;render()}); await f('demarrage');

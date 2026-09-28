@@ -435,3 +435,20 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 .ess-lim-v{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .ess-lim.rouge .ess-lim-v{color:var(--alert)}
 @media (max-width:420px){.ess-d{grid-template-columns:78px 1fr auto}.ess-lim{grid-template-columns:1fr auto}.ess-lim-b{grid-column:1/-1;grid-row:2}}
+
+/* Copier-coller, assistant de lecture */
+.etapes-txt{margin:6px 0 12px;padding-left:22px;font-size:16px;line-height:1.5}
+.etapes-txt li{margin-bottom:6px}
+.colle-txt{min-height:160px}
+.colle-res{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.colle-res .phrase b{font-weight:500}
+.btn svg{width:20px;height:20px}
+.assistant{border:1px solid var(--gold);background:var(--surface);padding:14px;margin:12px 0}
+.etape-assist{font-size:18px;margin:10px 0;color:var(--ink)}
+.etape-assist b{color:var(--gold)}
+.lignes-assist{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px;overflow-x:auto}
+.ligne-assist{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:6px;border-bottom:1px dashed var(--line)}
+.tok{min-height:44px;padding:6px 10px;border:1px solid var(--line);background:var(--bg);font-size:15px;font-variant-numeric:tabular-nums}
+.tok:hover{border-color:var(--ink)}
+.tok.choisi{border-color:var(--gold);background:var(--gold-soft);font-weight:500}
+.question .apercu .pv{display:grid}

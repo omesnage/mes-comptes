@@ -40,7 +40,9 @@ function vReglages(){
     <textarea id="readerIn" class="anon" placeholder="Collez ici la réponse de Claude, qui commence par { et finit par }"></textarea>
     <button class="btn secondaire" data-act="addreader">Ajouter ce lecteur</button>
     ${readerMsg?`<p class="${readerErr?'ko-txt':'ok-txt'}">${esc(readerMsg)}</p>`:''}
-    ${(S.readers||[]).map((x,i)=>`<div class="regle"><span>${esc(x.nom)}</span><span></span><button class="lien" data-delreader="${i}">Supprimer</button></div>`).join('')}
+    ${(S.readers||[]).map((x,i)=>`<div class="regle"><span>${esc(x.nom)}</span><button class="lien" data-lexport="${i}">Exporter ce lecteur</button><button class="lien" data-delreader="${i}">Supprimer</button></div>`).join('')}
+    <label class="btn secondaire">Importer un lecteur<input type="file" id="lecteurfile" accept=".json,application/json" hidden></label>
+    <p class="aide">Un lecteur reçu d’une personne qui a la même banque s’applique automatiquement aux relevés de cette banque.</p>
   </details>`;
 }
 

@@ -8,7 +8,7 @@ function pendingGroups(){
     e.accts.push(o.acct); e.n++; e.total+=o.amount; }
   return Object.values(g).sort((a,b)=>b.n-a.n||Math.abs(b.total)-Math.abs(a.total));
 }
-const nbAVerifier=()=>pendingGroups().length;
+const nbAVerifier=()=>pendingGroups().length+douteuxValides().length;
 function icons(){ if(window.lucide&&lucide.createIcons) lucide.createIcons({icons:lucide.icons,attrs:{'stroke-width':1.5}}) }
 const CAT_GROUPS=[['perso','Rubriques du foyer'],['auto','Rubriques communes'],['pro','Rubriques de l’activité'],['in','Rentrées et virements']];
 const catGroup=c=>c.type==='expense'?(c.univers||'perso'):'in';
@@ -74,9 +74,12 @@ function choixRubriques(x){
   return ids.filter(catById).map(id=>`<button class="choix-btn${id===s?' suggere':''}" data-qcat="${esc(x.m)}" data-c="${id}">${esc(noms[id]||catById(id).name)}</button>`).join('');
 }
 function aVerifier(){
-  const g=pendingGroups(), n=g.length; if(!n) return '';
+  const g=pendingGroups(), dv=douteuxValides(), n=g.length+dv.length; if(!n) return '';
   return `<section class="carte verifier"><h3>À vérifier <span class="compte">(${n})</span></h3>
   <p class="aide">Une seule réponse par marchand : elle vaudra pour toutes ses opérations, passées et futures.</p>
+  ${dv.map((d,i)=>{const a=BYID[d.a],b=BYID[d.b],L=o=>`<span class="pv"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span><span>${esc(o.label)}${o.src==='paste'?' <em>copier-coller</em>':' <em>relevé</em>'}</span><span class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></span>`;
+    return `<div class="question"><p class="q-question">Ces 2 opérations sont-elles les mêmes ?</p><div class="apercu">${L(a)}${L(b)}</div>
+    <div class="choix gros"><button class="choix-btn" data-dout="${i}:1">Oui, c’est la même : n’en garder qu’une</button><button class="choix-btn" data-dout="${i}:0">Non, ce sont deux opérations</button></div></div>`}).join('')}
   ${g.map(x=>x.credit&&x.accts.some(id=>acctById(id)?.type==='mixte')?`<div class="question client-q"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
     <p class="q-s">${x.n>1?`${x.n} rentrées, `:''}+${eur(x.total)}. ${esc(x.label)}</p>
     <p class="q-question">Cet argent vient-il d’un client ?</p>
@@ -141,12 +144,16 @@ function reportLine(r){
   if(r.error){txt=`${esc(r.name)} : ${esc(r.error)}`;cls='ko'}
   else if(!r.found){txt=`${esc(r.name)} : aucune opération n’a été reconnue.`;cls='ko'}
   else if(r.test) txt=`${qui}, ${mois} : ${r.found} opération${r.found>1?'s':''} lue${r.found>1?'s':''}. C’est un essai, rien n’a été enregistré.`;
+  else if(r.colle) {txt=`Copier-coller${r.bank?', '+esc(r.bank):''} : ${r.added} opération${r.added>1?'s':''} ajoutée${r.added>1?'s':''} ✓${r.dups?`, ${r.dups} déjà présente${r.dups>1?'s':''}`:''}${r.douteux?`, ${r.douteux} à confirmer dans Mes opérations`:''}.`;cls='ok'}
+  else if(r.completees) {txt=`${qui}, ${mois} : ${r.found} opérations. ${r.completees} étaient déjà là grâce à votre copier-coller et ont été complétées, ${r.added} ajoutée${r.added>1?'s':''} ✓${r.douteux?` (${r.douteux} à confirmer dans Mes opérations)`:''}`;cls='ok'}
   else if(!r.added) txt=`${qui}, ${mois} : déjà importé, rien n’a été ajouté.`;
   else {txt=`${qui}, ${mois} : ${r.added} opération${r.added>1?'s':''} ajoutée${r.added>1?'s':''} ✓`;cls='ok'}
+  if(r.found&&!r.error&&r.controle&&r.controle.ok) txt+=' Relevé vérifié ✓';
   const a=!r.test&&acctById(r.acct);
   return `<div class="releve ${cls}${r.test?' essai':''}"><p class="r-t">${txt}</p>
     ${r.controle&&!r.controle.ok?`<p class="r-alerte">Attention : il y a un écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes du relevé et les opérations lues. Vérifiez vos opérations.</p>`:''}
     ${a&&!a.confirmed?acctAsk(a):''}
+    ${!r.colle&&r.lignes&&(!r.found||(r.controle&&!r.controle.ok))?(ASSIST&&ASSIST.imp===r.imp?panneauAssistant(r):`<div class="boutons"><button class="btn${r.found?' secondaire':''}" data-assist="${r.imp}">${r.found?'La lecture n’est pas juste ? Apprenez-lui en 3 gestes':'Apprendre à lire ce relevé (3 gestes)'}</button></div>`):''}
     ${r.test&&r.found?`<div class="boutons"><button class="btn" data-realimp="${r.imp}">Importer pour de bon</button><button class="lien" data-dropreport="${r.imp}">Fermer</button></div>`:''}
     ${r.found||r.raw?`<details class="detail"${r.test||!r.found?' open':''}><summary>${r.found?'Voir le détail':'Aide à la lecture'}</summary>${reportCard(r)}</details>`:''}</div>`;
 }
@@ -159,7 +166,17 @@ function reportCard(r){
   const liste=r.lus.length?`<div class="apercu">${r.lus.slice().sort((a,b)=>a.date<b.date?-1:1).slice(0,200).map(o=>`<div class="pv${o.dup?' dup':''}"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span><span>${esc(o.label)}${o.dup?' <em>déjà importée</em>':''}</span><span class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></div>`).join('')}${r.lus.length>200?`<p class="aide">Et ${r.lus.length-200} autres.</p>`:''}</div>`:'';
   const aide=r.raw&&!r.found?`<p>Ce relevé n’a pas pu être lu. Voici le texte trouvé dans le fichier, sans vos numéros de compte ni vos noms. Envoyez-le à la personne qui vous a transmis l’application : elle pourra l’adapter à votre banque.</p>
       <textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="lien" data-copy="${r.imp}">Copier le texte</button>
-      <details class="autre"><summary>Autre solution</summary><p class="aide">Si vous utilisez Claude, il peut vous aider : <button class="lien" data-prompt="${r.imp}">copier la demande pour Claude</button>, puis suivez la marche à suivre dans Réglages, Réglages avancés, « Lecteurs de relevés ».</p></details>`:'';
+      <details class="autre"><summary>Autre solution, en dernier recours : avec Claude</summary>
+        <ol class="etapes-txt">
+          <li>Touchez <button class="lien" data-prompt="${r.imp}">Copier la demande pour Claude</button>. Le texte copié ne contient ni vos numéros de compte ni vos noms.</li>
+          <li>Ouvrez un nouvel onglet sur claude.ai et connectez-vous (un compte gratuit suffit).</li>
+          <li>Collez la demande dans la zone de message (Cmd + V), puis envoyez-la.</li>
+          <li>Claude répond par un texte qui commence par { et finit par }. Copiez-le en entier (bouton « Copier » sous sa réponse).</li>
+          <li>Revenez ici, collez-le dans la case ci-dessous, puis touchez « Ajouter ce lecteur et relire le relevé ».</li>
+          <li>Le résultat doit afficher « Relevé vérifié ✓ ». Sinon, écrivez à Claude, dans la même conversation, l’écart indiqué ici, puis recommencez à l’étape 4.</li>
+        </ol>
+        <textarea class="anon" id="claude-${r.imp}" placeholder="Collez ici la réponse de Claude"></textarea>
+        <button class="btn secondaire" data-lclaude="${r.imp}">Ajouter ce lecteur et relire le relevé</button></details>`:'';
   return info+ctl+liste+aide;
 }
 function vImport(){
@@ -168,7 +185,10 @@ function vImport(){
   <label class="gros-bouton" data-drop="bank"><input type="file" id="file" accept=".pdf,.csv,application/pdf,text/csv" multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
   <p class="aide">Des relevés PDF, plusieurs à la fois, même de banques différentes. Ce qui est déjà importé est ignoré.</p>
   <label class="btn secondaire">Tester un relevé<input type="file" id="testfile" accept=".pdf,.csv,application/pdf,text/csv" hidden></label>
-  <p class="aide">Pour voir comment un relevé est lu, sans rien enregistrer.</p></section>
+  <p class="aide">Pour voir comment un relevé est lu, sans rien enregistrer.</p>
+  <button class="btn secondaire" data-act="coller"><i data-lucide="clipboard-paste"></i>Coller mes opérations</button>
+  <p class="aide">Copiez les opérations sur le site de votre banque et collez-les ici. Celles qui sont déjà là ne sont pas ajoutées deux fois, même si vous importez le relevé PDF ensuite.</p></section>
+  ${COLLE?panneauColler():''}
   ${reports.length?`<section class="releves">${reports.map(reportLine).join('')}</section>`:''}
   <details class="carte repli"${revDraft||revMsg||revError?' open':''}><summary>Vous suivez vos revenus dans un tableau ?</summary>
   <p class="aide">Choisissez le fichier Excel, Numbers ou CSV où vous notez ce que vous encaissez. L’application le lit à la place de vos relevés pour vos encaissements.</p>
