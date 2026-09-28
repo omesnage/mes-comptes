@@ -1,5 +1,5 @@
 import {test,expect,openWith} from './helpers.js';
-const VUES=['accueil','bilan','operations','importer','reglages'];
+const VUES=['accueil','bilan','operations','importer','objectifs','reglages'];
 
 /* 3 ans d'historique, environ 5 000 opérations sur trois comptes */
 function histoire(){
@@ -37,16 +37,18 @@ async function parcours(page,f){
   await page.click('[data-act="demo"]');
   for(const k of [0,1]){await page.evaluate(k=>{view='accueil';P=shift(defaultPeriod(),-k);openCat='resto';render()},k);await f('accueil '+k)}
   await page.click('nav.tabs [data-tab="bilan"]'); await f('bilan');
-  await page.click('[data-blvl="Y"]'); await page.click('[data-btout]'); await f('bilan annee');
-  await page.locator('.legende .leg[data-bcat]').first().click(); await f('fiche rubrique'); await page.click('.fiche .fermer');
+  await page.click('[data-blvl="Y"]'); if(await page.locator('[data-btout]').count()) await page.click('[data-btout]'); await f('bilan annee');
+  await page.locator('.rep-l').first().click(); await f('fiche rubrique'); await page.click('.fiche .fermer');
   await page.click('[data-bu="pro"]'); await f('bilan activite');
   await page.click('[data-modal="prix"]'); await f('comment c’est calculé'); await page.click('.fenetre .fermer');
   await page.click('nav.tabs [data-tab="accueil"]'); await page.click('[data-modal="cascade"]'); await f('d’où vient ce chiffre'); await page.click('.fenetre .fermer');
   await page.evaluate(()=>{S.settings.taux=0;render()}); await f('accueil sans taux'); await page.evaluate(()=>{S.settings.taux=22;render()});
   await page.click('nav.tabs [data-tab="operations"]'); await f('operations');
+  await page.locator('[data-heures]').first().click(); await f('saisie des heures'); await page.fill('#heuresIn','60'); await page.click('[data-heuresok]'); await f('heures notées');
   await page.locator('.ops .op').first().click(); await expect(page.locator('.fiche')).toBeVisible(); await f('fiche');
   await page.click('.fiche .fermer');
   await page.click('nav.tabs [data-tab="importer"]'); await f('importer');
+  await page.click('nav.tabs [data-tab="objectifs"]'); await page.evaluate(()=>document.querySelectorAll('details').forEach(d=>d.open=true)); await f('objectifs');
   await page.click('#gear'); await page.evaluate(()=>document.querySelectorAll('details').forEach(d=>d.open=true)); await f('reglages');
   await page.evaluate(()=>{S.onboarded=false;demo=false;ONB=1;render()}); await f('demarrage');
 }
@@ -84,11 +86,10 @@ test('texte courant : 18 px sur mobile, 17 px sur ordinateur ; grand chiffre de 
 });
 
 test('aucun mot technique à l’écran',async({page})=>{
-  const INTERDITS=/URSSAF|cotisation|comptable|charges sociales|charges globales|provision|trésorerie|matelas|lissé|point mort|taux horaire/i;
+  const INTERDITS=/URSSAF|comptable|charges sociales|charges globales|provision|trésorerie|matelas|lissé|point mort|taux horaire/i;
   await parcours(page,async nom=>{
     const t=await page.evaluate(()=>{const c=document.body.cloneNode(true);c.querySelectorAll('.op-m,.q-t,.q-s,.f-m,.fiche .aide,.pv,textarea,script,style,#review,.regle>span:first-child').forEach(e=>e.remove());
-      /* « cotisations sociales et impôts » est permis dans la cascade et l'alerte de réglage, et seulement là */
-      c.querySelectorAll('.cascade .cas-l,.alerte-taux p').forEach(e=>{e.textContent=e.textContent.replace(/cotisations( sociales)? et impôts/g,'')});return c.innerText});
+      return c.innerText});
     const m=t.match(INTERDITS); expect(m&&m[0],nom).toBeFalsy();
   });
 });
@@ -101,7 +102,7 @@ test('aucun défilement horizontal en largeur mobile',async({page})=>{
 test('trois onglets, en bas de l’écran sur mobile ; réglages derrière l’engrenage',async({page})=>{
   await page.setViewportSize({width:390,height:800});
   await openWith(page,null); await page.click('[data-act="demo"]');
-  await expect(page.locator('nav.tabs button')).toHaveText([/Accueil/,/Bilan/,/Mes opérations/,/Importer/]);
+  await expect(page.locator('nav.tabs button')).toHaveText([/Accueil/,/Bilan/,/Mes opérations/,/Importer/,/Mes objectifs/]);
   const b=await page.locator('nav.tabs').boundingBox(); expect(b.y+b.height).toBeGreaterThan(790);
   await page.click('#gear'); await expect(page.locator('.titre-page')).toHaveText('Réglages');
 });

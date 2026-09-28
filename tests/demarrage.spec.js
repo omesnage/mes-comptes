@@ -12,7 +12,7 @@ test('première ouverture : trois écrans, objectif enregistré, puis Importer',
   await expect(page.locator('.demarrage h2')).toHaveText('Ajoutez vos relevés');
   await page.click('.demarrage [data-tab="importer"]');
   await expect(page.locator('.gros-bouton')).toContainText('Ajouter mes relevés');
-  await expect(page.locator('nav.tabs button')).toHaveCount(4);
+  await expect(page.locator('nav.tabs button')).toHaveCount(5);
   expect(await page.evaluate(()=>[S.settings.netVise,S.settings.taux,S.onboarded])).toEqual([2500,22,true]);
   await page.waitForTimeout(800); await page.reload(); await page.waitForSelector('#view');
   await expect(page.locator('.demarrage')).toHaveCount(0);

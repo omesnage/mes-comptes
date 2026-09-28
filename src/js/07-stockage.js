@@ -92,6 +92,12 @@ function migrateSchema(st){
     st.categories.forEach(c=>{if(c.budgetAn==null)c.budgetAn=0});
     st.schemaVersion=7;
   }
+  if(st.schemaVersion<8){
+    /* v7 → v8 : budget par mois et budget pour l'année deviennent une seule « limite » par rubrique (par mois, trimestre ou an).
+       Les anciens champs sont gardés tels quels. */
+    st.categories.forEach(c=>{if(c.limite==null){c.limite=c.budgetAn>0?{montant:+c.budgetAn,per:'Y'}:c.budget>0?{montant:+c.budget,per:'M'}:null}});
+    st.schemaVersion=8;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }

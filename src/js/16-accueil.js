@@ -17,7 +17,7 @@ function habitude(cid,p){
 /* Une rubrique dérape : +25 % et +30 € au-dessus d'habitude, ou au-dessus du budget s'il existe */
 function derapage(cid,net,p){
   const c=catById(cid); if(!c||cid==='_pending') return null;
-  if(c.budget>0) return net>c.budget?{txt:`${eur0(net-c.budget)} au-dessus de votre budget`,ecart:net-c.budget,pct:Math.round((net/c.budget-1)*100)}:null;
+  if(c.limite&&c.limite.per==='M'&&c.limite.montant>0){const l=c.limite.montant;return net>l?{txt:`${eur0(net-l)} au-dessus de votre limite`,ecart:net-l,pct:Math.round((net/l-1)*100)}:null}
   const h=habitude(cid,p); if(!h) return null;
   if(net>h*1.25&&net-h>30) return {txt:`+${Math.round((net/h-1)*100)} % par rapport à d’habitude`,ecart:net-h,pct:Math.round((net/h-1)*100),h};
   return null;
@@ -69,29 +69,38 @@ function blocsDefi(){
   return h;
 }
 
-/* ---------- Budgets de l'année ---------- */
-function blocBudgets(){
-  const cs=S.categories.filter(c=>c.budgetAn>0&&c.type==='expense');
-  if(!cs.length){const v=catById('voyages');return v?`<section class="carte budgets-propose"><h3><i data-lucide="luggage"></i>Fixez-vous un budget vacances pour l’année</h3>
-    <p class="aide">Un budget pour l’année vous montre, mois après mois, si vous êtes dans les clous.</p>
-    <div class="ajout-budget"><label class="champ">Budget vacances pour l’année (€)<input id="budgetAnRapide" type="number" inputmode="numeric" min="0" step="50" placeholder="2000"></label>
-    <button class="btn" data-budgetan="voyages">Enregistrer</button></div>
-    <button class="lien" data-tab="reglages" data-ancre="rubriques">Fixer d’autres budgets dans les réglages</button></section>`:''}
-  return `<section class="carte budgets"><h3>Vos budgets de l’année</h3>${cs.map(c=>{
-    let dep=0; for(let m=1;m<=P.m;m++) dep+=agg({lvl:'M',y:P.y,m},'perso').by[c.id]?.net||0;
-    const b=c.budgetAn, prorata=b*P.m/12, etat=dep>b?'rouge':dep>prorata+0.005?'orange':'or';
-    return `<div class="budget-an ${etat}"><p class="phrase">${esc(c.name)} : ${eur0(dep)} dépensés sur ${eur0(b)} prévus cette année.${dep<=b?` Il vous reste ${eur0(b-dep)}.`:''}</p>
-      <div class="barre-an"><span style="width:${Math.min(100,dep/b*100)}%"></span><em style="left:${Math.min(100,P.m/12*100)}%" title="Prorata des mois écoulés"></em></div>
-      ${etat==='rouge'?`<p class="ba-msg">Budget dépassé de ${eur0(dep-b)}</p>`:etat==='orange'?'<p class="ba-msg">Vous dépensez plus vite que prévu</p>':''}</div>`}).join('')}</section>`;
+/* ---------- Limites de dépenses : par mois, par trimestre ou par an ---------- */
+const PER_MOTS={M:'ce mois-ci',Q:'ce trimestre',Y:'cette année'};
+/* État d'une limite pour le mois p : dépensé depuis le début de sa période, doré, orange ou rouge */
+function etatLimite(c,p){
+  const L=c&&c.limite; if(!L||!(+L.montant>0)) return null;
+  const m0=L.per==='Y'?1:L.per==='Q'?(Math.ceil(p.m/3)-1)*3+1:p.m;
+  let dep=0; for(let m=m0;m<=p.m;m++) dep+=agg({lvl:'M',y:p.y,m},'perso').by[c.id]?.net||0;
+  const lim=+L.montant, frac=L.per==='Y'?p.m/12:L.per==='Q'?(p.m-m0+1)/3:1;
+  const etat=dep>lim+0.005?'rouge':(L.per==='M'?dep>lim*.8:dep>lim*frac+0.005)?'orange':'or';
+  return {dep,lim,frac,etat,per:L.per,mot:PER_MOTS[L.per],reste:Math.max(0,lim-dep),
+    msg:etat==='rouge'?`Limite dépassée de ${eur0(dep-lim)}`:etat==='orange'?'Attention, vous approchez de votre limite':''};
+}
+const avecLimite=()=>S.categories.filter(c=>c.type==='expense'&&c.limite&&+c.limite.montant>0);
+function barreLimite(e){return `<span class="barre-an ${e.etat}"><span style="width:${Math.min(100,e.dep/e.lim*100)}%"></span>${e.per!=='M'?`<em style="left:${Math.min(100,e.frac*100)}%" title="Temps écoulé"></em>`:''}</span>`}
+function blocLimites(){
+  const cs=avecLimite();
+  if(!cs.length) return `<section class="carte limites-propose"><h3><i data-lucide="gauge"></i>Fixez-vous des limites pour le shopping, les sorties ou les vacances</h3>
+    <p class="aide">Une limite vous montre, au fil des semaines, si vous êtes dans les clous.</p>
+    <button class="btn secondaire" data-tab="objectifs" data-ancre="limites">Fixer mes limites</button></section>`;
+  return `<section class="carte budgets"><h3>Vos limites</h3>${cs.map(c=>{const e=etatLimite(c,P);
+    return `<div class="budget-an ${e.etat}"><p class="phrase">${esc(c.name)} : ${eur0(e.dep)} sur ${eur0(e.lim)} ${e.mot}</p>${barreLimite(e)}
+      ${e.msg?`<p class="ba-msg">${esc(e.msg)}</p>`:`<p class="aide">Il reste : ${eur0(e.reste)}.</p>`}</div>`}).join('')}</section>`;
 }
 
 /* ---------- Conseils : deux au plus, par ordre d'importance ---------- */
 function conseils(){
   const out=[], X=agg(P,'pro'), st=stats(P,'all');
+  for(const c of avecLimite()){const e=etatLimite(c,P);if(e&&e.etat==='rouge')out.push({lvl:'ko',t:`Limite dépassée pour ${c.name} : ${eur0(e.dep-e.lim)} de trop ${e.mot}.`,go:'data-tab="objectifs" data-ancre="limites"'})}
   if(st.autonomie!=null&&st.autonomie<1) out.push({lvl:'ko',t:'Votre réserve couvre moins d’un mois de dépenses.',go:'data-tab="reglages" data-ancre="reserve"'});
   const tr=tresoPro(), du=resteAProvisionner();
   if(tr&&tr.t!=null&&du.du>0&&tr.t<du.du) out.push({lvl:'ko',t:`Votre compte pro ne contient pas assez pour ce qui doit être mis de côté : il manque ${eur0(du.du-tr.t)}.`,go:'data-tab="reglages" data-ancre="avances"'});
-  if(X.provision>0) out.push({lvl:'',t:`Pensez à mettre ${eur0(X.provision)} de côté ce mois-ci.`,go:'data-scroll="activite"'});
+  if(X.provision>0) out.push({lvl:'',t:`Pensez à garder ${eur0(X.provision)} de côté pour vos cotisations et impôts ce mois-ci.`,go:'data-scroll="activite"'});
   const n=nbAVerifier(); if(n) out.push({lvl:'',t:`${n} opération${n>1?'s':''} à vérifier.`,go:'data-tab="operations"'});
   const w=waitingReturns().filter(o=>(Date.now()-new Date(o.date))/864e5>30);
   if(w.length) out.push({lvl:'',t:`${w.length>1?`${w.length} remboursements attendus`:'Un remboursement attendu'} depuis plus de 30 jours : ${eur0(-w.reduce((s,o)=>s+o.amount,0))}.`,go:`data-op="${w[0].id}"`});
@@ -115,8 +124,9 @@ function vAccueil(){
     <section class="carte" id="activite"><h3>Mon activité</h3>
       <div class="ligne"><span>Encaissé</span><b>${eur0(X.ca)}</b></div>
       <div class="ligne"><span>Frais de l’activité</span><b>${eur0(X.fraisExpl)}</b></div>
-      <div class="ligne"><span>À mettre de côté</span><b>${eur0(X.provision)}</b></div>
-      ${+S.settings.taux?'':`<p class="aide">Indiquez le pourcentage à mettre de côté dans les <button class="lien" data-tab="reglages" data-ancre="objectif">réglages</button>.</p>`}
+      <div class="ligne ligne-cot"><span>Cotisations et impôts à garder de côté (${nb(reglage('taux',0,90))} %)</span><b>${eur0(X.provision)}</b></div>
+      <p class="aide sous-ligne">Cet argent n’est pas à vous : il servira à payer vos cotisations sociales et vos impôts.</p>
+      ${+S.settings.taux?'':`<p class="aide">Indiquez ce pourcentage dans <button class="lien" data-tab="objectifs" data-ancre="taux-champ">Mes objectifs</button>.</p>`}
       <div class="ligne total"><span>Il vous reste</span><b>${signed(X.revenuNet)}</b></div></section>`}
   else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ce mois-ci.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p></section>`;
   const q=S.accounts.filter(a=>!a.confirmed);
@@ -129,7 +139,7 @@ function vAccueil(){
         <span class="rub-amt">${eur0(e.net)}</span><span class="barre"><span style="width:${Math.max(1.5,e.net/max*100)}%"></span></span></button>
         ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div>
     <button class="lien ajout-rub" data-act="nouvrub"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>`:''}
-  ${S.ops.length?blocBudgets():''}
+  ${S.ops.length?blocLimites():''}
   ${blocsDefi()}
   ${cs.length?`<section class="conseils">${cs.map(c=>`<button class="conseil ${c.lvl}" ${c.go}><i data-lucide="${c.lvl==='ko'?'triangle-alert':'lightbulb'}"></i><span>${esc(c.t)}</span><i data-lucide="chevron-right"></i></button>`).join('')}</section>`:''}
   ${revue?`<button class="carte revue" data-act="review" data-year="${P.m===12?P.y:P.y-1}"><span><span class="r-t">Votre année ${P.m===12?P.y:P.y-1} en revue</span><span class="aide">Vos meilleurs et vos pires moments, en quelques écrans.</span></span><i data-lucide="sparkles"></i></button>`:''}`;

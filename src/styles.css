@@ -351,3 +351,46 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 .e-fleche{font-size:24px;line-height:1;font-weight:500}
 .ecart.hausse .e-fleche{color:var(--amber)}.ecart.baisse .e-fleche{color:var(--gold)}
 @media (max-width:520px){.ajout-budget{grid-template-columns:1fr}}
+
+/* Mes objectifs, limites, heures, répartition étiquetée */
+.barre-an{display:block}
+.budget-an .barre-an.orange span,.rep-l .barre-an.orange span{background:var(--amber)}
+.budget-an .barre-an.rouge span,.rep-l .barre-an.rouge span{background:var(--alert)}
+.budget-an.orange .ba-msg{color:var(--amber)}.budget-an.rouge .ba-msg{color:var(--alert)}
+.limite-reg{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 0;border-bottom:1px solid var(--line)}
+.lr-nom{display:flex;align-items:center;gap:12px;font-size:17px;min-width:150px;flex:1}
+.lr-nom svg{width:22px;height:22px;color:var(--gold)}
+.lr-champs{display:flex;gap:8px;align-items:center}
+.lr-champs input{width:96px;min-height:48px;padding:6px 10px;font-size:18px;text-align:right;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.lr-champs select.grand{width:auto;min-height:48px;font-size:16px}
+.affiner>summary{font-size:17px;color:var(--ink)}
+.prix-live{border-left:3px solid var(--gold);padding:8px 0 8px 14px;margin:16px 0}
+.prix-live b{font-weight:500;color:var(--gold)}
+.ligne-cot span{max-width:70%}
+.sous-ligne{margin:-4px 0 8px}
+.lien-objectifs{display:flex;justify-content:space-between;align-items:center;gap:14px;text-align:left}
+.lien-objectifs .r-t{display:block;font-size:18px;font-weight:500}
+.lien-objectifs svg{width:22px;height:22px;color:var(--gold)}
+.op-bloc{border-bottom:1px solid var(--line)}
+.op-bloc>.op{border-bottom:0}
+.op-heures{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:0 4px 12px}
+.h-eq{font-size:15px;color:var(--muted)}
+.h-reel{font-size:16px;font-weight:500}.h-reel.rouge{color:var(--alert)}.h-reel.or{color:var(--gold)}
+.lien.discret{font-size:15px;color:var(--muted)}
+.heures-saisie{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;width:100%;margin-top:6px}
+.heures-saisie .champ{margin:0}
+.heures-bilan .phrase.or{color:var(--gold)}.heures-bilan .phrase.rouge{color:var(--alert)}
+.heures-bilan b{font-weight:500}
+.rep-total{font-size:40px;font-weight:300;font-variant-numeric:tabular-nums;margin:0 0 4px}
+.rep-total span{font-size:17px;font-weight:400;color:var(--muted)}
+.rep{margin-top:10px}
+.rep-l{display:flex;flex-direction:column;gap:6px;width:100%;padding:12px 0;border-bottom:1px solid var(--line);min-height:56px}
+.rep-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;width:100%}
+.rep-nom{display:flex;flex-direction:column;font-size:18px;overflow-wrap:anywhere}
+.rep-val{font-size:16px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.rep-val b{font-size:18px;font-weight:500;color:var(--ink)}
+.rep-barre{display:block;height:12px;background:var(--line);border-radius:6px;position:relative}
+.rep-barre span{position:absolute;left:0;top:0;bottom:0;background:var(--gold);border-radius:6px}
+.rep-lim{font-size:15px;color:var(--muted)}
+.rep-lim.orange{color:var(--amber)}.rep-lim.rouge{color:var(--alert)}
+@media (max-width:420px){nav.tabs button{font-size:15px;padding:6px 2px}nav.tabs button>span{white-space:normal;text-align:center;line-height:1.15}}

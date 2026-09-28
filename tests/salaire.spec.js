@@ -59,7 +59,7 @@ test('part à mettre de côté non réglée : alerte rouge et bouton « Régler 
   await expect(a).toContainText('Vous n’avez pas indiqué la part à mettre de côté pour vos cotisations et impôts : ce chiffre est trop optimiste.');
   await page.click('[data-modal="cascade"]'); await expect(page.locator('.fenetre .alerte-taux')).toHaveCount(1);
   await page.click('.fenetre .alerte-taux [data-ancre="taux-champ"]');
-  await expect(page.locator('.titre-page')).toHaveText('Réglages');
+  await expect(page.locator('.titre-page')).toHaveText('Mes objectifs');
   await expect(page.locator('#taux-champ input')).toBeFocused();
   await expect(page.locator('#taux-champ + .sous-champ')).toHaveText('Souvent entre 25 et 45 % selon votre statut. En cas de doute, renseignez-vous auprès de votre centre de formalités ou d’un conseiller.');
   await page.fill('#taux-champ input','30'); await page.locator('#taux-champ input').blur();

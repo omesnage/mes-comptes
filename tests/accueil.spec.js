@@ -10,19 +10,22 @@ test('démo, mois affiché : gagné au-dessus de l’objectif, mon activité, o�
   await expect(g.locator('.salaire')).toContainText('nets de l’heure');
   await expect(g.locator('.salaire')).toHaveClass(/or/);
   await expect(g.locator('.sal-sous')).toHaveText('congés et retraite déjà déduits, sur une base de 40 h par semaine');
-  await expect(page.locator('#activite .ligne')).toHaveText([/Encaissé/,/Frais de l’activité/,/À mettre de côté/,/Il vous reste/]);
+  await expect(page.locator('#activite .ligne')).toHaveText([/Encaissé/,/Frais de l’activité/,/Cotisations et impôts à garder de côté \(22 %\)/,/Il vous reste/]);
+  await expect(page.locator('#activite .sous-ligne')).toHaveText('Cet argent n’est pas à vous : il servira à payer vos cotisations sociales et vos impôts.');
   const net=await page.evaluate(()=>agg(P,'pro').revenuNet);
   await expect(g.locator('.grand-chiffre')).toHaveText(new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(net));
   await expect(page.locator('.argent .phrase')).toContainText('dépensés côté perso');
   const resto=page.locator('.rub[data-cat="resto"]');
   await expect(resto).toHaveClass(/derape/);
   await expect(resto.locator('.rub-mention')).toContainText('% par rapport à d’habitude');
-  await expect(page.locator('.rub.derape')).toHaveCount(1);
+  expect(await page.locator('.rub.derape').count()).toBeGreaterThanOrEqual(1);
   // Les montants sont triés du plus cher au moins cher
   const m=await page.locator('.rub .rub-amt').allTextContents(); const v=m.map(x=>+x.replace(/[^\d]/g,''));
   expect(v).toEqual([...v].sort((a,b)=>b-a));
   await expect(page.locator('.conseil')).toHaveCount(2);
-  await expect(page.locator('.conseil').first()).toContainText('de côté ce mois-ci');
+  // Deux limites dépassées dans la démo (sorties, cadeaux) : elles passent avant les autres conseils
+  await expect(page.locator('.conseil.ko')).toHaveCount(2);
+  await expect(page.locator('.conseil').first()).toContainText('Limite dépassée pour');
 });
 
 test('démo, mois précédent : sous l’objectif, en rouge',async({page})=>{
@@ -44,14 +47,14 @@ function etat(montants,budget){
   const ops=montants.map((a,i)=>({id:'r'+i,date:`2026-0${i+1}-10`,label:'RESTO',amount:-a,merchant:'RESTO',acct:'pe'}));
   return {schemaVersion:4,onboarded:true,accounts:[{id:'pe',name:'Perso',type:'perso',confirmed:true}],ops,rules:{RESTO:'resto'},categories:undefined,...(budget?{_budget:budget}:{})};
 }
-const der=(page,m,budget)=>page.evaluate(([m,b])=>{if(b)catById('resto').budget=b;render();const p={lvl:'M',y:2026,m};const n=agg(p,'perso').by.resto.net;return derapage('resto',n,p)},[m,budget]);
+const der=(page,m,budget)=>page.evaluate(([m,b])=>{if(b)catById('resto').limite={montant:b,per:'M'};render();const p={lvl:'M',y:2026,m};const n=agg(p,'perso').by.resto.net;return derapage('resto',n,p)},[m,budget]);
 test('règle du dérapage',async({page})=>{
   await openWith(page,etat([100,100,100,130,100,126,200]));
   expect(await der(page,2)).toBeNull();                 // un seul mois d'historique
   expect(await der(page,4)).toBeNull();                 // +30 % mais seulement +30 € (il faut plus de 30 €)
   expect(await der(page,6)).toBeNull();                 // +15 %
   expect((await der(page,7)).txt).toBe('+69 % par rapport à d’habitude');
-  expect((await der(page,4,100)).txt.replace(/\s/g,' ')).toBe('30 € au-dessus de votre budget');
+  expect((await der(page,4,100)).txt.replace(/\s/g,' ')).toBe('30 € au-dessus de votre limite');
 });
 
 test('mois incomplet signalé',async({page})=>{

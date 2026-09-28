@@ -1,33 +1,14 @@
 /* ============ Réglages ============ */
 const CONSEIL_TAUX='Souvent entre 25 et 45 % selon votre statut. En cas de doute, renseignez-vous auprès de votre centre de formalités ou d’un conseiller.';
-function phraseCible(st){st=st||S.settings;const v=+st.netVise||SET0.netVise, h=+st.heuresSemaine||SET0.heuresSemaine;
-  return `Pour atteindre ${eur0(v)} par mois à ${h} h par semaine, une heure doit vous rapporter <b>${eurH(v/(h*52/12))}</b>.`}
 function vReglages(){
   const s=S.settings, st=S.ops.length?stats({lvl:'M',...endOf(defaultPeriod())},'all'):null;
   const r=Object.entries(S.rules).sort((a,b)=>a[0].localeCompare(b[0]));
   const annees=[...new Set(S.ops.map(o=>o.date.slice(0,4)))].sort().reverse();
   const perso=S.categories.filter(c=>c.type==='expense'&&c.univers!=='pro'), act=S.categories.filter(c=>c.type==='expense'&&c.univers==='pro');
   const rub=c=>`<div class="rub-reg"><i data-lucide="${c.icon}"></i><span class="rr-nom">${esc(c.name)}</span>
-    ${c.univers!=='pro'?`<span class="rr-budgets"><label class="rr-budget">Budget par mois<input type="number" inputmode="numeric" min="0" step="10" placeholder="—" value="${c.budget||''}" data-budget="${c.id}" aria-label="Budget par mois ${esc(c.name)}"></label>
-    <label class="rr-budget">Budget pour l’année<input type="number" inputmode="numeric" min="0" step="50" placeholder="—" value="${c.budgetAn||''}" data-budgetan-reg="${c.id}" aria-label="Budget pour l’année ${esc(c.name)}"></label></span>`:''}
     <button class="lien" data-rencat="${c.id}">Renommer</button>${c.custom?`<button class="lien danger" data-delcat="${c.id}">Supprimer</button>`:''}</div>`;
   return `<h2 class="titre-page">Réglages</h2>
-  <section class="carte" id="objectif"><h3>Votre activité</h3>
-    <label class="champ">Revenu net visé par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise??''}" placeholder="2000"></label>
-    <p class="aide sous-champ">Ce que vous voulez vous verser chaque mois, une fois tout payé.</p>
-    <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine??''}" placeholder="40"></label>
-    <p class="aide sous-champ">Tout compris : clients, prospection, devis, administratif, formation, déplacements.</p>
-    <p class="phrase" id="cibleLive">${phraseCible()}</p>
-    <label class="champ">Semaines non travaillées par an<input type="number" inputmode="numeric" min="0" max="51" step="1" data-set="semNonTrav" value="${s.semNonTrav??''}" placeholder="7"></label>
-    <p class="aide sous-champ">Par exemple 5 semaines de congés et 2 pour les jours fériés et les imprévus : soit ${nb(semTrav())} semaines travaillées.</p>
-    <label class="champ">Épargne et retraite à constituer vous-même (%)<input type="number" inputmode="numeric" min="0" max="90" step="1" data-set="epRetraite" value="${s.epRetraite??''}" placeholder="10"></label>
-    <p class="aide sous-champ">Un salarié les a déjà dans son salaire ; vous, vous devez les mettre de côté vous-même.</p>
-    <label class="champ">Part du temps non facturé (%)<input type="number" inputmode="numeric" min="0" max="90" step="1" data-set="nonFacture" value="${s.nonFacture??''}" placeholder="30"></label>
-    <p class="aide sous-champ">Prospection, devis, administratif, formation, déplacements : du temps travaillé que personne ne vous paie.</p>
-    <label class="champ">Heures par jour facturé<input type="number" inputmode="numeric" min="1" max="24" step="1" data-set="hJour" value="${s.hJour??''}" placeholder="7"></label>
-    <p class="aide sous-champ">Pour calculer votre prix à la journée.</p>
-    <label class="champ" id="taux-champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 30"></label>
-    <p class="aide sous-champ">${CONSEIL_TAUX}</p></section>
+  <button class="carte lien-objectifs" data-tab="objectifs"><span><span class="r-t">Votre objectif, votre temps de travail et vos limites</span><span class="aide">Ils se règlent dans l’onglet Mes objectifs.</span></span><i data-lucide="chevron-right"></i></button>
   <section class="carte" id="reserve"><h3>Votre réserve</h3>
     <label class="champ">Épargne disponible (€)<input type="number" inputmode="numeric" min="0" step="100" data-set="epargne" value="${s.epargne||''}" placeholder="0"></label>
     ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:'<p class="aide">Elle indique combien de mois vous tiendriez sans rien encaisser.</p>'}</section>
@@ -37,7 +18,7 @@ function vReglages(){
       <div class="choix gros">${Object.entries(TYPES_LONG).map(([k,l])=>`<button class="choix-btn${a.type===k?' suggere':''}" data-settype="${a.id}:${k}" aria-pressed="${a.type===k}">${l}</button>`).join('')}</div></div>`).join('')}
     <p class="aide">« Les deux mélangés » : un seul compte pour votre activité et votre vie perso. Chaque dépense est alors rangée selon sa rubrique.</p></section>`:''}
   <section class="carte" id="rubriques"><h3>Vos rubriques</h3>
-    <p class="aide">Un budget est facultatif : sans budget, une rubrique est comparée à ce que vous dépensez d’habitude.</p>
+    <p class="aide">Renommez ou supprimez vos rubriques. Les limites de dépenses se fixent dans Mes objectifs.</p>
     ${perso.map(rub).join('')}
     <details class="autre"><summary>Rubriques de l’activité</summary>${act.map(rub).join('')}</details>
     <button class="btn secondaire ajout-btn" data-act="nouvrub" data-de="reglages"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>
@@ -49,7 +30,7 @@ function vReglages(){
   ${annees.length?`<section class="carte"><h3>Votre année en revue</h3><div class="boutons">${annees.slice(0,3).map(y=>`<button class="btn secondaire" data-act="review" data-year="${y}">Année ${y}</button>`).join('')}</div></section>`:''}
   <section class="carte"><h3>Présentation</h3><button class="btn secondaire" data-act="relancer">Revoir la présentation</button></section>
   <details class="carte repli" id="avances"><summary>Réglages avancés</summary>
-    <label class="champ">La part à mettre de côté se calcule sur<select class="grand" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>ce que vous encaissez</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>ce qui reste après les frais</option></select></label>
+    <label class="champ">La part à garder de côté se calcule sur<select class="grand" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>ce que vous encaissez</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>ce qui reste après les frais</option></select></label>
     ${S.accounts.filter(a=>a.type==='pro').map(a=>`<label class="champ">Solde du compte ${esc(a.name)} (€)<input type="number" inputmode="decimal" step="0.01" data-solde="${a.id}" value="${a.solde!=null?a.solde:''}"></label>
       <label class="champ">À la date du<input type="date" data-soldedate="${a.id}" value="${esc(a.soldeDate||'')}"></label>`).join('')}
     <h4>Règles apprises</h4>
@@ -74,9 +55,10 @@ function vDemarrage(){
   if(ONB===1) return `<section class="demarrage">${pas}<h2>Votre objectif</h2>
     <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
     <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
-    <p class="phrase" id="cibleLive">${phraseCible()}</p>
-    <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
-    <p class="aide">${CONSEIL_TAUX} Vous pourrez tout changer plus tard.</p>
+    <label class="champ">Part à garder de côté pour vos cotisations et impôts (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
+    <p class="aide">${CONSEIL_TAUX}</p>
+    <p class="phrase prix-live" id="prixLive" aria-live="polite">${phrasePrix()}</p>
+    <p class="aide"><button class="lien" data-act="onbfin" data-tab="objectifs">Vous pourrez tout changer plus tard</button>, dans l’onglet Mes objectifs.</p>
     <div class="boutons"><button class="btn" data-onb="2">Continuer</button></div><button class="lien" data-act="onbfin">Passer</button></section>`;
   return `<section class="demarrage">${pas}<h2>Ajoutez vos relevés</h2>
     <p class="phrase">Téléchargez vos relevés de compte en PDF sur le site de votre banque, pro et perso, puis ajoutez-les ici.</p>

@@ -1,7 +1,7 @@
 /* ============ Vrai salaire et juste prix : affichage ============ */
 let MODAL=null;
 const nb=n=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(n);
-const alerteTaux=()=>tauxRegle()?'':`<div class="alerte-taux"><p>Vous n’avez pas indiqué la part à mettre de côté pour vos cotisations et impôts : ce chiffre est trop optimiste.</p><button class="btn secondaire" data-tab="reglages" data-ancre="taux-champ">Régler maintenant</button></div>`;
+const alerteTaux=()=>tauxRegle()?'':`<div class="alerte-taux"><p>Vous n’avez pas indiqué la part à mettre de côté pour vos cotisations et impôts : ce chiffre est trop optimiste.</p><button class="btn secondaire" data-tab="objectifs" data-ancre="taux-champ">Régler maintenant</button></div>`;
 function salaireBloc(p,src){
   const s=vraiSalaire(p); if(s.vide) return '';
   if(s.rien) return `<p class="salaire rouge">Votre activité ne vous a rien laissé en poche sur cette période : pas de salaire de l’heure à calculer.</p>${alerteTaux()}`;

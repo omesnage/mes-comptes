@@ -27,7 +27,7 @@ const V1={
   champFutur:{garde:true}
 };
 function checkMigrated(s){
-  expect(s.schemaVersion).toBe(7);
+  expect(s.schemaVersion).toBe(8);
   expect(s.ops).toHaveLength(6);
   expect(s.accounts.map(a=>[a.name,a.type,a.confirmed]).sort()).toEqual([['Compte principal','perso',false],['Crédit Agricole','perso',false],['Qonto pro','pro',false]]);
   const ids=new Set(s.accounts.map(a=>a.id));
@@ -41,7 +41,7 @@ function checkMigrated(s){
   expect(c.c_form).toMatchObject({type:'expense',univers:'pro',name:'Formations',custom:true});
   expect(c.c_atel).toMatchObject({type:'expense',univers:'perso',budget:50});
   expect(c.c_loc).toMatchObject({type:'income',univers:'auto'});
-  expect(c.courses.budget).toBe(350);
+  expect(c.courses.budget).toBe(350); expect(c.courses.limite).toEqual({montant:350,per:'M'});
   expect(c.logiciels).toMatchObject({type:'expense',univers:'pro'});
   // Aucun champ perdu
   expect(s.rules).toEqual(V1.rules); expect(s.sugg).toEqual(V1.sugg); expect(s.readers).toEqual(V1.readers);
@@ -98,7 +98,7 @@ test('vraies données produites par l’ancienne version de l’application',asy
   // 2. La nouvelle version ouvre les mêmes données
   await page.goto(APP); await page.waitForSelector('nav.tabs button');
   const s=await page.evaluate(()=>S);
-  expect(s.schemaVersion).toBe(7);
+  expect(s.schemaVersion).toBe(8);
   expect(s.ops.length).toBe(v1.ops.length);
   expect(s.rules).toEqual(v1.rules);
   expect(s.settings).toMatchObject({taux:25,heuresSemaine:35});
@@ -116,5 +116,5 @@ test('heures : l’ancien réglage par défaut (140 h puis 160 h par mois) devie
 test('v3 → v4 : un nom de rubrique personnalisé est gardé, les noms par défaut sont simplifiés',async({page})=>{
   await openWith(page,{schemaVersion:3,ops:[{id:'1',date:'2026-06-01',label:'CB X',amount:-5,merchant:'X',acct:'a'}],accounts:[{id:'a',name:'A',type:'perso',confirmed:true}],
     categories:[{id:'resto',name:'Mes restos',icon:'utensils',type:'expense',univers:'perso'},{id:'frais',name:'Frais bancaires',icon:'landmark',type:'expense',univers:'auto'}]});
-  expect(await page.evaluate(()=>[catById('resto').name,catById('frais').name,S.schemaVersion,S.onboarded])).toEqual(['Mes restos','Banque',7,true]);
+  expect(await page.evaluate(()=>[catById('resto').name,catById('frais').name,S.schemaVersion,S.onboarded])).toEqual(['Mes restos','Banque',8,true]);
 });

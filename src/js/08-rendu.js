@@ -20,7 +20,7 @@ const inUniv=o=>UNIV==='all'||opUniv(o)===UNIV;
 const moisNom=p=>{const s=MOIS[p.m-1]+' '+p.y;return s[0].toUpperCase()+s.slice(1)};
 
 let ACCN=0;
-const TABS=[['accueil','Accueil','house'],['bilan','Bilan','chart-pie'],['operations','Mes opérations','list'],['importer','Importer','upload']];
+const TABS=[['accueil','Accueil','house'],['bilan','Bilan','chart-bar'],['operations','Mes opérations','list'],['importer','Importer','upload'],['objectifs','Mes objectifs','target']];
 function render(){
   AGG={}; RAW={}; relink(); ACCN=S.accounts.length;
   if(!P||P.lvl!=='M') P=defaultPeriod(); P.lvl='M';
@@ -33,7 +33,7 @@ function render(){
   const v=$('#view');
   if(onb) v.innerHTML=vDemarrage();
   else if(!S.ops.length&&['accueil','bilan','operations'].includes(view)) v.innerHTML=libBanner()+vide();
-  else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,reglages:vReglages}[view]();
+  else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,objectifs:vObjectifs,reglages:vReglages}[view]();
   if(view!=='bilan') BCAT=null;
   v.insertAdjacentHTML('beforeend',(FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'')+(NEWCAT?fenetreRubrique():'')+(MODAL?fenetreModal():''));
   document.body.classList.toggle('fige',!!(FICHE||BCAT||NEWCAT||MODAL));
@@ -83,11 +83,26 @@ function aVerifier(){
     <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details></div>`).join('')}
   </section>`;
 }
-function opLine(o){
+let HEURES=null;
+/* Sous un encaissement de l'activité : son équivalent en heures au prix minimum, et le temps réellement passé */
+function heuresBloc(o,statique){
+  const px=heuresPrix(); if(!px||!estEncaissementPro(o)) return '';
+  const eq=Math.round(o.amount/px);
+  let h=`<span class="h-eq">= environ ${nb(eq)} h de travail à votre prix</span>`;
+  if(o.heures>0){const t=o.amount/o.heures;h+=`<span class="h-reel ${t<px?'rouge':'or'}">Vous avez passé ${fmt1(o.heures)} h : ce travail vous a rapporté ${eur0(t)} de l’heure</span>`}
+  if(statique) return `<div class="op-heures">${h}</div>`;
+  if(HEURES===o.id) h+=`<span class="heures-saisie"><label class="champ">Heures réellement passées<input id="heuresIn" type="number" inputmode="decimal" min="0" step="0.5" value="${o.heures||''}"></label><button class="btn secondaire" data-heuresok="${o.id}">Enregistrer</button></span>`;
+  else h+=`<button class="lien discret" data-heures="${o.id}">${o.heures>0?'Modifier le temps passé':'Temps réellement passé ?'}</button>`;
+  return `<div class="op-heures">${h}</div>`;
+}
+function opLine(o,statique){
+  statique=statique===true; /* attention : .map(opLine) passe le rang en second paramètre */
   const c=catOf(o), x=o.src==='rev'?'Fichier de revenus':opExtra(o);
   const nom=INTERNAL[o.id]&&!o.cat?'Virement entre vos comptes':c?catById(c)?.name||'':'À vérifier';
-  return `<button class="op" data-op="${o.id}"><span class="op-l1"><span class="op-m">${esc(o.merchant)}</span><span class="op-amt${o.amount>0?' cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></span>
-    <span class="op-l2">${o.date.slice(8,10)}/${o.date.slice(5,7)} · ${esc(nom)}${ACCN>1&&o.src!=='rev'?` · ${esc(acctName(o.acct))}`:''}</span>${x?`<span class="op-x">${esc(x)}</span>`:''}</button>`;
+  const tag=statique?'div':'button', hb=heuresBloc(o,statique);
+  const ligne=`<${tag} class="op"${statique?'':` data-op="${o.id}"`}><span class="op-l1"><span class="op-m">${esc(o.merchant)}</span><span class="op-amt${o.amount>0?' cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></span>
+    <span class="op-l2">${o.date.slice(8,10)}/${o.date.slice(5,7)} · ${esc(nom)}${ACCN>1&&o.src!=='rev'?` · ${esc(acctName(o.acct))}`:''}</span>${x?`<span class="op-x">${esc(x)}</span>`:''}</${tag}>`;
+  return hb?`<div class="op-bloc">${ligne}${hb}</div>`:ligne;
 }
 function vOps(){
   const t=norm(q.trim()), k=P.y+'-'+pad(P.m);

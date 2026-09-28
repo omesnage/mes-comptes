@@ -56,8 +56,8 @@ function demoData(){
   add(2,10,'CB AMAZON PAYMENTS',-89.9,null,pe.id,{awaiting:true});
   st.ops=ops.sort((a,b)=>a.date<b.date?1:-1);
   st.rules=cats;
-  /* Budgets de l'année : vacances dans les clous, shopping trop rapide, cadeaux dépassés */
-  const ba={voyages:2000,shopping:500,cadeaux:30}; for(const id in ba) st.categories.find(c=>c.id===id).budgetAn=ba[id];
+  /* Limites : vacances dans les clous (an), shopping trop rapide (an), cadeaux dépassés (an), sorties proches de la limite (mois) */
+  const li={voyages:[2000,'Y'],shopping:[600,'Y'],cadeaux:[30,'Y'],loisirs:[30,'M']}; for(const id in li) st.categories.find(c=>c.id===id).limite={montant:li[id][0],per:li[id][1]};
   const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
   st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);

@@ -8,7 +8,7 @@ test('vue Mois : totaux identiques à l’Accueil, pour chaque mois de la démo,
     out.push([bilan(p,'perso').total,agg(p,'perso').net,bilan(p,'pro').total,agg(p,'pro').fraisExpl])}return out});
   for(const [a,b,c,d] of r){expect(a).toBeCloseTo(b,6);expect(c).toBeCloseTo(d,6)}
   // Et à l'écran : le total au centre de l'anneau égale la phrase de l'Accueil
-  const centre=await page.locator('.anneau-bilan text').first().textContent();
+  const centre=await page.locator('.rep-total').evaluate(e=>e.firstChild.textContent);
   await page.click('nav.tabs [data-tab="accueil"]');
   const acc=await page.locator('.argent .phrase').textContent();
   expect(n(centre)).toBe(n(acc));
@@ -25,30 +25,21 @@ test('vue Année = somme des 12 mois ; vue Trimestre = somme de ses 3 mois',asyn
   for(const U of ['perso','pro']){expect(r[U][0]).toBeCloseTo(r[U][1],6);expect(r[U+'Q'][0]).toBeCloseTo(r[U+'Q'][1],6);expect(r[U+'R']).toBe(true)}
 });
 
-test('répartition : 7 parts au plus, légende triée avec montant et pourcentage, fiche au toucher',async({page})=>{
+test('répartition : une barre étiquetée par rubrique (nom, montant, pourcentage), triée, fiche au toucher',async({page})=>{
   await demo(page);
   await page.click('[data-blvl="Y"]');
   await expect(page.locator('.mois h2')).toHaveText(/^\d{4}$/);
-  const parts=await page.locator('.anneau-bilan circle.part').count();
-  expect(parts).toBeLessThanOrEqual(7);
-  await expect(page.locator('.leg').last()).toBeVisible();
-  const leg=page.locator('.legende > .leg');
-  await expect(leg.filter({hasText:'Autres ('})).toHaveCount(1);
-  const am=(await page.locator('.legende > .leg:not(:has(.pastille.vide)) .leg-amt').allTextContents()).map(n);
-  expect(am.slice(0,-1)).toEqual([...am.slice(0,-1)].sort((a,b)=>b-a));
-  await expect(leg.first().locator('.leg-pc')).toHaveText(/\d+ %/);
-  await leg.first().click();
+  await expect(page.locator('.repartition h3')).toHaveText(/^Répartition de vos dépenses de \d{4}$/);
+  const l=page.locator('.rep-l'); const n0=await l.count(); expect(n0).toBeGreaterThan(5);
+  for(let i=0;i<n0;i++){expect((await l.nth(i).locator('.rep-nom').textContent()).trim()).not.toBe('');expect(await l.nth(i).locator('.rep-val').textContent()).toMatch(/\d\s€ · \d+ %/)}
+  const am=(await page.locator('.rep-val b').allTextContents()).map(n);
+  expect(am).toEqual([...am].sort((a,b)=>b-a));
+  await l.first().click();
   const f=page.locator('.fiche');
   await expect(f).toContainText('En moyenne par mois');
   await expect(f).toContainText('Par rapport à l’année précédente');
   await expect(f.locator('.col')).toHaveCount(12);
   expect(await f.locator('.op').count()).toBeGreaterThan(0);
-  await page.click('.fiche .fermer');
-  // Toucher l'anneau lui-même, juste à droite de midi : c'est la première part (la plus grosse)
-  const b=await page.locator('.anneau-bilan').boundingBox(), k=b.width/200;
-  await page.mouse.click(b.x+(100+80*Math.sin(.15))*k,b.y+(100-80*Math.cos(.15))*k);
-  await expect(page.locator('.fiche .f-m')).toHaveText(await page.locator('.legende > .leg').first().locator('.leg-nom').textContent());
-  await expect(page.locator('.fiche')).toBeVisible();
 });
 
 test('évolution : 6 barres en Mois, 3 en Trimestre, 12 en Année, moyenne en pointillés ; toucher une barre ouvre ce mois',async({page})=>{
@@ -56,7 +47,7 @@ test('évolution : 6 barres en Mois, 3 en Trimestre, 12 en Année, moyenne en po
   const cols=page.locator('.carte:has(h3:text("Évolution")) .col');
   await expect(cols).toHaveCount(6);
   await expect(page.locator('.carte:has(h3:text("Évolution")) .moyenne')).toHaveCount(1);
-  await expect(page.locator('.legende-moy')).toContainText('En moyenne :');
+  await expect(page.locator('.legende-moy').first()).toContainText('Ligne pointillée : votre moyenne,');
   await page.click('[data-blvl="Q"]'); await expect(page.locator('.mois h2')).toHaveText(/trimestre/); await expect(cols).toHaveCount(3);
   await page.click('[data-blvl="Y"]'); await expect(cols).toHaveCount(12);
   await cols.nth(2).click();
@@ -86,7 +77,7 @@ test('choix Perso / Activité : absent sans frais d’activité ; en Activité, 
   await demo(page);
   await page.click('[data-bu="pro"]');
   const r=await page.evaluate(()=>({t:bilan(PB,'pro').total,f:agg(PB,'pro').fraisExpl}));
-  expect(n(await page.locator('.anneau-bilan text').first().textContent())).toBe(Math.round(r.f));
+  expect(n(await page.locator('.rep-total').evaluate(e=>e.firstChild.textContent))).toBe(Math.round(r.f));
   await openWith(page,{schemaVersion:4,onboarded:true,accounts:[{id:'a',name:'A',type:'perso',confirmed:true}],ops:[{id:'1',date:'2026-06-03',label:'CB CARREFOUR',amount:-50,merchant:'CARREFOUR',acct:'a'}],rules:{CARREFOUR:'courses'}});
   await page.click('nav.tabs [data-tab="bilan"]');
   await expect(page.locator('[data-bu]')).toHaveCount(0);

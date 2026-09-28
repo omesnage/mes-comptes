@@ -78,3 +78,13 @@ function cascade(p){
   return {a,b,c,d,e,f,enc,frais,prov,poche,H,hFact,corr,ep,nf,congesInclus:corr===1};
 }
 const tauxRegle=()=>+S.settings.taux>0;
+
+/* Prix minimum de l'heure avec des réglages en cours de saisie (les valeurs non saisies prennent leur valeur par défaut) */
+function justePrixAvec(sur){const avant=S.settings;S.settings={...avant,...(sur||{})};try{return justePrix()}finally{S.settings=avant}}
+function phrasePrix(sur){
+  const st={...S.settings,...(sur||{})}, v=+st.netVise||SET0.netVise, j=justePrixAvec(sur);
+  return j?`Pour avoir ${eur0(v)} par mois, vous devez vous faire payer au minimum <b>${eur0(j.heure)} de l’heure</b>.`:'Avec ces pourcentages, le calcul n’est pas possible : aucun ne peut atteindre 100 %.';
+}
+/* Encaissements de l'activité : conversion en heures de travail au prix minimum */
+const estEncaissementPro=o=>o.amount>0&&!INTERNAL[o.id]&&o.src!=='rev'&&(c=>c&&typeOf(c)==='income')(catOf(o))&&opUniv(o)==='pro'||o.src==='rev'&&o.amount>0;
+function heuresPrix(){const j=justePrix();return j&&j.heure>0?j.heure:null}

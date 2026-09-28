@@ -1,5 +1,5 @@
 /* ============ Données de base ============ */
-const SCHEMA=7;
+const SCHEMA=8;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
@@ -35,7 +35,7 @@ const CATS0=[
  ['revenus','Revenus et encaissements','arrow-down-left','income','auto'],
  ['remu','Votre rémunération','arrow-left-right','remu','auto'],
  ['interne','Virements entre vos comptes','repeat','transfer','auto']
-].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,budget:0,budgetAn:0,fixed:!!fixed}));
+].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,limite:null,fixed:!!fixed}));
 /* Anciens noms par défaut, remplacés par les nouveaux lors de la migration (un nom personnalisé est gardé) */
 const OLD_NAMES={courses:'Courses alimentaires',resto:'Restaurants & cafés',transport:'Transport & carburant',logement:'Logement & énergie',sante:'Santé',abonnements:'Abonnements & téléphonie',loisirs:'Loisirs & culture',shopping:'Shopping',frais:'Frais bancaires',pret:'Remboursement de prêt',logiciels:'Logiciels & outils',materiel:'Matériel & fournitures',deplacements:'Déplacements professionnels',soustraitance:'Sous-traitance',cotisations:'Cotisations sociales',impots:'Impôts sur l’activité',pro:'Autres frais professionnels',remb:'Remboursements',rentrees:'Rentrées d’argent',revenus:'Revenus',remu:'Rémunération (pro vers perso)',interne:'Virements internes',divers:'Divers'};
 /* Rubriques qui correspondent au paiement de la provision (cotisations, impôts) */

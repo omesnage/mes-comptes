@@ -3,33 +3,6 @@ const nb=s=>s.replace(/\s/g,' ');
 const perso=(ops,rules,extra={})=>({schemaVersion:7,onboarded:true,accounts:[{id:'pe',name:'Perso',type:'perso',confirmed:true}],
   ops:ops.map(([date,amount,merchant],i)=>({id:'o'+i,date,label:merchant,amount,merchant,acct:'pe'})),rules,...extra});
 
-test('budgets de l’année : doré dans les clous, orange plus vite que prévu, rouge dépassé',async({page})=>{
-  const ops=[['2026-01-10',-300,'AIRBNB'],['2026-06-10',-200,'HOTEL DU PORT'],['2026-06-28',-10,'CARREFOUR']];
-  await openWith(page,perso(ops,{AIRBNB:'voyages','HOTEL DU PORT':'voyages',CARREFOUR:'courses'}));
-  await page.evaluate(()=>{catById('voyages').budgetAn=1200;P={lvl:'M',y:2026,m:6};render()});
-  const b=page.locator('.budget-an');
-  await expect(b).toHaveClass(/ or/);
-  await expect(b.locator('.phrase')).toHaveText(nb('Vacances : 500 € dépensés sur 1 200 € prévus cette année. Il vous reste 700 €.').replace(/ €/g,' €').replace('1 200','1 200'));
-  // Prorata de juin : 600 € ; 700 € dépensés, c'est trop vite
-  await page.evaluate(()=>{S.ops.push({id:'x',date:'2026-06-12',label:'AIRBNB',amount:-200,merchant:'AIRBNB',acct:'pe'});render()});
-  await expect(b).toHaveClass(/orange/); await expect(b.locator('.ba-msg')).toHaveText('Vous dépensez plus vite que prévu');
-  await page.evaluate(()=>{S.ops.push({id:'y',date:'2026-06-14',label:'AIRBNB',amount:-680,merchant:'AIRBNB',acct:'pe'});render()});
-  await expect(b).toHaveClass(/rouge/); await expect(b.locator('.ba-msg')).toHaveText('Budget dépassé de 180 €');
-});
-
-test('sans budget de l’année : encadré « Fixez-vous un budget vacances », enregistrement direct',async({page})=>{
-  await openWith(page,perso([['2026-06-10',-50,'CARREFOUR']],{CARREFOUR:'courses'}));
-  const e=page.locator('.budgets-propose');
-  await expect(e).toContainText('Fixez-vous un budget vacances pour l’année');
-  await page.fill('#budgetAnRapide','1500'); await page.click('[data-budgetan="voyages"]');
-  await expect(page.locator('.budgets-propose')).toHaveCount(0);
-  await expect(page.locator('.budget-an')).toContainText('Vacances : 0');
-  await page.click('#gear');
-  await expect(page.locator('[data-budgetan-reg="voyages"]')).toHaveValue('1500');
-  const noms=await page.evaluate(()=>['voyages','loisirs','shopping','cadeaux'].map(id=>catById(id).name));
-  expect(noms).toEqual(['Vacances','Sorties et loisirs','Vêtements et shopping','Cadeaux']);
-});
-
 /* Défi : mois calendaires relatifs à aujourd'hui */
 function mois(k){const d=new Date();const x=new Date(d.getFullYear(),d.getMonth()-k,1);return {ym:x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'),nom:['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][x.getMonth()]}}
 function etatDefi(depPrev,defi){
@@ -83,9 +56,9 @@ test('jamais de montant négatif : la rubrique reste à 0 €, le surplus appara
   await expect(s.locator('.rub-sous')).toHaveText('dont 50 € de remboursements');
   for(const t of await page.locator('.rub-amt').allTextContents()) expect(t).not.toContain('−');
   await page.click('nav.tabs [data-tab="bilan"]');
-  for(const t of await page.locator('.leg-amt').allTextContents()) expect(t).not.toContain('−');
-  await expect(page.locator('.legende')).not.toContainText('plus de remboursements que de dépenses');
-  await expect(page.locator('.leg',{hasText:'Santé'})).toContainText('dont 50 € de remboursements');
+  for(const t of await page.locator('.rep-val').allTextContents()) expect(t).not.toContain('−');
+  await expect(page.locator('.repartition')).not.toContainText('plus de remboursements que de dépenses');
+  await expect(page.locator('.rep-l',{hasText:'Santé'})).toContainText('dont 50 € de remboursements');
 });
 
 test('migration : plus aucune trace des frais remboursés ni de la voiture',async({page})=>{
@@ -97,7 +70,7 @@ test('migration : plus aucune trace des frais remboursés ni de la voiture',asyn
       {id:'3',date:'2026-05-20',label:'VIR SEPA EMIS INDEMNITES KM',amount:-140,merchant:'INDEMNITES KM',acct:'pr'},{id:'4',date:'2026-05-21',label:'VIR SEPA RECU DE QONTO',amount:140,merchant:'QONTO',acct:'pe'}]});
   const s=await page.evaluate(()=>({v:S.schemaVersion,cat:S.categories.some(c=>c.id==='fraisrembourses'),rules:S.rules,sugg:S.sugg,vir:S.virements,op2:S.ops.find(o=>o.id==='2').cat,
     t:catById('transport'),l:catById('loisirs').name,vo:catById('voyages').name,remu:agg({lvl:'M',y:2026,m:5},'pro').remu}));
-  expect(s.v).toBe(7); expect(s.cat).toBe(false); expect(s.rules).toEqual({CARREFOUR:'courses'}); expect(s.sugg).toEqual({});
+  expect(s.v).toBe(8); expect(s.cat).toBe(false); expect(s.rules).toEqual({CARREFOUR:'courses'}); expect(s.sugg).toEqual({});
   expect(s.vir).toBeUndefined(); expect(s.op2).toBeUndefined();
   expect(s.t).toMatchObject({name:'Transports',univers:'perso'}); expect(s.l).toBe('Sorties et loisirs'); expect(s.vo).toBe('Vacances');
   expect(s.remu).toBe(140);
