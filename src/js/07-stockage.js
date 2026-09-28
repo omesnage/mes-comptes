@@ -2,6 +2,9 @@
 let db=null, uid=null, mode='local', stateDirty=false, dirtyMonths=new Set(), timer=null, flushing=false, again=false, saveState='';
 const LS='mes-comptes-v1';
 const base=()=>`data/users/${uid}/state`;
+const LSUI='mes-comptes-affichage';
+function loadUI(){try{const u=JSON.parse(localStorage.getItem(LSUI)||'{}');if(['all','pro','perso'].includes(u.univ))UNIV=u.univ}catch(e){}}
+function saveUI(){try{localStorage.setItem(LSUI,JSON.stringify({univ:UNIV}))}catch(e){}}
 function loadLocal(){try{const t=localStorage.getItem(LS);return t?JSON.parse(t):null}catch(e){return null}}
 function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 function mergeCats(saved){
@@ -10,8 +13,40 @@ function mergeCats(saved){
   CATS0.forEach((d,i)=>{if(!out.some(c=>c.id===d.id)){const after=i>0?out.findIndex(c=>c.id===CATS0[i-1].id):-1;out.splice(after+1,0,{...d})}});
   return out;
 }
-function merge(x){const b=blank();return{categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]}}
+/* Les champs inconnus sont conservés tels quels, puis la migration de schéma s'applique */
+let MIGRATED=false;
+function merge(x){
+  const st={...x,schemaVersion:x.schemaVersion||1,accounts:x.accounts||[],categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]};
+  if(migrateSchema(st)){MIGRATED=true;st.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)))}
+  return st;
+}
+/* Migrations de schéma, dans l'ordre. Chaque étape est rejouable sans risque. */
+function migrateSchema(st){
+  const v0=st.schemaVersion;
+  if(st.schemaVersion<2){
+    /* v1 → v2 : le nom de compte porté par chaque opération devient une fiche de compte avec un type */
+    const byName={};
+    for(const o of st.ops){ if(o.src==='rev') continue;
+      const n=o.acct||'Compte principal';
+      let a=byName[n];
+      if(!a){const bank=(BANKS.find(([b])=>b===n)||[])[0]||detectBank(n)||'';
+        a=byName[n]={id:newId('a_'),name:n,bank,no:'',type:guessType(bank,'',n),confirmed:false,solde:null,soldeDate:''};st.accounts.push(a)}
+      o.acct=a.id; }
+    /* L'ancien type « pro » devient une dépense de l'univers pro */
+    st.categories.forEach(c=>{
+      if(c.type==='pro'){c.type='expense';c.univers='pro'}
+      if(c.id==='pro'&&c.name==='Frais professionnels') c.name='Autres frais professionnels';
+      if(!c.univers){const d=CATS0.find(k=>k.id===c.id);c.univers=d?d.univers:(c.type==='income'?'auto':'perso')}
+    });
+    st.schemaVersion=2;
+  }
+  return st.schemaVersion!==v0;
+}
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }
+/* Enregistrement immédiat quand la page est quittée ou mise en arrière-plan, pour ne rien perdre */
+function saveNow(){if(!demo&&timer){clearTimeout(timer);timer=null;saveLocal();if(mode==='db')flush()}}
+addEventListener('pagehide',saveNow);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveNow()});
 async function flush(){
   if(demo) return;
   saveLocal();
@@ -20,7 +55,7 @@ async function flush(){
   flushing=true; setStatus('saving');
   const months=[...dirtyMonths]; dirtyMonths.clear(); const st=stateDirty; stateDirty=false;
   try{
-    if(st) await db.doc(base()).set({categories:S.categories,rules:S.rules,sugg:S.sugg,incomeSource:S.incomeSource,settings:S.settings,challenges:S.challenges,readers:S.readers,updated:Date.now()});
+    if(st) await db.doc(base()).set({schemaVersion:S.schemaVersion,accounts:S.accounts,categories:S.categories,rules:S.rules,sugg:S.sugg,incomeSource:S.incomeSource,settings:S.settings,challenges:S.challenges,readers:S.readers,updated:Date.now()});
     for(const mk of months){
       const ref=db.doc(base()).collection('months').doc(mk);
       const ops=S.ops.filter(o=>o.date.slice(0,7)===mk);
@@ -49,10 +84,11 @@ function migrate(){
   return ch;
 }
 async function initStore(){
-  const local=loadLocal(); let localMig=false; if(local){S=merge(local);localMig=migrate()}
+  loadUI();
+  const local=loadLocal(); let localMig=false; if(local){MIGRATED=false;S=merge(local);localMig=migrate()||MIGRATED}
   render();
   try{
-    if(!window.claude||!claude.use){setStatus('local');if(localMig)save();return}
+    if(!HAS_CLAUDE){setStatus('local');if(localMig)save();return}
     const [d,u]=await Promise.all([claude.use('db'),claude.use('user')]);
     const id=u?await u.id():null;
     if(d&&id){
@@ -62,7 +98,7 @@ async function initStore(){
         const data=JSON.parse(JSON.stringify(st.data()));
         const ms=await db.doc(base()).collection('months').get();
         const ops=[]; ms.docs.forEach(x=>ops.push(...JSON.parse(JSON.stringify(x.data().ops||[]))));
-        S=merge({...data,ops}); S.ops.sort((a,b)=>a.date<b.date?1:-1); if(migrate()) save();
+        MIGRATED=false; S=merge({...data,ops}); S.ops.sort((a,b)=>a.date<b.date?1:-1); if(migrate()||MIGRATED){stateDirty=true;save()}
         if(!demo){P=null;render()}
         saveLocal(); setStatus('saved');
       } else if(S.ops.length||Object.keys(S.rules).length){

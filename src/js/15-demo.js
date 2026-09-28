@@ -32,18 +32,21 @@ function startDemo(){
   add(mk(0,1),'CB VINTED 01/'+mk(0,1).slice(5,7),-35,{awaiting:true});
   add(mk(2,8),'CB FNAC 08/'+mk(2,8).slice(5,7)+' NANTES',-149,{awaiting:true,_c:'shopping'});
   S.ops.forEach(o=>{if(o._c&&!/ATELIER|AMAZON/.test(o.merchant))S.rules[o.merchant]=o._c;delete o._c;
-    if(!S.rules[o.merchant]){const c=kwSuggest(o.merchant,o.label);if(c)S.sugg[o.merchant]={c,src:'kw'}}});
+    if(!S.rules[o.merchant]){const c=kwSuggest(o.merchant,o.label,'perso',o.amount);if(c)S.sugg[o.merchant]={c,src:'kw'}}});
   S.categories.find(c=>c.id==='courses').budget=380;
   for(let k=5;k>=0;k--){add(mk(k,6),'PRLV SEPA OVH CLOUD',-23.99,{_c:'pro'});if(k%2===0)add(mk(k,14),'CB LDLC 14/'+mk(k,14).slice(5,7),-(80+Math.random()*300),{_c:'pro'})}
   S.ops.forEach(o=>{if(o._c==='pro'){S.rules[o.merchant]='pro';delete o._c}});
-  S.ops.forEach(o=>o.acct='Crédit Agricole');
-  S.ops.filter(o=>S.rules[o.merchant]==='pro'||/HONORAIRES/.test(o.label)).forEach(o=>o.acct='Qonto pro');
-  for(let k=5;k>=0;k--){const d=mk(k,5);add(d,'VIR SEPA EMIS VERS OLIVIER PERSO',-1500,{acct:'Qonto pro'});add(d,'VIR SEPA RECU DE QONTO SAS',1500,{acct:'Crédit Agricole'})}
-  S.settings={epargne:9500,taux:25,heures:140,objectif:6};
+  const perso=addAccount({name:'Crédit Agricole',bank:'Crédit Agricole',type:'perso',confirmed:true}).id;
+  const pro=addAccount({name:'Qonto pro',bank:'Qonto',type:'pro',confirmed:true}).id;
+  S.ops.forEach(o=>o.acct=perso);
+  S.ops.filter(o=>S.rules[o.merchant]==='pro'||/HONORAIRES/.test(o.label)).forEach(o=>o.acct=pro);
+  for(let k=5;k>=0;k--){const d=mk(k,5);add(d,'VIR SEPA EMIS VERS OLIVIER PERSO',-1500,{acct:pro});add(d,'VIR SEPA RECU DE QONTO SAS',1500,{acct:perso})}
+  const pa=acctById(pro); pa.solde=6400; pa.soldeDate=mk(2,28);
+  S.settings={epargne:9500,taux:25,heures:140,objectif:6,assiette:'ca'};
   S.challenges=[{id:'courses10',month:thisMonth()},{id:'noshop',month:mk(1,1).slice(0,7)}];
   S.ops.sort((a,b)=>a.date<b.date?1:-1);
   P=null; view='synthese'; render();
 }
-function exitDemo(){ACC='';demo=false;S=backup||blank();backup=null;P=null;openCat=null}
+function exitDemo(){OPACC='';demo=false;S=backup||blank();backup=null;P=null;openCat=null}
 
 initStore();

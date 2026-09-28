@@ -15,9 +15,14 @@ function merchantOf(label){
   const w=s.split(/\s+/).map(x=>x.replace(/^[.'-]+|[.'-]+$/g,'')).filter(x=>x.length>1&&!/\d/.test(x)&&!stop.has(x)&&!/^([A-Z]\.)+[A-Z]?$/.test(x));
   return w.slice(0,3).join(' ')||(/PAYPAL/.test(norm(label))?'PAYPAL':norm(label).trim().slice(0,24))||'INCONNU';
 }
-function kwSuggest(m,label){
+/* Suggestion de rubrique d'après le libellé et le type du compte (perso, pro ou mixte) */
+function kwSuggest(m,label,atype,amount){
   const t=norm(m+' '+label);
-  for(const [re,c] of KW) if(re.test(t)) return c;
+  if(atype==='pro'&&amount<0&&/\b(VIR|VIREMENT)\b/.test(t)&&/\b(PERSO|PERSONNEL|REMUNERATION|PRELEVEMENT EXPLOITANT)\b/.test(t)) return 'remu';
+  for(const [re,c] of KW_PRO) if(re.test(t)) return c;
+  if(atype==='pro') for(const [re,c] of KW_PROACC) if(re.test(t)) return c;
+  for(const [re,c] of KW) if(re.test(t)) return c==='revenus'&&atype==='perso'&&/HONORAIRES/.test(t)?'revenus':c;
+  if(amount>0&&!REFUND_RE.test(t)) return atype==='perso'?'rentrees':'revenus';
   return null;
 }
 

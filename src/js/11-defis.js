@@ -8,12 +8,12 @@ const DEFIS=[
 ];
 function evalDefi(c){
   const D=DEFIS.find(x=>x.id===c.id)||DEFIS[0]; const y=+c.month.slice(0,4), m=+c.month.slice(5,7);
-  const p={lvl:'M',y,m}, A=agg(p), dim=new Date(y,m,0).getDate();
+  const p={lvl:'M',y,m}, A=agg(p,'all'), dim=new Date(y,m,0).getDate();
   const complete=lastOpDate()>=`${c.month}-${pad2(dim-3)}`&&thisMonth()>c.month;
   let v=0,target=0,ok;
   if(D.zero){v=A.by[D.cat]?.net||0;ok=v<=0}
-  else if(D.pct){let s=0,k=0;for(let i=1;i<=3;i++){const b=agg(shift(p,-i));if(b.any){s+=b.by[D.cat]?.net||0;k++}}target=k?s/k*D.pct:0;v=A.by[D.cat]?.net||0;ok=v<=target}
-  else {target=stats(p).lisse;v=A.net+A.pro;ok=target>0&&v<=target}
+  else if(D.pct){let s=0,k=0;for(let i=1;i<=3;i++){const b=agg(shift(p,-i),'all');if(b.any){s+=b.by[D.cat]?.net||0;k++}}target=k?s/k*D.pct:0;v=A.by[D.cat]?.net||0;ok=v<=target}
+  else {target=stats(p,'all').lisse;v=A.net;ok=target>0&&v<=target}
   const status=D.zero&&!ok?'manqué':complete?(ok?'réussi':'manqué'):'en cours';
   const progress=D.zero?(ok?'Rien pour l’instant, continuez.':`${eur0(v)} déjà dépensés.`):`${eur0(v)} pour ${eur0(target)} maximum.`;
   return {...D,month:c.month,status,progress,ok};
@@ -21,7 +21,7 @@ function evalDefi(c){
 function medals(st){
   const done=S.challenges.map(evalDefi).filter(x=>x.status==='réussi').length;
   const monthsData=new Set(S.ops.map(o=>o.date.slice(0,7))).size;
-  let sober=0,best=0; st.ms.forEach(x=>{if(x.a.any&&st.lisse>0&&x.a.net+x.a.pro<=st.lisse){sober++;best=Math.max(best,sober)}else sober=0});
+  let sober=0,best=0; st.ms.forEach(x=>{if(x.a.any&&st.lisse>0&&x.t.net<=st.lisse){sober++;best=Math.max(best,sober)}else sober=0});
   return [
     ['file-check','Premier relevé','Importer un relevé',S.ops.length>0],
     ['check-check','Tout est rangé','Plus rien à valider',S.ops.length>0&&!pendingGroups().length],
@@ -34,7 +34,7 @@ function medals(st){
   ];
 }
 function vGoals(){
-  const st=stats(P), obj=+S.settings.objectif||6, tm=thisMonth();
+  const st=stats(P,'all'), obj=+S.settings.objectif||6, tm=thisMonth();
   const mine=S.challenges.slice().sort((a,b)=>a.month<b.month?1:-1).map(evalDefi);
   const cur=new Set(mine.filter(x=>x.month===tm).map(x=>x.id));
   const pts=st.ms.map(x=>({l:MOIS[x.q.m-1].slice(0,1),v:x.a.income,any:x.a.any}));

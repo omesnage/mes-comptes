@@ -9,7 +9,9 @@ document.addEventListener('click',async e=>{
   if(d.lvl){P.lvl=d.lvl;openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
   if(d.cat==='_pending'){view='valider';openCat=null;render();window.scrollTo({top:0});return}
-  if(d.renacct){const n=(prompt('Nouveau nom du compte',d.renacct)||'').trim();if(!n||n===d.renacct)return;S.ops.forEach(o=>{if(o.src!=='rev'&&acctOf(o)===d.renacct){o.acct=n;dirtyMonths.add(o.date.slice(0,7))}});reports.forEach(r=>{if(r.acct===d.renacct)r.acct=n});if(ACC===d.renacct)ACC=n;save();render();return}
+  if(d.univ){UNIV=d.univ;saveUI();openCat=null;if(!['synthese','economies','objectifs','operations','remb'].includes(view))view='synthese';OPACC='';render();window.scrollTo({top:0});return}
+  if(d.settype){const [id,ty]=d.settype.split(':');const a=acctById(id);if(a){a.type=ty;a.confirmed=true;stateDirty=true;save();render()}return}
+  if(d.renacct){const a=acctById(d.renacct);if(!a)return;const n=(prompt('Nouveau nom du compte',a.name)||'').trim();if(!n||n===a.name)return;a.name=n.slice(0,40);stateDirty=true;save();render();return}
   if(d.copy){const ta=t.closest('.privacy').querySelector('textarea');ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}if(!ok&&navigator.clipboard){navigator.clipboard.writeText(ta.value).then(()=>{t.textContent='Copié'},()=>{t.textContent='Sélectionnez le texte et copiez-le'});return}t.textContent=ok?'Copié':'Sélectionnez le texte et copiez-le';return}
   if(d.prompt){const r=reports.find(x=>x.imp===d.prompt);if(!r)return;copyText(claudePrompt(r.raw),t,'Demande copiée : collez-la dans Claude');return}
   if(d.act==='addreader'){addReader();return}
@@ -25,7 +27,7 @@ document.addEventListener('click',async e=>{
   if(d.qok){const s=document.querySelector(`[data-qsel="${CSS.escape(d.qok)}"]`);if(!s.value){s.focus();return}setRule(d.qok,s.value);render();return}
   if(d.await){const o=S.ops.find(x=>x.id===d.await);if(o){if(o.awaiting)delete o.awaiting;else o.awaiting=true;dirtyMonths.add(o.date.slice(0,7));save();render()}return}
   if(d.act==='addcat'){const n=$('#newcat').value.trim();if(!n){$('#newcat').focus();return}
-    const ty=$('#newcattype').value;S.categories.push({id:'c_'+Math.random().toString(36).slice(2,8),name:n,icon:ty==='income'?'plus-circle':ty==='pro'?'briefcase':'tag',type:ty,budget:0,custom:true});save();render();return}
+    const ty=$('#newcattype').value;S.categories.push({id:'c_'+Math.random().toString(36).slice(2,8),name:n,icon:ty==='income'?'plus-circle':ty==='pro'?'briefcase':'tag',type:ty==='income'?'income':'expense',univers:ty==='income'?'auto':ty,budget:0,custom:true});save();render();return}
   if(d.delcat){const c=catById(d.delcat);if(!c||!confirm(`Supprimer la rubrique « ${c.name} » ? Les opérations concernées repasseront dans À valider.`))return;
     S.categories=S.categories.filter(x=>x!==c);for(const m in S.rules)if(S.rules[m]===c.id)delete S.rules[m];for(const m in S.sugg)if(S.sugg[m].c===c.id)delete S.sugg[m];
     S.ops.forEach(o=>{if(o.cat===c.id){delete o.cat;dirtyMonths.add(o.date.slice(0,7))}});save();render();return}
@@ -45,10 +47,16 @@ document.addEventListener('change',e=>{
   if(d.override){const o=S.ops.find(x=>x.id===d.override);if(!o)return;if(t.value)o.cat=t.value;else delete o.cat;dirtyMonths.add(o.date.slice(0,7));save();render();return}
   if(d.rule){S.rules[d.rule]=t.value;save();render();return}
   if(d.budget){const c=catById(d.budget);c.budget=Math.max(0,+t.value||0);save();return}
-  if(d.accfilter){ACC=t.value;openCat=null;render();return}
+  if(d.opacc){OPACC=t.value;render();return}
+  if(d.accttype){const a=acctById(d.accttype);if(a){a.type=t.value;a.confirmed=true;stateDirty=true;save();render()}return}
+  if(d.solde){const a=acctById(d.solde);if(a){const v=t.value.trim();a.solde=v===''?null:+(+v).toFixed(2);if(a.solde!=null&&!a.soldeDate)a.soldeDate=S.ops.filter(o=>o.acct===a.id).reduce((m,o)=>o.date>m?o.date:m,'')||new Date().toISOString().slice(0,10);a.soldeSrc='saisie';stateDirty=true;save();render()}return}
+  if(d.soldedate){const a=acctById(d.soldedate);if(a){a.soldeDate=t.value;a.soldeSrc='saisie';stateDirty=true;save();render()}return}
+  if(d.catuniv){const c=catById(d.catuniv);if(c){c.univers=t.value;save();render()}return}
+  if(d.assiette){S.settings.assiette=t.value==='resultat'?'resultat':'ca';save();render();return}
   if(d.repacct){let v=t.value;const r=reports.find(x=>x.imp===d.repacct);if(!r)return;
-    if(v==='__new'){v=(prompt('Nom du compte (par exemple « Qonto pro »)')||'').trim();if(!v){render();return}}
-    S.ops.forEach(o=>{if(o.imp===r.imp){o.acct=v;dirtyMonths.add(o.date.slice(0,7))}});r.acct=v;save();render();return}
+    if(v==='__new'){const n=(prompt('Nom du compte (par exemple « Qonto pro »)')||'').trim();if(!n){render();return}v=addAccount({name:n.slice(0,40),type:guessType('','',n)}).id;r.isNew=true}
+    S.ops.forEach(o=>{if(o.imp===r.imp){o.acct=v;dirtyMonths.add(o.date.slice(0,7))}});r.acct=v;
+    S.accounts=S.accounts.filter(a=>S.ops.some(o=>o.acct===a.id));stateDirty=true;save();render();return}
   if(d.set){S.settings[d.set]=Math.max(0,+t.value||0);save();return}
   if(t.id==='restorefile'&&t.files.length){restore_(t.files[0]);t.value='';return}
   if(t.id==='file'&&t.files.length){importFiles([...t.files]);t.value=''}
