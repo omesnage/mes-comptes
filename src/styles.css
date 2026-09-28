@@ -394,3 +394,4 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 .rep-lim{font-size:15px;color:var(--muted)}
 .rep-lim.orange{color:var(--amber)}.rep-lim.rouge{color:var(--alert)}
 @media (max-width:420px){nav.tabs button{font-size:15px;padding:6px 2px}nav.tabs button>span{white-space:normal;text-align:center;line-height:1.15}}
+.q-question{font-size:18px;font-weight:500;margin:6px 0 4px}

@@ -53,12 +53,12 @@ function moisBar(){
   <h2>${moisNom(P)}</h2><button class="fleche" data-shift="1" aria-label="Mois suivant"><i data-lucide="chevron-right"></i></button></div>`;
 }
 /* Question sur le type d'un compte nouvellement ajouté */
-const TYPES_LONG={pro:'Professionnel',perso:'Personnel',mixte:'Les deux mélangés'};
+const TYPES_LONG={pro:'Professionnel',perso:'Personnel',mixte:'Je n’ai pas de compte pro : ce compte sert à tout'};
 function acctAsk(a){
-  return `<div class="question compte-q"><p class="q-t">Ce compte est-il professionnel, personnel, ou les deux mélangés ?</p>
+  return `<div class="question compte-q"><p class="q-t">Ce compte est-il professionnel, personnel, ou sert-il à tout ?</p>
   <p class="q-s">${esc(a.name)}${a.no?` (n° se terminant par ${esc(a.no.slice(-4))})`:''}. Nous avons supposé : ${TYPES_LONG[a.type].toLowerCase()}.</p>
   <div class="choix gros">${Object.entries(TYPES_LONG).map(([k,l])=>`<button class="choix-btn${a.type===k?' suggere':''}" data-settype="${a.id}:${k}">${l}</button>`).join('')}</div>
-  <p class="q-s">« Les deux mélangés » : un seul compte pour votre activité et votre vie perso. Chaque dépense est alors rangée selon sa rubrique.</p></div>`;
+  <p class="q-s">Sans compte pro, l’application vous demandera simplement, pour chaque personne qui vous paie, s’il s’agit d’un client.</p></div>`;
 }
 
 /* ============ Mes opérations ============ */
@@ -66,7 +66,7 @@ function choixRubriques(x){
   const s=S.sugg[x.m]?.c, acc=[...new Set(x.accts.map(id=>(acctById(id)||{}).type||'perso'))];
   let ids;
   if(x.credit) ids=['revenus','rentrees','remb'];
-  else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','conseils','pro'];
+  else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','soustraitance','pro'];
   else ids=['courses','resto','transport','shopping','maison','loisirs','sante','divers'];
   if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','logiciels','materiel','pro','divers'];
   if(s) ids=[s,...ids.filter(i=>i!==s)];
@@ -77,7 +77,10 @@ function aVerifier(){
   const g=pendingGroups(), n=g.length; if(!n) return '';
   return `<section class="carte verifier"><h3>À vérifier <span class="compte">(${n})</span></h3>
   <p class="aide">Une seule réponse par marchand : elle vaudra pour toutes ses opérations, passées et futures.</p>
-  ${g.map(x=>`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
+  ${g.map(x=>x.credit&&x.accts.some(id=>acctById(id)?.type==='mixte')?`<div class="question client-q"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
+    <p class="q-s">${x.n>1?`${x.n} rentrées, `:''}+${eur(x.total)}. ${esc(x.label)}</p>
+    <p class="q-question">Cet argent vient-il d’un client ?</p>
+    <div class="choix gros"><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="revenus">Oui, c’est un client</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="rentrees">Non (CAF, vente, remboursement, virement perso…)</button></div></div>`:`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
     <p class="q-s">${x.n>1?`${x.n} opérations, `:''}${x.total<0?'−':'+'}${eur(Math.abs(x.total))}. ${esc(x.label)}</p>
     <div class="choix">${choixRubriques(x)}</div>
     <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details></div>`).join('')}

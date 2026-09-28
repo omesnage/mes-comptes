@@ -20,7 +20,6 @@ function demoData(){
     add(k,6,'PRLV SEPA SECURITE SOCIALE DES INDEPENDANTS',-Math.round((k<11?CA[10-k]:3500)*.212),'cotisations',pr.id);
     add(k,3,'PRLV SEPA OVH CLOUD',-23.99,'logiciels',pr.id);
     add(k,8,'PRLV SEPA ADOBE SYSTEMS',-71.99,'logiciels',pr.id);
-    add(k,10,'PRLV SEPA INDY COMPTABILITE',-24,'conseils',pr.id);
     add(k,27,'FRAIS TENUE DE COMPTE QONTO',-11,'frais',pr.id);
     if(k%3===1) add(k,15,'CB LDLC',-vary(260,.4),'materiel',pr.id);
     if(k===8) add(k,14,'PRLV SEPA DGFIP CFE',-356,'impots',pr.id);
@@ -50,14 +49,19 @@ function demoData(){
   add(5,14,'CB CLINIQUE VETERINAIRE',-68,'animaux');
   add(2,18,'CB LIBRAIRIE CADEAUX DU PORT',-42,'cadeaux');
   add(7,9,'CB AIRBNB',-386,'voyages');
+  /* Location d'été : la limite vacances de l'année est dépassée */
+  add(1,3,'CB LOCATION VACANCES ILE DE RE',-2400,'voyages');
+  /* Un mois de sorties bien rempli : proche de la limite */
+  add(0,12,'CB FNAC SPECTACLES',-72,'loisirs');
+  add(0,18,'CB LE BARBU SAINT NAZAIRE',-32,'loisirs');
   /* Remboursement d'achat : commandé le mois dernier, remboursé ce mois-ci. Un autre retour attend depuis 2 mois. */
   add(1,9,'CB ZALANDO',-129,'shopping',pe.id,{awaiting:true});
   add(0,14,'VIR ZALANDO REMBOURSEMENT',129,null);
   add(2,10,'CB AMAZON PAYMENTS',-89.9,null,pe.id,{awaiting:true});
   st.ops=ops.sort((a,b)=>a.date<b.date?1:-1);
   st.rules=cats;
-  /* Limites : vacances dans les clous (an), shopping trop rapide (an), cadeaux dépassés (an), sorties proches de la limite (mois) */
-  const li={voyages:[2000,'Y'],shopping:[600,'Y'],cadeaux:[30,'Y'],loisirs:[30,'M']}; for(const id in li) st.categories.find(c=>c.id===id).limite={montant:li[id][0],per:li[id][1]};
+  /* Limites réalistes : vacances dépassées (location d'été), sorties proches de la limite, shopping et cadeaux dans les clous */
+  const li={shopping:[1200,'Y'],loisirs:[150,'M'],voyages:[2500,'Y'],cadeaux:[500,'Y']}; for(const id in li) st.categories.find(c=>c.id===id).limite={montant:li[id][0],per:li[id][1]};
   const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
   st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);

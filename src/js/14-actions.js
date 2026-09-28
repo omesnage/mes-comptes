@@ -25,6 +25,7 @@ document.addEventListener('click',async e=>{
   if(d.autres||d.btout){BTOUT=!BTOUT;render();return}
   if(d.bmois){const [y,m]=d.bmois.split('-').map(Number);PB={lvl:'M',y,m};BCAT=null;BTOUT=false;render();window.scrollTo({top:0});return}
   if(d.act==='onbfin'){S.onboarded=true;ONB=0;save();aller(d.tab||'accueil');return}
+  if(d.cu){S.settings.compteUnique=d.cu==='1';save();render();return}
   if(d.onb){ONB=+d.onb;render();window.scrollTo({top:0});return}
   if(d.act==='relancer'){S.onboarded=false;ONB=0;save();render();window.scrollTo({top:0});return}
   if(d.tab){aller(d.tab,d.ancre);return}

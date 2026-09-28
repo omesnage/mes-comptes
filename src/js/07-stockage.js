@@ -98,6 +98,17 @@ function migrateSchema(st){
     st.categories.forEach(c=>{if(c.limite==null){c.limite=c.budgetAn>0?{montant:+c.budgetAn,per:'Y'}:c.budget>0?{montant:+c.budget,per:'M'}:null}});
     st.schemaVersion=8;
   }
+  if(st.schemaVersion<9){
+    /* v8 → v9 : rubrique « Conseils et services » retirée ; ses opérations passent dans « Autres frais de l'activité » */
+    const X='conseils';
+    if(!st.categories.find(c=>c.id===X)?.custom){
+      st.categories=st.categories.filter(c=>c.id!==X);
+      for(const m in st.rules) if(st.rules[m]===X) st.rules[m]='pro';
+      for(const m in st.sugg) if(st.sugg[m].c===X) st.sugg[m].c='pro';
+      st.ops.forEach(o=>{if(o.cat===X)o.cat='pro'});
+    }
+    st.schemaVersion=9;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }

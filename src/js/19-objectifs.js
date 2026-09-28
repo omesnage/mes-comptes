@@ -26,7 +26,7 @@ function vObjectifs(){
       ${champ('semNonTrav','Semaines non travaillées par an',`Par exemple 5 semaines de congés et 2 pour les jours fériés et les imprévus : soit ${nb(semTrav())} semaines travaillées.`,{max:51})}
       ${champ('nonFacture','Part du temps non facturé (%)','Prospection, devis, administratif, formation, déplacements : du temps travaillé que personne ne vous paie.',{max:90})}
       ${champ('epRetraite','Épargne et retraite à constituer vous-même (%)','Un salarié les a déjà dans son salaire ; vous, vous devez les mettre de côté vous-même.',{max:90})}
-      ${champ('hJour','Heures par jour facturé','Pour calculer votre prix à la journée.',{max:24})}
+      ${champ('hJour','Si vous facturez à la journée : combien d’heures compte une journée ?',(j=>`Sert seulement à calculer votre prix à la journée, à partir de votre prix à l’heure${j?` (par exemple ${eur0(j.heure)} × ${nb(hJour())} h = ${eur0(j.heure*hJour())} la journée)`:''}.`)(justePrix()),{max:24})}
     </details></section>
   <section class="carte" id="limites"><h3>Mes limites de dépenses</h3>
     <p class="aide">Indiquez un montant pour les rubriques que vous voulez surveiller, par mois, par trimestre ou par an. Laissez vide pour ne pas fixer de limite.</p>

@@ -34,13 +34,13 @@ test('tester un relevé : toujours disponible dans Importer',async({page})=>{
 test('compte non confirmé : question en haut de l’Accueil jusqu’à la réponse, modifiable dans Réglages',async({page})=>{
   await openWith(page,{schemaVersion:4,onboarded:true,accounts:[{id:'a',name:'Qonto',type:'pro',confirmed:false}],ops:[{id:'1',date:'2026-06-03',label:'VIR CLIENT',amount:900,merchant:'CLIENT',acct:'a'}],rules:{CLIENT:'revenus'}});
   const q=page.locator('#view > .verifier .compte-q');
-  await expect(q).toContainText('Ce compte est-il professionnel, personnel, ou les deux mélangés ?');
-  await expect(q.locator('.choix-btn')).toHaveText(['Professionnel','Personnel','Les deux mélangés']);
+  await expect(q).toContainText('Ce compte est-il professionnel, personnel, ou sert-il à tout ?');
+  await expect(q.locator('.choix-btn')).toHaveText(['Professionnel','Personnel','Je n’ai pas de compte pro : ce compte sert à tout']);
   await expect(q.locator('.choix-btn.suggere')).toHaveText('Professionnel');
-  await q.locator('.choix-btn',{hasText:'Les deux mélangés'}).click();
+  await q.locator('.choix-btn',{hasText:'Je n’ai pas de compte pro : ce compte sert à tout'}).click();
   await expect(page.locator('.compte-q')).toHaveCount(0);
   await page.click('#gear');
-  await expect(page.locator('#comptes .choix-btn.suggere')).toHaveText('Les deux mélangés');
+  await expect(page.locator('#comptes .choix-btn.suggere')).toHaveText('Je n’ai pas de compte pro : ce compte sert à tout');
   await page.locator('#comptes .choix-btn',{hasText:'Personnel'}).click();
   expect(await page.evaluate(()=>[S.accounts[0].type,S.accounts[0].confirmed])).toEqual(['perso',true]);
 });

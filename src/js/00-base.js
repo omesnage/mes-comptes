@@ -1,5 +1,5 @@
 /* ============ Données de base ============ */
-const SCHEMA=8;
+const SCHEMA=9;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
@@ -25,7 +25,6 @@ const CATS0=[
  ['materiel','Matériel et fournitures','monitor','expense','pro'],
  ['deplacements','Déplacements de l’activité','train-front','expense','pro'],
  ['soustraitance','Sous-traitance','handshake','expense','pro'],
- ['conseils','Conseils et services','messages-square','expense','pro'],
  ['cotisations','Versements de ce qui est mis de côté','piggy-bank','expense','pro'],
  ['impots','Impôts de l’activité','receipt-text','expense','pro'],
  ['empruntpro','Remboursement d’emprunt de l’activité','banknote','expense','pro',1],
@@ -48,7 +47,7 @@ function autoCatOf(label,atype){if(LOAN_RE.test(norm(label)))return atype==='pro
 /* Mots-clés toujours professionnels, quel que soit le compte */
 const KW_PRO=[
  [/\bURS{2}AF\b|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
- [/EXPERT.?COMPTA|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE|AVOCAT|NOTAIRE/,'conseils']
+ [/EXPERT.?COMPTA|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE|AVOCAT|NOTAIRE/,'pro']
 ];
 /* Mots-clés professionnels seulement sur un compte pro */
 const KW_PROACC=[
@@ -122,7 +121,7 @@ const catById=id=>S.categories.find(c=>c.id===id);
 const newId=p=>p+Math.random().toString(36).slice(2,10);
 
 /* ============ Comptes ============ */
-const ACCT_TYPES={perso:'Personnel',pro:'Professionnel',mixte:'Pro et perso mélangés'};
+const ACCT_TYPES={perso:'Personnel',pro:'Professionnel',mixte:'Je n’ai pas de compte pro : ce compte sert à tout'};
 const acctById=id=>S.accounts.find(a=>a.id===id);
 const acctOf=o=>o.acct||'';
 const acctName=id=>(acctById(id)||{}).name||'Compte principal';
@@ -130,6 +129,7 @@ const acctType=o=>(acctById(o.acct)||{}).type||'perso';
 function addAccount(x){const a={id:newId('a_'),name:x.name||'Compte principal',bank:x.bank||'',no:x.no||'',type:x.type||'perso',confirmed:!!x.confirmed,solde:null,soldeDate:''};S.accounts.push(a);stateDirty=true;return a}
 const PRO_HINT=/\b(SASU?|SARL|EURL|SELARL|SELAS|SCP|SCM|ENTREPRISE INDIVIDUELLE|MICRO[- ]?ENTREPRENEUR|MICRO[- ]?ENTREPRISE|AUTO[- ]?ENTREPRENEUR|COMPTE PROFESSIONNEL|COMPTE PRO|CPTE PRO|CONVENTION PRO|OFFRE PRO|ESPACE PRO|EI)\b/;
 function guessType(bank,headerText,name){
+  if(S.settings&&S.settings.compteUnique===true) return 'mixte';
   if(['Qonto','Shine'].includes(bank)) return 'pro';
   if(PRO_HINT.test(norm(headerText||''))) return 'pro';
   if(/\bPRO\b|PROFESSIONNEL/.test(norm(name||''))) return 'pro';

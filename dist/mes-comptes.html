@@ -408,6 +408,7 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 .rep-lim{font-size:15px;color:var(--muted)}
 .rep-lim.orange{color:var(--amber)}.rep-lim.rouge{color:var(--alert)}
 @media (max-width:420px){nav.tabs button{font-size:15px;padding:6px 2px}nav.tabs button>span{white-space:normal;text-align:center;line-height:1.15}}
+.q-question{font-size:18px;font-weight:500;margin:6px 0 4px}
 </style>
 </head>
 <body>
@@ -423,7 +424,7 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 
 <script>
 /* ============ Données de base ============ */
-const SCHEMA=8;
+const SCHEMA=9;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
@@ -449,7 +450,6 @@ const CATS0=[
  ['materiel','Matériel et fournitures','monitor','expense','pro'],
  ['deplacements','Déplacements de l’activité','train-front','expense','pro'],
  ['soustraitance','Sous-traitance','handshake','expense','pro'],
- ['conseils','Conseils et services','messages-square','expense','pro'],
  ['cotisations','Versements de ce qui est mis de côté','piggy-bank','expense','pro'],
  ['impots','Impôts de l’activité','receipt-text','expense','pro'],
  ['empruntpro','Remboursement d’emprunt de l’activité','banknote','expense','pro',1],
@@ -472,7 +472,7 @@ function autoCatOf(label,atype){if(LOAN_RE.test(norm(label)))return atype==='pro
 /* Mots-clés toujours professionnels, quel que soit le compte */
 const KW_PRO=[
  [/\bURS{2}AF\b|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
- [/EXPERT.?COMPTA|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE|AVOCAT|NOTAIRE/,'conseils']
+ [/EXPERT.?COMPTA|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE|AVOCAT|NOTAIRE/,'pro']
 ];
 /* Mots-clés professionnels seulement sur un compte pro */
 const KW_PROACC=[
@@ -546,7 +546,7 @@ const catById=id=>S.categories.find(c=>c.id===id);
 const newId=p=>p+Math.random().toString(36).slice(2,10);
 
 /* ============ Comptes ============ */
-const ACCT_TYPES={perso:'Personnel',pro:'Professionnel',mixte:'Pro et perso mélangés'};
+const ACCT_TYPES={perso:'Personnel',pro:'Professionnel',mixte:'Je n’ai pas de compte pro : ce compte sert à tout'};
 const acctById=id=>S.accounts.find(a=>a.id===id);
 const acctOf=o=>o.acct||'';
 const acctName=id=>(acctById(id)||{}).name||'Compte principal';
@@ -554,6 +554,7 @@ const acctType=o=>(acctById(o.acct)||{}).type||'perso';
 function addAccount(x){const a={id:newId('a_'),name:x.name||'Compte principal',bank:x.bank||'',no:x.no||'',type:x.type||'perso',confirmed:!!x.confirmed,solde:null,soldeDate:''};S.accounts.push(a);stateDirty=true;return a}
 const PRO_HINT=/\b(SASU?|SARL|EURL|SELARL|SELAS|SCP|SCM|ENTREPRISE INDIVIDUELLE|MICRO[- ]?ENTREPRENEUR|MICRO[- ]?ENTREPRISE|AUTO[- ]?ENTREPRENEUR|COMPTE PROFESSIONNEL|COMPTE PRO|CPTE PRO|CONVENTION PRO|OFFRE PRO|ESPACE PRO|EI)\b/;
 function guessType(bank,headerText,name){
+  if(S.settings&&S.settings.compteUnique===true) return 'mixte';
   if(['Qonto','Shine'].includes(bank)) return 'pro';
   if(PRO_HINT.test(norm(headerText||''))) return 'pro';
   if(/\bPRO\b|PROFESSIONNEL/.test(norm(name||''))) return 'pro';
@@ -1153,6 +1154,17 @@ function migrateSchema(st){
     st.categories.forEach(c=>{if(c.limite==null){c.limite=c.budgetAn>0?{montant:+c.budgetAn,per:'Y'}:c.budget>0?{montant:+c.budget,per:'M'}:null}});
     st.schemaVersion=8;
   }
+  if(st.schemaVersion<9){
+    /* v8 → v9 : rubrique « Conseils et services » retirée ; ses opérations passent dans « Autres frais de l'activité » */
+    const X='conseils';
+    if(!st.categories.find(c=>c.id===X)?.custom){
+      st.categories=st.categories.filter(c=>c.id!==X);
+      for(const m in st.rules) if(st.rules[m]===X) st.rules[m]='pro';
+      for(const m in st.sugg) if(st.sugg[m].c===X) st.sugg[m].c='pro';
+      st.ops.forEach(o=>{if(o.cat===X)o.cat='pro'});
+    }
+    st.schemaVersion=9;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }
@@ -1278,12 +1290,12 @@ function moisBar(){
   <h2>${moisNom(P)}</h2><button class="fleche" data-shift="1" aria-label="Mois suivant"><i data-lucide="chevron-right"></i></button></div>`;
 }
 /* Question sur le type d'un compte nouvellement ajouté */
-const TYPES_LONG={pro:'Professionnel',perso:'Personnel',mixte:'Les deux mélangés'};
+const TYPES_LONG={pro:'Professionnel',perso:'Personnel',mixte:'Je n’ai pas de compte pro : ce compte sert à tout'};
 function acctAsk(a){
-  return `<div class="question compte-q"><p class="q-t">Ce compte est-il professionnel, personnel, ou les deux mélangés ?</p>
+  return `<div class="question compte-q"><p class="q-t">Ce compte est-il professionnel, personnel, ou sert-il à tout ?</p>
   <p class="q-s">${esc(a.name)}${a.no?` (n° se terminant par ${esc(a.no.slice(-4))})`:''}. Nous avons supposé : ${TYPES_LONG[a.type].toLowerCase()}.</p>
   <div class="choix gros">${Object.entries(TYPES_LONG).map(([k,l])=>`<button class="choix-btn${a.type===k?' suggere':''}" data-settype="${a.id}:${k}">${l}</button>`).join('')}</div>
-  <p class="q-s">« Les deux mélangés » : un seul compte pour votre activité et votre vie perso. Chaque dépense est alors rangée selon sa rubrique.</p></div>`;
+  <p class="q-s">Sans compte pro, l’application vous demandera simplement, pour chaque personne qui vous paie, s’il s’agit d’un client.</p></div>`;
 }
 
 /* ============ Mes opérations ============ */
@@ -1291,7 +1303,7 @@ function choixRubriques(x){
   const s=S.sugg[x.m]?.c, acc=[...new Set(x.accts.map(id=>(acctById(id)||{}).type||'perso'))];
   let ids;
   if(x.credit) ids=['revenus','rentrees','remb'];
-  else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','conseils','pro'];
+  else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','soustraitance','pro'];
   else ids=['courses','resto','transport','shopping','maison','loisirs','sante','divers'];
   if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','logiciels','materiel','pro','divers'];
   if(s) ids=[s,...ids.filter(i=>i!==s)];
@@ -1302,7 +1314,10 @@ function aVerifier(){
   const g=pendingGroups(), n=g.length; if(!n) return '';
   return `<section class="carte verifier"><h3>À vérifier <span class="compte">(${n})</span></h3>
   <p class="aide">Une seule réponse par marchand : elle vaudra pour toutes ses opérations, passées et futures.</p>
-  ${g.map(x=>`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
+  ${g.map(x=>x.credit&&x.accts.some(id=>acctById(id)?.type==='mixte')?`<div class="question client-q"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
+    <p class="q-s">${x.n>1?`${x.n} rentrées, `:''}+${eur(x.total)}. ${esc(x.label)}</p>
+    <p class="q-question">Cet argent vient-il d’un client ?</p>
+    <div class="choix gros"><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="revenus">Oui, c’est un client</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="rentrees">Non (CAF, vente, remboursement, virement perso…)</button></div></div>`:`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
     <p class="q-s">${x.n>1?`${x.n} opérations, `:''}${x.total<0?'−':'+'}${eur(Math.abs(x.total))}. ${esc(x.label)}</p>
     <div class="choix">${choixRubriques(x)}</div>
     <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details></div>`).join('')}
@@ -1750,6 +1765,7 @@ document.addEventListener('click',async e=>{
   if(d.autres||d.btout){BTOUT=!BTOUT;render();return}
   if(d.bmois){const [y,m]=d.bmois.split('-').map(Number);PB={lvl:'M',y,m};BCAT=null;BTOUT=false;render();window.scrollTo({top:0});return}
   if(d.act==='onbfin'){S.onboarded=true;ONB=0;save();aller(d.tab||'accueil');return}
+  if(d.cu){S.settings.compteUnique=d.cu==='1';save();render();return}
   if(d.onb){ONB=+d.onb;render();window.scrollTo({top:0});return}
   if(d.act==='relancer'){S.onboarded=false;ONB=0;save();render();window.scrollTo({top:0});return}
   if(d.tab){aller(d.tab,d.ancre);return}
@@ -1845,7 +1861,6 @@ function demoData(){
     add(k,6,'PRLV SEPA SECURITE SOCIALE DES INDEPENDANTS',-Math.round((k<11?CA[10-k]:3500)*.212),'cotisations',pr.id);
     add(k,3,'PRLV SEPA OVH CLOUD',-23.99,'logiciels',pr.id);
     add(k,8,'PRLV SEPA ADOBE SYSTEMS',-71.99,'logiciels',pr.id);
-    add(k,10,'PRLV SEPA INDY COMPTABILITE',-24,'conseils',pr.id);
     add(k,27,'FRAIS TENUE DE COMPTE QONTO',-11,'frais',pr.id);
     if(k%3===1) add(k,15,'CB LDLC',-vary(260,.4),'materiel',pr.id);
     if(k===8) add(k,14,'PRLV SEPA DGFIP CFE',-356,'impots',pr.id);
@@ -1875,14 +1890,19 @@ function demoData(){
   add(5,14,'CB CLINIQUE VETERINAIRE',-68,'animaux');
   add(2,18,'CB LIBRAIRIE CADEAUX DU PORT',-42,'cadeaux');
   add(7,9,'CB AIRBNB',-386,'voyages');
+  /* Location d'été : la limite vacances de l'année est dépassée */
+  add(1,3,'CB LOCATION VACANCES ILE DE RE',-2400,'voyages');
+  /* Un mois de sorties bien rempli : proche de la limite */
+  add(0,12,'CB FNAC SPECTACLES',-72,'loisirs');
+  add(0,18,'CB LE BARBU SAINT NAZAIRE',-32,'loisirs');
   /* Remboursement d'achat : commandé le mois dernier, remboursé ce mois-ci. Un autre retour attend depuis 2 mois. */
   add(1,9,'CB ZALANDO',-129,'shopping',pe.id,{awaiting:true});
   add(0,14,'VIR ZALANDO REMBOURSEMENT',129,null);
   add(2,10,'CB AMAZON PAYMENTS',-89.9,null,pe.id,{awaiting:true});
   st.ops=ops.sort((a,b)=>a.date<b.date?1:-1);
   st.rules=cats;
-  /* Limites : vacances dans les clous (an), shopping trop rapide (an), cadeaux dépassés (an), sorties proches de la limite (mois) */
-  const li={voyages:[2000,'Y'],shopping:[600,'Y'],cadeaux:[30,'Y'],loisirs:[30,'M']}; for(const id in li) st.categories.find(c=>c.id===id).limite={montant:li[id][0],per:li[id][1]};
+  /* Limites réalistes : vacances dépassées (location d'été), sorties proches de la limite, shopping et cadeaux dans les clous */
+  const li={shopping:[1200,'Y'],loisirs:[150,'M'],voyages:[2500,'Y'],cadeaux:[500,'Y']}; for(const id in li) st.categories.find(c=>c.id===id).limite={montant:li[id][0],per:li[id][1]};
   const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
   st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);
@@ -2057,9 +2077,9 @@ function vReglages(){
     ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:'<p class="aide">Elle indique combien de mois vous tiendriez sans rien encaisser.</p>'}</section>
   ${S.accounts.length?`<section class="carte" id="comptes"><h3>Vos comptes</h3>
     ${S.accounts.map(a=>`<div class="compte-reg"><p class="cr-nom">${esc(a.name)} <button class="lien" data-renacct="${a.id}">Renommer</button></p>
-      <p class="aide">Ce compte est-il professionnel, personnel, ou les deux mélangés ?</p>
+      <p class="aide">Ce compte est-il professionnel, personnel, ou sert-il à tout ?</p>
       <div class="choix gros">${Object.entries(TYPES_LONG).map(([k,l])=>`<button class="choix-btn${a.type===k?' suggere':''}" data-settype="${a.id}:${k}" aria-pressed="${a.type===k}">${l}</button>`).join('')}</div></div>`).join('')}
-    <p class="aide">« Les deux mélangés » : un seul compte pour votre activité et votre vie perso. Chaque dépense est alors rangée selon sa rubrique.</p></section>`:''}
+    <p class="aide">Sans compte pro, l’application vous demandera simplement, pour chaque personne qui vous paie, s’il s’agit d’un client.</p></section>`:''}
   <section class="carte" id="rubriques"><h3>Vos rubriques</h3>
     <p class="aide">Renommez ou supprimez vos rubriques. Les limites de dépenses se fixent dans Mes objectifs.</p>
     ${perso.map(rub).join('')}
@@ -2103,8 +2123,12 @@ function vDemarrage(){
     <p class="phrase prix-live" id="prixLive" aria-live="polite">${phrasePrix()}</p>
     <p class="aide"><button class="lien" data-act="onbfin" data-tab="objectifs">Vous pourrez tout changer plus tard</button>, dans l’onglet Mes objectifs.</p>
     <div class="boutons"><button class="btn" data-onb="2">Continuer</button></div><button class="lien" data-act="onbfin">Passer</button></section>`;
+  const cu=S.settings.compteUnique;
   return `<section class="demarrage">${pas}<h2>Ajoutez vos relevés</h2>
-    <p class="phrase">Téléchargez vos relevés de compte en PDF sur le site de votre banque, pro et perso, puis ajoutez-les ici.</p>
+    <p class="phrase">Avez-vous un compte bancaire réservé à votre activité ?</p>
+    <div class="choix gros"><button class="choix-btn${cu===false?' suggere':''}" data-cu="0" aria-pressed="${cu===false}">Oui, j’ai un compte pro</button><button class="choix-btn${cu===true?' suggere':''}" data-cu="1" aria-pressed="${cu===true}">Non, un seul compte pour tout</button></div>
+    ${cu===true?`<p class="aide">Pas de souci : vous aurez simplement à nous dire, pour chaque personne qui vous paie, s’il s’agit d’un client.</p>`:''}
+    <p class="phrase">Téléchargez ensuite vos relevés de compte en PDF sur le site de votre banque${cu===true?'':', pro et perso'}, puis ajoutez-les ici.</p>
     <div class="boutons"><button class="btn" data-act="onbfin" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div>
     <button class="lien" data-act="onbfin">Plus tard</button></section>`;
 }
@@ -2291,7 +2315,7 @@ function vObjectifs(){
       ${champ('semNonTrav','Semaines non travaillées par an',`Par exemple 5 semaines de congés et 2 pour les jours fériés et les imprévus : soit ${nb(semTrav())} semaines travaillées.`,{max:51})}
       ${champ('nonFacture','Part du temps non facturé (%)','Prospection, devis, administratif, formation, déplacements : du temps travaillé que personne ne vous paie.',{max:90})}
       ${champ('epRetraite','Épargne et retraite à constituer vous-même (%)','Un salarié les a déjà dans son salaire ; vous, vous devez les mettre de côté vous-même.',{max:90})}
-      ${champ('hJour','Heures par jour facturé','Pour calculer votre prix à la journée.',{max:24})}
+      ${champ('hJour','Si vous facturez à la journée : combien d’heures compte une journée ?',(j=>`Sert seulement à calculer votre prix à la journée, à partir de votre prix à l’heure${j?` (par exemple ${eur0(j.heure)} × ${nb(hJour())} h = ${eur0(j.heure*hJour())} la journée)`:''}.`)(justePrix()),{max:24})}
     </details></section>
   <section class="carte" id="limites"><h3>Mes limites de dépenses</h3>
     <p class="aide">Indiquez un montant pour les rubriques que vous voulez surveiller, par mois, par trimestre ou par an. Laissez vide pour ne pas fixer de limite.</p>

@@ -14,9 +14,9 @@ function vReglages(){
     ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:'<p class="aide">Elle indique combien de mois vous tiendriez sans rien encaisser.</p>'}</section>
   ${S.accounts.length?`<section class="carte" id="comptes"><h3>Vos comptes</h3>
     ${S.accounts.map(a=>`<div class="compte-reg"><p class="cr-nom">${esc(a.name)} <button class="lien" data-renacct="${a.id}">Renommer</button></p>
-      <p class="aide">Ce compte est-il professionnel, personnel, ou les deux mélangés ?</p>
+      <p class="aide">Ce compte est-il professionnel, personnel, ou sert-il à tout ?</p>
       <div class="choix gros">${Object.entries(TYPES_LONG).map(([k,l])=>`<button class="choix-btn${a.type===k?' suggere':''}" data-settype="${a.id}:${k}" aria-pressed="${a.type===k}">${l}</button>`).join('')}</div></div>`).join('')}
-    <p class="aide">« Les deux mélangés » : un seul compte pour votre activité et votre vie perso. Chaque dépense est alors rangée selon sa rubrique.</p></section>`:''}
+    <p class="aide">Sans compte pro, l’application vous demandera simplement, pour chaque personne qui vous paie, s’il s’agit d’un client.</p></section>`:''}
   <section class="carte" id="rubriques"><h3>Vos rubriques</h3>
     <p class="aide">Renommez ou supprimez vos rubriques. Les limites de dépenses se fixent dans Mes objectifs.</p>
     ${perso.map(rub).join('')}
@@ -60,8 +60,12 @@ function vDemarrage(){
     <p class="phrase prix-live" id="prixLive" aria-live="polite">${phrasePrix()}</p>
     <p class="aide"><button class="lien" data-act="onbfin" data-tab="objectifs">Vous pourrez tout changer plus tard</button>, dans l’onglet Mes objectifs.</p>
     <div class="boutons"><button class="btn" data-onb="2">Continuer</button></div><button class="lien" data-act="onbfin">Passer</button></section>`;
+  const cu=S.settings.compteUnique;
   return `<section class="demarrage">${pas}<h2>Ajoutez vos relevés</h2>
-    <p class="phrase">Téléchargez vos relevés de compte en PDF sur le site de votre banque, pro et perso, puis ajoutez-les ici.</p>
+    <p class="phrase">Avez-vous un compte bancaire réservé à votre activité ?</p>
+    <div class="choix gros"><button class="choix-btn${cu===false?' suggere':''}" data-cu="0" aria-pressed="${cu===false}">Oui, j’ai un compte pro</button><button class="choix-btn${cu===true?' suggere':''}" data-cu="1" aria-pressed="${cu===true}">Non, un seul compte pour tout</button></div>
+    ${cu===true?`<p class="aide">Pas de souci : vous aurez simplement à nous dire, pour chaque personne qui vous paie, s’il s’agit d’un client.</p>`:''}
+    <p class="phrase">Téléchargez ensuite vos relevés de compte en PDF sur le site de votre banque${cu===true?'':', pro et perso'}, puis ajoutez-les ici.</p>
     <div class="boutons"><button class="btn" data-act="onbfin" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div>
     <button class="lien" data-act="onbfin">Plus tard</button></section>`;
 }
