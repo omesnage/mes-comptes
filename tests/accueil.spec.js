@@ -6,8 +6,10 @@ test('démo, mois affiché : gagné au-dessus de l’objectif, mon activité, o�
   const g=page.locator('.gagne');
   await expect(g.locator('h3')).toContainText('Ce que vous avez gagné');
   await expect(g.locator('.etiquette.ok')).toContainText('de plus que votre objectif de 2 000 €');
-  await expect(g.locator('.phrase')).toContainText('Sur une base de 40 h par semaine, une heure de travail vous a rapporté');
-  await expect(g.locator('.phrase')).toHaveClass(/or/);
+  await expect(g.locator('.salaire')).toContainText('Votre vrai salaire :');
+  await expect(g.locator('.salaire')).toContainText('nets de l’heure');
+  await expect(g.locator('.salaire')).toHaveClass(/or/);
+  await expect(g.locator('.sal-sous')).toHaveText('congés et retraite déjà déduits, sur une base de 40 h par semaine');
   await expect(page.locator('#activite .ligne')).toHaveText([/Encaissé/,/Frais de l’activité/,/À mettre de côté/,/Il vous reste/]);
   const net=await page.evaluate(()=>agg(P,'pro').revenuNet);
   await expect(g.locator('.grand-chiffre')).toHaveText(new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(net));
@@ -29,8 +31,8 @@ test('démo, mois précédent : sous l’objectif, en rouge',async({page})=>{
   await demo(page,1);
   await expect(page.locator('.gagne .etiquette.ko')).toContainText('Il manque');
   await expect(page.locator('.gagne .etiquette.ko')).toContainText('pour atteindre votre objectif de 2 000 €');
-  await expect(page.locator('.gagne .phrase')).toHaveClass(/rouge/);
-  await expect(page.locator('.gagne .phrase')).toContainText('par heure pour atteindre les');
+  await expect(page.locator('.gagne .salaire')).toHaveClass(/rouge/);
+  await expect(page.locator('.gagne .sal-manque')).toContainText('de l’heure pour atteindre votre objectif');
   await expect(page.locator('.defi')).toContainText('de trop');
 });
 

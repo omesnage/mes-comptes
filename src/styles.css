@@ -303,3 +303,16 @@ select,input,textarea,button,label,details,summary{box-sizing:border-box}
 .ajout-rub svg,.ajout-btn svg{width:20px;height:20px}
 .ajout-btn{margin-top:18px}
 @media (max-width:380px){.icones{grid-template-columns:repeat(4,1fr)}}
+.salaire{font-size:24px;line-height:1.35;margin:14px 0 2px}
+.salaire b{font-weight:600}
+.salaire.or{color:var(--gold)}.salaire.rouge{color:var(--alert)}
+.sal-sous{font-size:16px;color:var(--muted);margin:0 0 4px}
+.sal-manque{font-size:17px;color:var(--alert);margin:4px 0}
+.salaire-bilan .salaire{margin-top:0}
+.juste-prix .phrase b{font-weight:600}
+.phrase.or{color:var(--gold)}
+.sous-champ{margin:-8px 0 18px}
+input.mini{width:88px;min-height:44px;padding:4px 8px;font-size:18px;text-align:center;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17px;margin:4px 0}
+.total-prix{border-top:2px solid var(--ink);padding-top:12px;margin-top:14px}
+@media (min-width:701px){.salaire{font-size:26px}}

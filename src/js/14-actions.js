@@ -10,6 +10,8 @@ document.addEventListener('click',async e=>{
   const part=e.target.closest&&e.target.closest('circle[data-bcat]'); if(part){BCAT=part.dataset.bcat;render();return}
   const t=e.target.closest&&e.target.closest('button,[data-act="closefiche"]'); if(!t) return;
   const d=t.dataset;
+  if(d.modal){MODAL={type:d.modal,src:d.src||''};render();setTimeout(()=>$('.fenetre .fermer')?.focus(),30);return}
+  if(d.act==='mclose'){MODAL=null;render();return}
   if(d.act==='nrannule'){NEWCAT=null;render();return}
   if(d.act==='nrcree'){creerRubrique();return}
   if(d.nru){NEWCAT.nom=$('#nrNom').value;NEWCAT.univers=d.nru;render();return}
@@ -78,14 +80,14 @@ document.addEventListener('change',e=>{
   if(d.soldedate){const a=acctById(d.soldedate);if(a){a.soldeDate=t.value;a.soldeSrc='saisie';stateDirty=true;save();render()}return}
   if(d.assiette){S.settings.assiette=t.value==='resultat'?'resultat':'ca';save();render();return}
   if(d.inc){S.incomeSource=d.inc;save();render();return}
-  if(d.set){S.settings[d.set]=Math.max(0,+t.value||0);save();return}
+  if(d.set){S.settings[d.set]=t.value===''?'':Math.max(0,+t.value||0);save();if(MODAL)render();return}
   if(t.id==='restorefile'&&t.files.length){restore_(t.files[0]);t.value='';return}
   if(t.id==='file'&&t.files.length){importFiles([...t.files]);t.value=''}
   if(t.id==='testfile'&&t.files.length){testerFichier(t.files[0]);t.value=''}
   if(t.id==='revfile'&&t.files.length){if(demo)exitDemo();readRev(t.files[0]);t.value=''}
   if(d.rev){const v=+t.value;if(d.rev==='sheet'){revDraft.sheet=v;detect()}else revDraft[d.rev]=v;render()}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nrNom'){e.preventDefault();creerRubrique();return}if(e.key!=='Escape')return;if(NEWCAT){NEWCAT=null;render();return}if(FICHE||BCAT){FICHE=null;BCAT=null;render();return}if($('#review')){$('#review').remove();document.body.style.overflow=''}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nrNom'){e.preventDefault();creerRubrique();return}if(e.key!=='Escape')return;if(NEWCAT){NEWCAT=null;render();return}if(MODAL){MODAL=null;render();return}if(FICHE||BCAT){FICHE=null;BCAT=null;render();return}if($('#review')){$('#review').remove();document.body.style.overflow=''}});
 document.addEventListener('input',e=>{
   const d=e.target.dataset||{};
   if(d.set==='netVise'||d.set==='heuresSemaine'){const el=$('#cibleLive');if(el)el.innerHTML=phraseCible({...S.settings,[d.set]:+e.target.value||0})}

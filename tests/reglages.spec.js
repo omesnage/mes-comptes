@@ -1,7 +1,7 @@
 import {test,expect,openWith} from './helpers.js';
 test('réglages : une page simple, tout l’avancé replié',async({page})=>{
   await openWith(page,null); await page.click('[data-act="demo"]'); await page.click('#gear');
-  await expect(page.locator('#view .carte h3')).toHaveText(['Votre objectif','Votre réserve','Vos comptes','Vos rubriques','Vos données','Votre année en revue','Présentation']);
+  await expect(page.locator('#view .carte h3')).toHaveText(['Votre activité','Votre réserve','Vos comptes','Vos rubriques','Vos données','Votre année en revue','Présentation']);
   await expect(page.locator('#avances')).not.toHaveAttribute('open','');
   await expect(page.locator('[data-set="heuresSemaine"]')).toHaveValue('40');
   await expect(page.locator('#cibleLive')).toHaveText('Pour atteindre 2 000 € par mois à 40 h par semaine, une heure doit vous rapporter 11,54 €.'.replace(/ €/g,'\u00a0€').replace('2 000','2\u202f000'));

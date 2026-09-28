@@ -317,6 +317,19 @@ select,input,textarea,button,label,details,summary{box-sizing:border-box}
 .ajout-rub svg,.ajout-btn svg{width:20px;height:20px}
 .ajout-btn{margin-top:18px}
 @media (max-width:380px){.icones{grid-template-columns:repeat(4,1fr)}}
+.salaire{font-size:24px;line-height:1.35;margin:14px 0 2px}
+.salaire b{font-weight:600}
+.salaire.or{color:var(--gold)}.salaire.rouge{color:var(--alert)}
+.sal-sous{font-size:16px;color:var(--muted);margin:0 0 4px}
+.sal-manque{font-size:17px;color:var(--alert);margin:4px 0}
+.salaire-bilan .salaire{margin-top:0}
+.juste-prix .phrase b{font-weight:600}
+.phrase.or{color:var(--gold)}
+.sous-champ{margin:-8px 0 18px}
+input.mini{width:88px;min-height:44px;padding:4px 8px;font-size:18px;text-align:center;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17px;margin:4px 0}
+.total-prix{border-top:2px solid var(--ink);padding-top:12px;margin-top:14px}
+@media (min-width:701px){.salaire{font-size:26px}}
 </style>
 </head>
 <body>
@@ -333,7 +346,7 @@ select,input,textarea,button,label,details,summary{box-sizing:border-box}
 <script>
 /* ============ Données de base ============ */
 const SCHEMA=5;
-const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
+const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
  ['logement','Logement','house','expense','perso',1],
@@ -1147,8 +1160,8 @@ function render(){
   else if(!S.ops.length&&['accueil','bilan','operations'].includes(view)) v.innerHTML=libBanner()+vide();
   else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,reglages:vReglages}[view]();
   if(view!=='bilan') BCAT=null;
-  v.insertAdjacentHTML('beforeend',(FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'')+(NEWCAT?fenetreRubrique():''));
-  document.body.classList.toggle('fige',!!(FICHE||BCAT||NEWCAT));
+  v.insertAdjacentHTML('beforeend',(FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'')+(NEWCAT?fenetreRubrique():'')+(MODAL?fenetreModal():''));
+  document.body.classList.toggle('fige',!!(FICHE||BCAT||NEWCAT||MODAL));
   icons(); setStatus();
 }
 function libBanner(){return window.pdfjsLib&&window.XLSX?'':`<div class="note-box alerte-box" role="alert"><i data-lucide="wifi-off"></i><p>${MSG_RESEAU}</p></div>`}
@@ -1462,6 +1475,53 @@ function moisPartiel(p){
   const dim=new Date(p.y,p.m,0).getDate();
   return last&&+last.slice(8,10)<dim-3&&lastOpDate().slice(0,7)===k?+last.slice(8,10):null;
 }
+
+/* ============ Vrai salaire net de l'heure et juste prix ============ */
+const reglage=(k,min,max)=>{const v=S.settings[k];const n=v===''||v==null||isNaN(+v)?SET0[k]:+v;return Math.min(max,Math.max(min,n))};
+const semTrav=()=>52-reglage('semNonTrav',0,51);
+const epRet=()=>reglage('epRetraite',0,90)/100;
+const nonFact=()=>reglage('nonFacture',0,90)/100;
+const hJour=()=>reglage('hJour',1,24);
+/* Cascade : ce qui reste en poche par heure → moins les congés → moins l'épargne et la retraite */
+function calcSalaire(pocheMois,heuresMois,corrConges,epargne){
+  const brut=pocheMois/heuresMois, conges=brut*corrConges, vrai=conges*(1-epargne);
+  return {brut,conges,vrai};
+}
+/* Correction des congés : les mois et trimestres ne contiennent pas les congés de l'année ;
+   une année dont les 12 mois ont des relevés les contient déjà. */
+function correctionConges(p){
+  if(p.lvl==='Y'){let n=0;for(let m=1;m<=12;m++)if((BYMONTH[p.y+'-'+pad(m)]||[]).some(o=>o.src!=='rev'))n++;if(n===12)return 1}
+  return semTrav()/52;
+}
+/* Vrai salaire sur une période : null si l'activité n'a rien laissé en poche */
+function vraiSalaire(p){
+  const A=agg(p,'pro'); if(!A.any) return {vide:true};
+  const poche=A.revenuNet/A.months;
+  if(!(A.ca>0)||poche<=0) return {rien:true,poche};
+  const corr=correctionConges(p), c=calcSalaire(poche,heures(),corr,epRet());
+  return {...c,poche,corr,cible:tauxCible(),ok:c.vrai>=tauxCible()-1e-9,manque:Math.max(0,tauxCible()-c.vrai),congesInclus:corr===1};
+}
+/* Prix minimum à facturer, selon le mode de calcul de la somme mise de côté */
+function calcPrix({vise,epargne,fraisAn,taux,assiette,semaines,hSem,nonFacture,hParJour}){
+  if(epargne>=1||taux>=1||nonFacture>=1) return null;
+  const poche=vise*12/(1-epargne);
+  const enc=assiette==='resultat'?poche/(1-taux)+fraisAn:(poche+fraisAn)/(1-taux);
+  const hFact=semaines*hSem*(1-nonFacture); if(hFact<=0) return null;
+  const heure=enc/hFact;
+  return {poche,enc,hFact,heure,jour:heure*hParJour};
+}
+/* Moyennes réelles des 12 derniers mois qui ont des données d'activité */
+function douzeMois(){
+  const last=lastOpDate(); if(!last) return [];
+  return monthsTo(+last.slice(0,4),+last.slice(5,7),12).map(q=>agg(q,'pro')).filter(a=>a.any);
+}
+function justePrix(){
+  const ms=douzeMois(), fraisAn=ms.length?ms.reduce((s,a)=>s+a.fraisExpl,0)/ms.length*12:0;
+  const r=calcPrix({vise:netVise(),epargne:epRet(),fraisAn,taux:reglage('taux',0,90)/100,assiette:S.settings.assiette,semaines:semTrav(),hSem:hSemaine(),nonFacture:nonFact(),hParJour:hJour()});
+  if(!r) return null;
+  const caAn=ms.length>=3?ms.reduce((s,a)=>s+a.ca,0)/ms.length*12:null;
+  return {...r,fraisAn,moyen:caAn!=null&&caAn>0?caAn/r.hFact:null,nMois:ms.length};
+}
 /* ============ Votre année en revue ============ */
 function openReview(y){
   y=+y||P.y;
@@ -1544,6 +1604,8 @@ document.addEventListener('click',async e=>{
   const part=e.target.closest&&e.target.closest('circle[data-bcat]'); if(part){BCAT=part.dataset.bcat;render();return}
   const t=e.target.closest&&e.target.closest('button,[data-act="closefiche"]'); if(!t) return;
   const d=t.dataset;
+  if(d.modal){MODAL={type:d.modal,src:d.src||''};render();setTimeout(()=>$('.fenetre .fermer')?.focus(),30);return}
+  if(d.act==='mclose'){MODAL=null;render();return}
   if(d.act==='nrannule'){NEWCAT=null;render();return}
   if(d.act==='nrcree'){creerRubrique();return}
   if(d.nru){NEWCAT.nom=$('#nrNom').value;NEWCAT.univers=d.nru;render();return}
@@ -1612,14 +1674,14 @@ document.addEventListener('change',e=>{
   if(d.soldedate){const a=acctById(d.soldedate);if(a){a.soldeDate=t.value;a.soldeSrc='saisie';stateDirty=true;save();render()}return}
   if(d.assiette){S.settings.assiette=t.value==='resultat'?'resultat':'ca';save();render();return}
   if(d.inc){S.incomeSource=d.inc;save();render();return}
-  if(d.set){S.settings[d.set]=Math.max(0,+t.value||0);save();return}
+  if(d.set){S.settings[d.set]=t.value===''?'':Math.max(0,+t.value||0);save();if(MODAL)render();return}
   if(t.id==='restorefile'&&t.files.length){restore_(t.files[0]);t.value='';return}
   if(t.id==='file'&&t.files.length){importFiles([...t.files]);t.value=''}
   if(t.id==='testfile'&&t.files.length){testerFichier(t.files[0]);t.value=''}
   if(t.id==='revfile'&&t.files.length){if(demo)exitDemo();readRev(t.files[0]);t.value=''}
   if(d.rev){const v=+t.value;if(d.rev==='sheet'){revDraft.sheet=v;detect()}else revDraft[d.rev]=v;render()}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nrNom'){e.preventDefault();creerRubrique();return}if(e.key!=='Escape')return;if(NEWCAT){NEWCAT=null;render();return}if(FICHE||BCAT){FICHE=null;BCAT=null;render();return}if($('#review')){$('#review').remove();document.body.style.overflow=''}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nrNom'){e.preventDefault();creerRubrique();return}if(e.key!=='Escape')return;if(NEWCAT){NEWCAT=null;render();return}if(MODAL){MODAL=null;render();return}if(FICHE||BCAT){FICHE=null;BCAT=null;render();return}if($('#review')){$('#review').remove();document.body.style.overflow=''}});
 document.addEventListener('input',e=>{
   const d=e.target.dataset||{};
   if(d.set==='netVise'||d.set==='heuresSemaine'){const el=$('#cibleLive');if(el)el.innerHTML=phraseCible({...S.settings,[d.set]:+e.target.value||0})}
@@ -1790,7 +1852,7 @@ function vAccueil(){
     gagne=`<section class="carte gagne"><h3>Ce que vous avez gagné ${P.m===new Date().getMonth()+1&&P.y===new Date().getFullYear()?'ce mois-ci':'en '+MOIS[P.m-1]}</h3>
       <p class="grand-chiffre">${signed(n)}</p>
       <p class="etiquette ${d>=0?'ok':'ko'}">${d>=0?`${eur0(d)} de plus que votre objectif de ${eur0(V)}`:`Il manque ${eur0(-d)} pour atteindre votre objectif de ${eur0(V)}`}</p>
-      <p class="phrase ${t<tauxCible()?'rouge':'or'}">${n>0?`Sur une base de ${hSemaine()} h par semaine, une heure de travail vous a rapporté ${eurH(t)}.${t<tauxCible()?` Il manque ${eurH(tauxCible()-t)} par heure pour atteindre les ${eurH(tauxCible())} visés.`:''}`:'Ce mois-ci, votre activité ne vous a rien rapporté.'}</p>
+      ${salaireBloc(P,'accueil')}
       ${part?`<p class="aide">Votre dernier relevé s’arrête au ${part} ${MOIS[P.m-1]}.</p>`:''}</section>
     <section class="carte" id="activite"><h3>Mon activité</h3>
       <div class="ligne"><span>Encaissé</span><b>${eur0(X.ca)}</b></div>
@@ -1825,12 +1887,22 @@ function vReglages(){
     ${c.univers!=='pro'?`<label class="rr-budget">Budget<input type="number" inputmode="numeric" min="0" step="10" placeholder="—" value="${c.budget||''}" data-budget="${c.id}" aria-label="Budget mensuel ${esc(c.name)}"></label>`:''}
     <button class="lien" data-rencat="${c.id}">Renommer</button>${c.custom?`<button class="lien danger" data-delcat="${c.id}">Supprimer</button>`:''}</div>`;
   return `<h2 class="titre-page">Réglages</h2>
-  <section class="carte" id="objectif"><h3>Votre objectif</h3>
-    <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
-    <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
+  <section class="carte" id="objectif"><h3>Votre activité</h3>
+    <label class="champ">Revenu net visé par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise??''}" placeholder="2000"></label>
+    <p class="aide sous-champ">Ce que vous voulez vous verser chaque mois, une fois tout payé.</p>
+    <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine??''}" placeholder="40"></label>
+    <p class="aide sous-champ">Tout compris : clients, prospection, devis, administratif, formation, déplacements.</p>
     <p class="phrase" id="cibleLive">${phraseCible()}</p>
+    <label class="champ">Semaines non travaillées par an<input type="number" inputmode="numeric" min="0" max="51" step="1" data-set="semNonTrav" value="${s.semNonTrav??''}" placeholder="7"></label>
+    <p class="aide sous-champ">Par exemple 5 semaines de congés et 2 pour les jours fériés et les imprévus : soit ${nb(semTrav())} semaines travaillées.</p>
+    <label class="champ">Épargne et retraite à constituer vous-même (%)<input type="number" inputmode="numeric" min="0" max="90" step="1" data-set="epRetraite" value="${s.epRetraite??''}" placeholder="10"></label>
+    <p class="aide sous-champ">Un salarié les a déjà dans son salaire ; vous, vous devez les mettre de côté vous-même.</p>
+    <label class="champ">Part du temps non facturé (%)<input type="number" inputmode="numeric" min="0" max="90" step="1" data-set="nonFacture" value="${s.nonFacture??''}" placeholder="30"></label>
+    <p class="aide sous-champ">Prospection, devis, administratif, formation, déplacements : du temps travaillé que personne ne vous paie.</p>
+    <label class="champ">Heures par jour facturé<input type="number" inputmode="numeric" min="1" max="24" step="1" data-set="hJour" value="${s.hJour??''}" placeholder="7"></label>
+    <p class="aide sous-champ">Pour calculer votre prix à la journée.</p>
     <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
-    <p class="aide">Si vous ne savez pas, demandez à votre comptable.</p></section>
+    <p class="aide sous-champ">Si vous ne savez pas, demandez à votre comptable.</p></section>
   <section class="carte" id="reserve"><h3>Votre réserve</h3>
     <label class="champ">Épargne disponible (€)<input type="number" inputmode="numeric" min="0" step="100" data-set="epargne" value="${s.epargne||''}" placeholder="0"></label>
     ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:'<p class="aide">Elle indique combien de mois vous tiendriez sans rien encaisser.</p>'}</section>
@@ -1943,6 +2015,7 @@ function vBilan(){
   return `<div class="seg" role="group" aria-label="Période">${lvl.map(([k,l])=>`<button data-blvl="${k}" aria-pressed="${PB.lvl===k}">${l}</button>`).join('')}</div>
   <div class="mois"><button class="fleche" data-bshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${nomPeriode(PB)}</h2><button class="fleche" data-bshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>
   ${hasFraisPro()?`<div class="seg" role="group" aria-label="Dépenses montrées"><button data-bu="perso" aria-pressed="${U==='perso'}">Perso</button><button data-bu="pro" aria-pressed="${U==='pro'}">Activité</button></div>`:''}
+  ${U==='pro'?`<section class="carte salaire-bilan">${salaireBloc(PB,'bilan')||'<p class="aide">Aucune activité sur cette période.</p>'}</section>${justePrixBloc()}`:''}
   <section class="carte"><h3>Répartition</h3>
     ${pos.length?`${anneau(parts,B.total)}
     <div class="legende">${parts.map((x,i)=>`<button class="leg"${x.cid?` data-bcat="${x.cid}"`:' data-autres="1"'}><span class="pastille" style="background:var(--c${i+1})"></span><span class="leg-nom">${esc(x.nom)}</span><span class="leg-amt">${eur0(x.v)}</span><span class="leg-pc">${Math.round(x.v/sumPos*100)} %</span></button>
@@ -1971,6 +2044,51 @@ function ficheRub(cid){
     ${barres(mois,q=>agg(q,U).by[cid]?.net||0,q=>PB.lvl==='M'&&q.y===PB.y&&q.m===PB.m,mois.length>6?'defile petit':'petit')}
     <p class="f-lbl">${ops.length} opération${ops.length>1?'s':''}</p>
     <div class="ops">${ops.map(o=>opLine(o).replace(/^<button class="op" data-op="[^"]*">/,'<div class="op">').replace(/<\/button>$/,'</div>')).join('')}</div></div>`;
+}
+/* ============ Vrai salaire et juste prix : affichage ============ */
+let MODAL=null;
+const nb=n=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(n);
+function salaireBloc(p,src){
+  const s=vraiSalaire(p); if(s.vide) return '';
+  if(s.rien) return `<p class="salaire rouge">Votre activité ne vous a rien laissé en poche sur cette période : pas de salaire de l’heure à calculer.</p>`;
+  return `<p class="salaire ${s.ok?'or':'rouge'}">Votre vrai salaire : <b>${eur(s.vrai)} nets de l’heure</b></p>
+    <p class="sal-sous">congés et retraite déjà déduits, sur une base de ${nb(hSemaine())} h par semaine</p>
+    ${s.ok?'':`<p class="sal-manque">Il vous manque ${eur(s.manque)} de l’heure pour atteindre votre objectif</p>`}
+    <button class="lien" data-modal="cascade" data-src="${src}">D’où vient ce chiffre ?</button>`;
+}
+function justePrixBloc(){
+  const j=justePrix();
+  if(!j) return `<section class="carte juste-prix"><h3>Votre juste prix</h3><p class="aide">Vos réglages ne permettent pas de le calculer : vérifiez les pourcentages dans les réglages.</p></section>`;
+  return `<section class="carte juste-prix"><h3>Votre juste prix</h3>
+    <p class="phrase">Pour gagner vraiment ${eur0(netVise())} nets par mois, vous devez facturer au minimum <b>${eur0(j.heure)} de l’heure</b>, soit <b>${eur0(j.jour)} par jour</b>.</p>
+    ${j.moyen!=null?`<p class="phrase ${j.moyen<j.heure?'rouge':'or'}">Aujourd’hui, vous facturez en moyenne l’équivalent de ${eur0(j.moyen)} de l’heure.</p>`:''}
+    <button class="lien" data-modal="prix">Comment c’est calculé ?</button></section>`;
+}
+const mini=(k,max,step)=>`<input class="mini" type="number" inputmode="decimal" min="0" max="${max}" step="${step||1}" data-set="${k}" value="${esc(String(S.settings[k]??SET0[k]))}" aria-label="${k}">`;
+function fenetreModal(){
+  let h='';
+  if(MODAL.type==='cascade'){
+    const p=MODAL.src==='bilan'?PB:P, s=vraiSalaire(p);
+    h=s.vide||s.rien?`<p class="f-m">D’où vient ce chiffre ?</p><p class="phrase">Votre activité ne vous a rien laissé en poche sur cette période.</p>`:`<p class="f-m">D’où vient ce chiffre ?</p>
+      <div class="ligne"><span>Ce qui vous reste en poche, par heure travaillée</span><b>${eur(s.brut)}</b></div>
+      <div class="ligne"><span>${s.congesInclus?'Vos congés : déjà compris dans vos 12 mois de relevés':`Moins vos congés (${nb(reglage('semNonTrav',0,51))} semaines par an sans revenu)`}</span><b>${eur(s.conges)}</b></div>
+      <div class="ligne total"><span>Moins l’épargne et la retraite à constituer vous-même (${nb(epRet()*100)} %)</span><b>${eur(s.vrai)}</b></div>
+      <p class="phrase">Un salarié payé ${eur(s.vrai)} nets de l’heure a déjà ses congés et sa retraite compris. Vous, vous devez les financer vous-même.</p>
+      <p class="aide">Calculé sur ${eur0(s.poche)} en poche par mois (ce que vous avez encaissé, moins les frais de l’activité et la somme mise de côté), pour ${nb(heures())} heures de travail par mois.</p>`;
+  } else {
+    const j=justePrix(), ms=douzeMois();
+    h=`<p class="f-m">Comment c’est calculé ?</p>
+      <p class="phrase">Vous visez ${mini('netVise',100000,50)} € nets par mois.</p>
+      <p class="phrase">Vous travaillez ${mini('heuresSemaine',100)} h par semaine, et ${mini('semNonTrav',51)} semaines par an sans revenu (congés, jours fériés, imprévus) : soit ${nb(semTrav())} semaines travaillées.</p>
+      <p class="phrase">${mini('nonFacture',90)} % de votre temps n’est pas facturé (prospection, devis, administratif, formation, déplacements).${j?` Il vous reste ${nb(j.hFact)} heures à facturer par an.`:''}</p>
+      <p class="phrase">Vous devez constituer vous-même ${mini('epRetraite',90)} % pour votre épargne et votre retraite.${j?` Il vous faut donc ${eur0(j.poche)} en poche sur l’année.`:''}</p>
+      <p class="phrase">${ms.length?`Vos frais de l’activité : ${eur0(j?j.fraisAn:0)} par an, d’après vos ${ms.length} derniers mois.`:'Vos frais de l’activité : pas encore de relevés, ils sont comptés à zéro.'}</p>
+      <p class="phrase">La somme mise de côté représente ${mini('taux',90)} % de <select class="grand inline" data-assiette="1"><option value="ca"${S.settings.assiette!=='resultat'?' selected':''}>ce que vous encaissez</option><option value="resultat"${S.settings.assiette==='resultat'?' selected':''}>ce qui reste après les frais</option></select>.</p>
+      ${j?`<p class="phrase total-prix">Il faut donc encaisser ${eur0(j.enc)} par an, soit <b>${eur0(j.heure)} par heure facturée</b>. À ${mini('hJour',24)} h par jour facturé, cela fait <b>${eur0(j.jour)} par jour</b>.</p>`:'<p class="ko-txt">Avec ces pourcentages, le calcul n’est pas possible : aucun ne peut atteindre 100 %.</p>'}`;
+  }
+  return `<div class="fiche-fond haut" data-act="mclose"></div><div class="fiche fenetre haut" role="dialog" aria-modal="true" aria-label="${MODAL.type==='cascade'?'D’où vient ce chiffre ?':'Comment c’est calculé ?'}">
+    <button class="fermer" data-act="mclose" aria-label="Fermer"><i data-lucide="x"></i></button>${h}
+    <div class="boutons"><button class="btn" data-act="mclose">Fermer</button></div></div>`;
 }
 /* ============ Lancement ============ */
 initStore();

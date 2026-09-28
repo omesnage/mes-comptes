@@ -20,3 +20,50 @@ function moisPartiel(p){
   const dim=new Date(p.y,p.m,0).getDate();
   return last&&+last.slice(8,10)<dim-3&&lastOpDate().slice(0,7)===k?+last.slice(8,10):null;
 }
+
+/* ============ Vrai salaire net de l'heure et juste prix ============ */
+const reglage=(k,min,max)=>{const v=S.settings[k];const n=v===''||v==null||isNaN(+v)?SET0[k]:+v;return Math.min(max,Math.max(min,n))};
+const semTrav=()=>52-reglage('semNonTrav',0,51);
+const epRet=()=>reglage('epRetraite',0,90)/100;
+const nonFact=()=>reglage('nonFacture',0,90)/100;
+const hJour=()=>reglage('hJour',1,24);
+/* Cascade : ce qui reste en poche par heure → moins les congés → moins l'épargne et la retraite */
+function calcSalaire(pocheMois,heuresMois,corrConges,epargne){
+  const brut=pocheMois/heuresMois, conges=brut*corrConges, vrai=conges*(1-epargne);
+  return {brut,conges,vrai};
+}
+/* Correction des congés : les mois et trimestres ne contiennent pas les congés de l'année ;
+   une année dont les 12 mois ont des relevés les contient déjà. */
+function correctionConges(p){
+  if(p.lvl==='Y'){let n=0;for(let m=1;m<=12;m++)if((BYMONTH[p.y+'-'+pad(m)]||[]).some(o=>o.src!=='rev'))n++;if(n===12)return 1}
+  return semTrav()/52;
+}
+/* Vrai salaire sur une période : null si l'activité n'a rien laissé en poche */
+function vraiSalaire(p){
+  const A=agg(p,'pro'); if(!A.any) return {vide:true};
+  const poche=A.revenuNet/A.months;
+  if(!(A.ca>0)||poche<=0) return {rien:true,poche};
+  const corr=correctionConges(p), c=calcSalaire(poche,heures(),corr,epRet());
+  return {...c,poche,corr,cible:tauxCible(),ok:c.vrai>=tauxCible()-1e-9,manque:Math.max(0,tauxCible()-c.vrai),congesInclus:corr===1};
+}
+/* Prix minimum à facturer, selon le mode de calcul de la somme mise de côté */
+function calcPrix({vise,epargne,fraisAn,taux,assiette,semaines,hSem,nonFacture,hParJour}){
+  if(epargne>=1||taux>=1||nonFacture>=1) return null;
+  const poche=vise*12/(1-epargne);
+  const enc=assiette==='resultat'?poche/(1-taux)+fraisAn:(poche+fraisAn)/(1-taux);
+  const hFact=semaines*hSem*(1-nonFacture); if(hFact<=0) return null;
+  const heure=enc/hFact;
+  return {poche,enc,hFact,heure,jour:heure*hParJour};
+}
+/* Moyennes réelles des 12 derniers mois qui ont des données d'activité */
+function douzeMois(){
+  const last=lastOpDate(); if(!last) return [];
+  return monthsTo(+last.slice(0,4),+last.slice(5,7),12).map(q=>agg(q,'pro')).filter(a=>a.any);
+}
+function justePrix(){
+  const ms=douzeMois(), fraisAn=ms.length?ms.reduce((s,a)=>s+a.fraisExpl,0)/ms.length*12:0;
+  const r=calcPrix({vise:netVise(),epargne:epRet(),fraisAn,taux:reglage('taux',0,90)/100,assiette:S.settings.assiette,semaines:semTrav(),hSem:hSemaine(),nonFacture:nonFact(),hParJour:hJour()});
+  if(!r) return null;
+  const caAn=ms.length>=3?ms.reduce((s,a)=>s+a.ca,0)/ms.length*12:null;
+  return {...r,fraisAn,moyen:caAn!=null&&caAn>0?caAn/r.hFact:null,nMois:ms.length};
+}

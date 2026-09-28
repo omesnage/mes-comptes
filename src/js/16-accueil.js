@@ -81,7 +81,7 @@ function vAccueil(){
     gagne=`<section class="carte gagne"><h3>Ce que vous avez gagné ${P.m===new Date().getMonth()+1&&P.y===new Date().getFullYear()?'ce mois-ci':'en '+MOIS[P.m-1]}</h3>
       <p class="grand-chiffre">${signed(n)}</p>
       <p class="etiquette ${d>=0?'ok':'ko'}">${d>=0?`${eur0(d)} de plus que votre objectif de ${eur0(V)}`:`Il manque ${eur0(-d)} pour atteindre votre objectif de ${eur0(V)}`}</p>
-      <p class="phrase ${t<tauxCible()?'rouge':'or'}">${n>0?`Sur une base de ${hSemaine()} h par semaine, une heure de travail vous a rapporté ${eurH(t)}.${t<tauxCible()?` Il manque ${eurH(tauxCible()-t)} par heure pour atteindre les ${eurH(tauxCible())} visés.`:''}`:'Ce mois-ci, votre activité ne vous a rien rapporté.'}</p>
+      ${salaireBloc(P,'accueil')}
       ${part?`<p class="aide">Votre dernier relevé s’arrête au ${part} ${MOIS[P.m-1]}.</p>`:''}</section>
     <section class="carte" id="activite"><h3>Mon activité</h3>
       <div class="ligne"><span>Encaissé</span><b>${eur0(X.ca)}</b></div>

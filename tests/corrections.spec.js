@@ -29,22 +29,10 @@ test('migration : une règle « prêt » dont toutes les opérations sont sur le
   expect(await page.evaluate(()=>[S.rules['CREDIT MARITIME'],S.rules['CAISSE LOCALE'],catById('pret').name,catById('pret').univers,S.settings.heuresSemaine])).toEqual(['empruntpro','pret','Remboursement d’emprunt','perso',42]);
 });
 
-const etatH=ca=>({schemaVersion:5,onboarded:true,accounts:[{id:'pr',name:'Pro',type:'pro',confirmed:true}],ops:[{id:'1',date:'2026-06-03',label:'VIR CLIENT',amount:ca,merchant:'CLIENT',acct:'pr'},{id:'z',date:'2026-06-29',label:'X',amount:-1,merchant:'X',acct:'pr'}],rules:{CLIENT:'revenus',X:'pro'}});
-test('heures par semaine : 40 h ≈ 173 h par mois ; phrase de l’Accueil dorée au-dessus du taux visé',async({page})=>{
-  const etat=ca=>({schemaVersion:5,onboarded:true,accounts:[{id:'pr',name:'Pro',type:'pro',confirmed:true}],ops:[{id:'1',date:'2026-06-03',label:'VIR CLIENT',amount:ca,merchant:'CLIENT',acct:'pr'},{id:'z',date:'2026-06-29',label:'X',amount:-1,merchant:'X',acct:'pr'}],rules:{CLIENT:'revenus',X:'pro'}});
-  await openWith(page,etat(2601));
+test('heures par semaine : 40 h ≈ 173,3 h par mois, taux visé 11,54 €',async({page})=>{
+  await openWith(page,null);
   expect(await page.evaluate(()=>[+heures().toFixed(2),+tauxCible().toFixed(4)])).toEqual([173.33,11.5385]);
-  // 2 600 € nets / 173,33 h = 15 €
-  await expect(page.locator('.gagne .phrase')).toHaveText(n('Sur une base de 40 h par semaine, une heure de travail vous a rapporté 15 €.').replace(' €',' €'));
-  await expect(page.locator('.gagne .phrase')).toHaveClass(/or/);
 });
-test('phrase de l’Accueil en rouge, avec le montant manquant, sous le taux visé',async({page})=>{
-  await openWith(page,etatH(1734.33));
-  const t=n(await page.locator('.gagne .phrase').textContent());
-  expect(t).toBe('Sur une base de 40 h par semaine, une heure de travail vous a rapporté 10 €. Il manque 1,54 € par heure pour atteindre les 11,54 € visés.');
-  await expect(page.locator('.gagne .phrase')).toHaveClass(/rouge/);
-});
-
 test('ajouter une rubrique depuis l’Accueil : nom, Perso ou Activité, icône ; renommable et supprimable dans Réglages',async({page})=>{
   await openWith(page,null); await page.click('[data-act="demo"]');
   await page.click('.argent [data-act="nouvrub"]');

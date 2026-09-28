@@ -40,6 +40,8 @@ async function parcours(page,f){
   await page.click('[data-blvl="Y"]'); await page.click('[data-btout]'); await f('bilan annee');
   await page.locator('.legende .leg[data-bcat]').first().click(); await f('fiche rubrique'); await page.click('.fiche .fermer');
   await page.click('[data-bu="pro"]'); await f('bilan activite');
+  await page.click('[data-modal="prix"]'); await f('comment c’est calculé'); await page.click('.fenetre .fermer');
+  await page.click('[data-modal="cascade"]'); await f('d’où vient ce chiffre'); await page.click('.fenetre .fermer');
   await page.click('nav.tabs [data-tab="operations"]'); await f('operations');
   await page.locator('.ops .op').first().click(); await expect(page.locator('.fiche')).toBeVisible(); await f('fiche');
   await page.click('.fiche .fermer');

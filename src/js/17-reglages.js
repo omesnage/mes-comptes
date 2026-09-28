@@ -10,12 +10,22 @@ function vReglages(){
     ${c.univers!=='pro'?`<label class="rr-budget">Budget<input type="number" inputmode="numeric" min="0" step="10" placeholder="—" value="${c.budget||''}" data-budget="${c.id}" aria-label="Budget mensuel ${esc(c.name)}"></label>`:''}
     <button class="lien" data-rencat="${c.id}">Renommer</button>${c.custom?`<button class="lien danger" data-delcat="${c.id}">Supprimer</button>`:''}</div>`;
   return `<h2 class="titre-page">Réglages</h2>
-  <section class="carte" id="objectif"><h3>Votre objectif</h3>
-    <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
-    <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
+  <section class="carte" id="objectif"><h3>Votre activité</h3>
+    <label class="champ">Revenu net visé par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise??''}" placeholder="2000"></label>
+    <p class="aide sous-champ">Ce que vous voulez vous verser chaque mois, une fois tout payé.</p>
+    <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine??''}" placeholder="40"></label>
+    <p class="aide sous-champ">Tout compris : clients, prospection, devis, administratif, formation, déplacements.</p>
     <p class="phrase" id="cibleLive">${phraseCible()}</p>
+    <label class="champ">Semaines non travaillées par an<input type="number" inputmode="numeric" min="0" max="51" step="1" data-set="semNonTrav" value="${s.semNonTrav??''}" placeholder="7"></label>
+    <p class="aide sous-champ">Par exemple 5 semaines de congés et 2 pour les jours fériés et les imprévus : soit ${nb(semTrav())} semaines travaillées.</p>
+    <label class="champ">Épargne et retraite à constituer vous-même (%)<input type="number" inputmode="numeric" min="0" max="90" step="1" data-set="epRetraite" value="${s.epRetraite??''}" placeholder="10"></label>
+    <p class="aide sous-champ">Un salarié les a déjà dans son salaire ; vous, vous devez les mettre de côté vous-même.</p>
+    <label class="champ">Part du temps non facturé (%)<input type="number" inputmode="numeric" min="0" max="90" step="1" data-set="nonFacture" value="${s.nonFacture??''}" placeholder="30"></label>
+    <p class="aide sous-champ">Prospection, devis, administratif, formation, déplacements : du temps travaillé que personne ne vous paie.</p>
+    <label class="champ">Heures par jour facturé<input type="number" inputmode="numeric" min="1" max="24" step="1" data-set="hJour" value="${s.hJour??''}" placeholder="7"></label>
+    <p class="aide sous-champ">Pour calculer votre prix à la journée.</p>
     <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
-    <p class="aide">Si vous ne savez pas, demandez à votre comptable.</p></section>
+    <p class="aide sous-champ">Si vous ne savez pas, demandez à votre comptable.</p></section>
   <section class="carte" id="reserve"><h3>Votre réserve</h3>
     <label class="champ">Épargne disponible (€)<input type="number" inputmode="numeric" min="0" step="100" data-set="epargne" value="${s.epargne||''}" placeholder="0"></label>
     ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:'<p class="aide">Elle indique combien de mois vous tiendriez sans rien encaisser.</p>'}</section>

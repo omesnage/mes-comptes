@@ -53,6 +53,7 @@ function vBilan(){
   return `<div class="seg" role="group" aria-label="Période">${lvl.map(([k,l])=>`<button data-blvl="${k}" aria-pressed="${PB.lvl===k}">${l}</button>`).join('')}</div>
   <div class="mois"><button class="fleche" data-bshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${nomPeriode(PB)}</h2><button class="fleche" data-bshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>
   ${hasFraisPro()?`<div class="seg" role="group" aria-label="Dépenses montrées"><button data-bu="perso" aria-pressed="${U==='perso'}">Perso</button><button data-bu="pro" aria-pressed="${U==='pro'}">Activité</button></div>`:''}
+  ${U==='pro'?`<section class="carte salaire-bilan">${salaireBloc(PB,'bilan')||'<p class="aide">Aucune activité sur cette période.</p>'}</section>${justePrixBloc()}`:''}
   <section class="carte"><h3>Répartition</h3>
     ${pos.length?`${anneau(parts,B.total)}
     <div class="legende">${parts.map((x,i)=>`<button class="leg"${x.cid?` data-bcat="${x.cid}"`:' data-autres="1"'}><span class="pastille" style="background:var(--c${i+1})"></span><span class="leg-nom">${esc(x.nom)}</span><span class="leg-amt">${eur0(x.v)}</span><span class="leg-pc">${Math.round(x.v/sumPos*100)} %</span></button>
