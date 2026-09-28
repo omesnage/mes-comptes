@@ -56,6 +56,18 @@ function migrateSchema(st){
     for(const c of st.categories){const d=CATS0.find(k=>k.id===c.id);if(d&&OLD_NAMES[c.id]===c.name){c.name=d.name;c.icon=d.icon}}
     st.schemaVersion=4;
   }
+  if(st.schemaVersion<5){
+    /* v4 → v5 : heures par semaine au lieu de par mois (160 h par mois par défaut devient 40 h par semaine) */
+    const h=+st.settings.heures;
+    st.settings.heuresSemaine=!h||h===160?40:Math.max(1,Math.round(h*12/52));
+    delete st.settings.heures;
+    /* Remboursement d'emprunt : rubrique du foyer ; un emprunt payé uniquement depuis un compte pro passe dans la rubrique de l'activité */
+    const pret=st.categories.find(c=>c.id==='pret');
+    if(pret){if(pret.name==='Remboursement de prêt'){pret.name='Remboursement d’emprunt';pret.icon='banknote'}if(pret.univers==='auto')pret.univers='perso';pret.fixed=true}
+    const pro=new Set(st.accounts.filter(a=>a.type==='pro').map(a=>a.id));
+    for(const [m,c] of Object.entries(st.rules)) if(c==='pret'){const ops=st.ops.filter(o=>o.merchant===m.replace(/\|[+-]$/,''));if(ops.length&&ops.every(o=>pro.has(o.acct)))st.rules[m]='empruntpro'}
+    st.schemaVersion=5;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }
@@ -92,7 +104,7 @@ function migrate(){
     const nm=merchantOf(o.label);
     if(nm!==o.merchant){ if(S.rules[o.merchant]&&!S.rules[nm]&&!brandOf(o.label)) S.rules[nm]=S.rules[o.merchant];
       old.add(o.merchant); o.merchant=nm; dirtyMonths.add(o.date.slice(0,7)); ch=true }
-    const ac=autoCatOf(o.label); if(ac&&!S.rules[o.merchant]){S.rules[o.merchant]=ac;delete S.sugg[o.merchant];ch=true}
+    const ac=autoCatOf(o.label,acctType(o)); if(ac&&!S.rules[o.merchant]){S.rules[o.merchant]=ac;delete S.sugg[o.merchant];ch=true}
   }
   const live=new Set(S.ops.map(o=>o.merchant));
   old.forEach(m=>{if(!live.has(m)){delete S.rules[m];delete S.sugg[m]}});

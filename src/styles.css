@@ -291,3 +291,15 @@ select,input,textarea,button,label,details,summary{box-sizing:border-box}
 .ecart.baisse .e-val{color:var(--gold);font-weight:500}
 .m-hausse{color:var(--amber)}.m-baisse{color:var(--gold)}
 .fiche .ops .op{cursor:default}
+.phrase.or{color:var(--gold)}
+.fiche-fond.haut{z-index:24}.fiche.haut{z-index:25}
+.fenetre{max-width:520px}
+.icones{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:4px 0 12px}
+.icone{display:grid;place-items:center;min-height:52px;border:1px solid var(--line);background:var(--surface)}
+.icone svg{width:24px;height:24px;color:var(--ink)}
+.icone.choisie{border-color:var(--gold);background:var(--gold-soft)}
+.icone.choisie svg{color:var(--gold)}
+.ajout-rub{gap:8px;margin-top:10px;font-size:17px}
+.ajout-rub svg,.ajout-btn svg{width:20px;height:20px}
+.ajout-btn{margin-top:18px}
+@media (max-width:380px){.icones{grid-template-columns:repeat(4,1fr)}}

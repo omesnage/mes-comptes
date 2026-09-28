@@ -1,5 +1,7 @@
 /* ============ Taux horaire et revenu net visé ============ */
-const heures=()=>+S.settings.heures||SET0.heures;
+const hSemaine=()=>+S.settings.heuresSemaine||SET0.heuresSemaine;
+/* Heures par mois : heures par semaine × 52 ÷ 12 */
+const heures=()=>hSemaine()*52/12;
 const netVise=()=>+S.settings.netVise||SET0.netVise;
 const tauxCible=()=>netVise()/heures();
 /* Revenu net et taux horaire réel : sur la période affichée (moyenne par mois) et lissés sur 12 mois */

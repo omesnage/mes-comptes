@@ -20,8 +20,8 @@ const nbAVerifier=()=>pendingGroups().length+virementsInconnus().length;
 function icons(){ if(window.lucide&&lucide.createIcons) lucide.createIcons({icons:lucide.icons,attrs:{'stroke-width':1.5}}) }
 const CAT_GROUPS=[['perso','Rubriques du foyer'],['auto','Rubriques communes'],['pro','Rubriques de l’activité'],['in','Rentrées et virements']];
 const catGroup=c=>c.type==='expense'?(c.univers||'perso'):'in';
-function catOptions(sel,withAuto,mark){
-  return (withAuto?`<option value="">Selon la règle</option>`:'')+CAT_GROUPS.map(([g,l])=>{const cs=S.categories.filter(c=>catGroup(c)===g);return cs.length?`<optgroup label="${l}">${cs.map(c=>`<option value="${c.id}"${c.id===sel?' selected':''}>${esc(c.name)}${mark&&c.id===sel?mark:''}</option>`).join('')}</optgroup>`:''}).join('');
+function catOptions(sel,withAuto,mark,nouvelle){
+  return (withAuto?`<option value="">Selon la règle</option>`:'')+CAT_GROUPS.map(([g,l])=>{const cs=S.categories.filter(c=>catGroup(c)===g);return cs.length?`<optgroup label="${l}">${cs.map(c=>`<option value="${c.id}"${c.id===sel?' selected':''}>${esc(c.name)}${mark&&c.id===sel?mark:''}</option>`).join('')}</optgroup>`:''}).join('')+(nouvelle?'<option value="__new">+ Nouvelle rubrique…</option>':'');
 }
 function opUniv(o){if(o.src==='rev')return 'pro';if(INTERNAL[o.id]&&!o.cat)return acctType(o)==='pro'?'pro':'perso';const c=catOf(o);if(c&&typeOf(c)==='remu')return o.amount<0?'pro':'perso';return univOf(o,c)}
 const inUniv=o=>UNIV==='all'||opUniv(o)===UNIV;
@@ -43,8 +43,8 @@ function render(){
   else if(!S.ops.length&&['accueil','bilan','operations'].includes(view)) v.innerHTML=libBanner()+vide();
   else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,reglages:vReglages}[view]();
   if(view!=='bilan') BCAT=null;
-  v.insertAdjacentHTML('beforeend',FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'');
-  document.body.classList.toggle('fige',!!(FICHE||BCAT));
+  v.insertAdjacentHTML('beforeend',(FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'')+(NEWCAT?fenetreRubrique():''));
+  document.body.classList.toggle('fige',!!(FICHE||BCAT||NEWCAT));
   icons(); setStatus();
 }
 function libBanner(){return window.pdfjsLib&&window.XLSX?'':`<div class="note-box alerte-box" role="alert"><i data-lucide="wifi-off"></i><p>${MSG_RESEAU}</p></div>`}
@@ -91,7 +91,7 @@ function aVerifier(){
   ${g.map(x=>`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
     <p class="q-s">${x.n>1?`${x.n} opérations, `:''}${x.total<0?'−':'+'}${eur(Math.abs(x.total))}. ${esc(x.label)}</p>
     <div class="choix">${choixRubriques(x)}</div>
-    <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions()}</select></details></div>`).join('')}
+    <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details></div>`).join('')}
   </section>`;
 }
 function opLine(o){
@@ -120,7 +120,7 @@ function fiche(id){
     ${opExtra(o)?`<p class="f-x">${esc(opExtra(o))}</p>`:''}
     ${vir?`<p class="f-lbl">Ce virement de votre compte pro, c’est :</p><div class="choix"><button class="choix-btn${virKind(deb,cre)!=='ndf'?' suggere':''}" data-vir="${esc(deb.merchant)}" data-k="remu">Ma rémunération</button><button class="choix-btn${virKind(deb,cre)==='ndf'?' suggere':''}" data-vir="${esc(deb.merchant)}" data-k="ndf">Un remboursement de frais</button></div>`:''}
     ${o.src==='rev'||x?'':`<label class="f-lbl" for="ficheCat">Rubrique</label>
-    <select class="grand" id="ficheCat">${c?'':'<option value="">À vérifier</option>'}${catOptions(c)}</select>
+    <select class="grand" id="ficheCat">${c||FICHESEL?'':'<option value="">À vérifier</option>'}${catOptions(FICHESEL||c,false,'',true)}</select>
     <div class="radios"><label><input type="radio" name="portee" value="tout" checked> Pour toutes les opérations de ce marchand</label>
     <label><input type="radio" name="portee" value="une"> Pour cette opération seulement</label></div>
     <button class="btn" data-act="savefiche" data-id="${o.id}">Enregistrer</button>`}

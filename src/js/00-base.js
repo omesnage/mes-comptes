@@ -1,6 +1,6 @@
 /* ============ Données de base ============ */
-const SCHEMA=4;
-const SET0={epargne:0,taux:0,heures:160,netVise:2000,objectif:6,assiette:'ca'};
+const SCHEMA=5;
+const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
  ['logement','Logement','house','expense','perso',1],
@@ -19,7 +19,7 @@ const CATS0=[
  ['voyages','Voyages','luggage','expense','perso'],
  ['frais','Banque','landmark','expense','auto',1],
  ['impotsfoyer','Impôts et taxes du foyer','receipt','expense','perso',1],
- ['pret','Remboursement de prêt','key-round','expense','auto',1],
+ ['pret','Remboursement d’emprunt','banknote','expense','perso',1],
  ['divers','Autres','circle-dashed','expense','auto'],
  ['logiciels','Logiciels et outils','app-window','expense','pro'],
  ['materiel','Matériel et fournitures','monitor','expense','pro'],
@@ -29,6 +29,7 @@ const CATS0=[
  ['cotisations','Versements de ce qui est mis de côté','piggy-bank','expense','pro'],
  ['impots','Impôts de l’activité','receipt-text','expense','pro'],
  ['fraisrembourses','Frais remboursés par l’activité','car-front','expense','pro'],
+ ['empruntpro','Remboursement d’emprunt de l’activité','banknote','expense','pro',1],
  ['pro','Autres frais de l’activité','briefcase','expense','pro'],
  ['remb','Remboursements','rotate-ccw','expense','auto'],
  ['rentrees','Autres rentrées','hand-coins','income','perso'],
@@ -43,8 +44,9 @@ const NDF_RE=/\b(IK|INDEMNITES? (KM|KILOMETRIQUES?)|FRAIS KM|NOTES? DE FRAIS|NDF
 /* Rubriques qui correspondent au paiement de la provision (cotisations, impôts) */
 const PROV_CATS=new Set(['cotisations','impots']);
 const typeOf=id=>(S.categories.find(c=>c.id===id)||{}).type||'expense';
-const LOAN_RE=/\b(ECH(EANCE)?|REMB(OURSEMENT)?|PRLV|PRELEVEMENT)?\s*(SEPA\s*)?(DE\s*)?(PRET|CREDIT IMMO|PRET IMMO)\b|\b(COFIDIS|CETELEM|SOFINCO|FRANFINANCE|FLOA|ONEY)\b/;
-function autoCatOf(label){const b=brandOf(label);if(b&&b[2])return b[2];if(LOAN_RE.test(norm(label)))return 'pret';return null}
+/* Remboursement d'emprunt : reconnu sans rien demander */
+const LOAN_RE=/\b(ECHEANCES? (DE )?PRETS?|ECH\.? PRETS?|REMBOURSEMENTS? (DE )?PRETS?|REMB PRET|PRETS? IMMO(BILIER)?|CREDITS? IMMO(BILIER)?)\b|\b(COFIDIS|CETELEM|SOFINCO|FRANFINANCE|FLOA|ONEY)\b/;
+function autoCatOf(label,atype){if(LOAN_RE.test(norm(label)))return atype==='pro'?'empruntpro':'pret';const b=brandOf(label);if(b&&b[2])return b[2];return null}
 
 /* Mots-clés toujours professionnels, quel que soit le compte */
 const KW_PRO=[

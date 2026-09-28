@@ -1,4 +1,6 @@
 /* ============ Réglages ============ */
+function phraseCible(st){st=st||S.settings;const v=+st.netVise||SET0.netVise, h=+st.heuresSemaine||SET0.heuresSemaine;
+  return `Pour atteindre ${eur0(v)} par mois à ${h} h par semaine, une heure doit vous rapporter <b>${eurH(v/(h*52/12))}</b>.`}
 function vReglages(){
   const s=S.settings, st=S.ops.length?stats({lvl:'M',...endOf(defaultPeriod())},'all'):null;
   const r=Object.entries(S.rules).sort((a,b)=>a[0].localeCompare(b[0]));
@@ -10,8 +12,8 @@ function vReglages(){
   return `<h2 class="titre-page">Réglages</h2>
   <section class="carte" id="objectif"><h3>Votre objectif</h3>
     <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
-    <label class="champ">Heures travaillées par mois<input type="number" inputmode="numeric" min="1" step="5" data-set="heures" value="${s.heures||''}" placeholder="160"></label>
-    <p class="phrase">Une heure de travail doit vous rapporter <b id="cibleLive">${eurH(tauxCible())}</b>.</p>
+    <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
+    <p class="phrase" id="cibleLive">${phraseCible()}</p>
     <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
     <p class="aide">Si vous ne savez pas, demandez à votre comptable.</p></section>
   <section class="carte" id="reserve"><h3>Votre réserve</h3>
@@ -26,9 +28,7 @@ function vReglages(){
     <p class="aide">Un budget est facultatif : sans budget, une rubrique est comparée à ce que vous dépensez d’habitude.</p>
     ${perso.map(rub).join('')}
     <details class="autre"><summary>Rubriques de l’activité</summary>${act.map(rub).join('')}</details>
-    <div class="ajout"><input id="newcat" class="grand" placeholder="Nom de la nouvelle rubrique" maxlength="40" aria-label="Nom de la nouvelle rubrique">
-      <select class="grand" id="newcattype" aria-label="Type de rubrique"><option value="perso">Dépense perso</option><option value="pro">Dépense de l’activité</option></select>
-      <button class="btn secondaire" data-act="addcat">Ajouter</button></div></section>
+    <button class="btn secondaire ajout-btn" data-act="nouvrub" data-de="reglages"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>
   <section class="carte" id="donnees"><h3>Vos données</h3>
     <p class="aide">${mode==='db'?'Vos données sont dans votre espace privé.':'Vos données sont enregistrées dans ce navigateur, sur cet appareil.'} Pour changer d’appareil, sauvegardez ici, puis restaurez sur l’autre appareil.</p>
     <div class="boutons"><button class="btn" data-act="backup">Sauvegarder mes données</button><label class="btn secondaire">Restaurer une sauvegarde<input type="file" id="restorefile" accept=".json,application/json" hidden></label></div>
@@ -63,7 +63,8 @@ function vDemarrage(){
     <button class="lien" data-act="onbfin">Passer</button></section>`;
   if(ONB===1) return `<section class="demarrage">${pas}<h2>Votre objectif</h2>
     <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
-    <label class="champ">Heures travaillées par mois<input type="number" inputmode="numeric" min="1" step="5" data-set="heures" value="${s.heures||''}" placeholder="160"></label>
+    <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
+    <p class="phrase" id="cibleLive">${phraseCible()}</p>
     <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
     <p class="aide">Si vous ne savez pas, demandez à votre comptable. Vous pourrez tout changer plus tard.</p>
     <div class="boutons"><button class="btn" data-onb="2">Continuer</button></div><button class="lien" data-act="onbfin">Passer</button></section>`;

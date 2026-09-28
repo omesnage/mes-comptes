@@ -81,7 +81,7 @@ function vAccueil(){
     gagne=`<section class="carte gagne"><h3>Ce que vous avez gagné ${P.m===new Date().getMonth()+1&&P.y===new Date().getFullYear()?'ce mois-ci':'en '+MOIS[P.m-1]}</h3>
       <p class="grand-chiffre">${signed(n)}</p>
       <p class="etiquette ${d>=0?'ok':'ko'}">${d>=0?`${eur0(d)} de plus que votre objectif de ${eur0(V)}`:`Il manque ${eur0(-d)} pour atteindre votre objectif de ${eur0(V)}`}</p>
-      <p class="phrase${t<tauxCible()?' rouge':''}">${n>0?`Une heure de travail vous a rapporté ${eurH(t)}.`:'Ce mois-ci, votre activité ne vous a rien rapporté.'}</p>
+      <p class="phrase ${t<tauxCible()?'rouge':'or'}">${n>0?`Sur une base de ${hSemaine()} h par semaine, une heure de travail vous a rapporté ${eurH(t)}.${t<tauxCible()?` Il manque ${eurH(tauxCible()-t)} par heure pour atteindre les ${eurH(tauxCible())} visés.`:''}`:'Ce mois-ci, votre activité ne vous a rien rapporté.'}</p>
       ${part?`<p class="aide">Votre dernier relevé s’arrête au ${part} ${MOIS[P.m-1]}.</p>`:''}</section>
     <section class="carte" id="activite"><h3>Mon activité</h3>
       <div class="ligne"><span>Encaissé</span><b>${eur0(X.ca)}</b></div>
@@ -98,7 +98,8 @@ function vAccueil(){
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
         <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}</span>
         <span class="rub-amt">${eur0(e.net)}</span><span class="barre"><span style="width:${Math.max(1.5,e.net/max*100)}%"></span></span></button>
-        ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div></section>`:''}
+        ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div>
+    <button class="lien ajout-rub" data-act="nouvrub"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>`:''}
   ${blocDefi()}
   ${cs.length?`<section class="conseils">${cs.map(c=>`<button class="conseil ${c.lvl}" ${c.go}><i data-lucide="${c.lvl==='ko'?'triangle-alert':'lightbulb'}"></i><span>${esc(c.t)}</span><i data-lucide="chevron-right"></i></button>`).join('')}</section>`:''}
   ${revue?`<button class="carte revue" data-act="review" data-year="${P.m===12?P.y:P.y-1}"><span><span class="r-t">Votre année ${P.m===12?P.y:P.y-1} en revue</span><span class="aide">Vos meilleurs et vos pires moments, en quelques écrans.</span></span><i data-lucide="sparkles"></i></button>`:''}`;

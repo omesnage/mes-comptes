@@ -305,6 +305,18 @@ select,input,textarea,button,label,details,summary{box-sizing:border-box}
 .ecart.baisse .e-val{color:var(--gold);font-weight:500}
 .m-hausse{color:var(--amber)}.m-baisse{color:var(--gold)}
 .fiche .ops .op{cursor:default}
+.phrase.or{color:var(--gold)}
+.fiche-fond.haut{z-index:24}.fiche.haut{z-index:25}
+.fenetre{max-width:520px}
+.icones{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:4px 0 12px}
+.icone{display:grid;place-items:center;min-height:52px;border:1px solid var(--line);background:var(--surface)}
+.icone svg{width:24px;height:24px;color:var(--ink)}
+.icone.choisie{border-color:var(--gold);background:var(--gold-soft)}
+.icone.choisie svg{color:var(--gold)}
+.ajout-rub{gap:8px;margin-top:10px;font-size:17px}
+.ajout-rub svg,.ajout-btn svg{width:20px;height:20px}
+.ajout-btn{margin-top:18px}
+@media (max-width:380px){.icones{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
@@ -320,8 +332,8 @@ select,input,textarea,button,label,details,summary{box-sizing:border-box}
 
 <script>
 /* ============ Données de base ============ */
-const SCHEMA=4;
-const SET0={epargne:0,taux:0,heures:160,netVise:2000,objectif:6,assiette:'ca'};
+const SCHEMA=5;
+const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
  ['logement','Logement','house','expense','perso',1],
@@ -340,7 +352,7 @@ const CATS0=[
  ['voyages','Voyages','luggage','expense','perso'],
  ['frais','Banque','landmark','expense','auto',1],
  ['impotsfoyer','Impôts et taxes du foyer','receipt','expense','perso',1],
- ['pret','Remboursement de prêt','key-round','expense','auto',1],
+ ['pret','Remboursement d’emprunt','banknote','expense','perso',1],
  ['divers','Autres','circle-dashed','expense','auto'],
  ['logiciels','Logiciels et outils','app-window','expense','pro'],
  ['materiel','Matériel et fournitures','monitor','expense','pro'],
@@ -350,6 +362,7 @@ const CATS0=[
  ['cotisations','Versements de ce qui est mis de côté','piggy-bank','expense','pro'],
  ['impots','Impôts de l’activité','receipt-text','expense','pro'],
  ['fraisrembourses','Frais remboursés par l’activité','car-front','expense','pro'],
+ ['empruntpro','Remboursement d’emprunt de l’activité','banknote','expense','pro',1],
  ['pro','Autres frais de l’activité','briefcase','expense','pro'],
  ['remb','Remboursements','rotate-ccw','expense','auto'],
  ['rentrees','Autres rentrées','hand-coins','income','perso'],
@@ -364,8 +377,9 @@ const NDF_RE=/\b(IK|INDEMNITES? (KM|KILOMETRIQUES?)|FRAIS KM|NOTES? DE FRAIS|NDF
 /* Rubriques qui correspondent au paiement de la provision (cotisations, impôts) */
 const PROV_CATS=new Set(['cotisations','impots']);
 const typeOf=id=>(S.categories.find(c=>c.id===id)||{}).type||'expense';
-const LOAN_RE=/\b(ECH(EANCE)?|REMB(OURSEMENT)?|PRLV|PRELEVEMENT)?\s*(SEPA\s*)?(DE\s*)?(PRET|CREDIT IMMO|PRET IMMO)\b|\b(COFIDIS|CETELEM|SOFINCO|FRANFINANCE|FLOA|ONEY)\b/;
-function autoCatOf(label){const b=brandOf(label);if(b&&b[2])return b[2];if(LOAN_RE.test(norm(label)))return 'pret';return null}
+/* Remboursement d'emprunt : reconnu sans rien demander */
+const LOAN_RE=/\b(ECHEANCES? (DE )?PRETS?|ECH\.? PRETS?|REMBOURSEMENTS? (DE )?PRETS?|REMB PRET|PRETS? IMMO(BILIER)?|CREDITS? IMMO(BILIER)?)\b|\b(COFIDIS|CETELEM|SOFINCO|FRANFINANCE|FLOA|ONEY)\b/;
+function autoCatOf(label,atype){if(LOAN_RE.test(norm(label)))return atype==='pro'?'empruntpro':'pret';const b=brandOf(label);if(b&&b[2])return b[2];return null}
 
 /* Mots-clés toujours professionnels, quel que soit le compte */
 const KW_PRO=[
@@ -829,7 +843,7 @@ async function importFiles(files){
         seen.add(k);
         const op={id:Math.random().toString(36).slice(2,10),date:o.date,label:o.label,amount:o.amount,merchant:merchantOf(o.label),acct:rep.acct,imp:rep.imp};
         S.ops.push(op); rep.added++; rep.sample.push(op); dirtyMonths.add(o.date.slice(0,7));
-        const ac=autoCatOf(op.label); if(ac&&!S.rules[op.merchant]){S.rules[op.merchant]=ac;delete S.sugg[op.merchant];stateDirty=true}
+        const ac=autoCatOf(op.label,atype); if(ac&&!S.rules[op.merchant]){S.rules[op.merchant]=ac;delete S.sugg[op.merchant];stateDirty=true}
         if(op.amount>0&&atype!=='pro'&&NDF_RE.test(norm(op.label))&&!S.rules[op.merchant+'|+']){S.rules[op.merchant+'|+']='fraisrembourses';stateDirty=true}
         else if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const c=kwSuggest(op.merchant,op.label,atype,op.amount); if(c){S.sugg[op.merchant]={c,src:'kw'};stateDirty=true}}
       }
@@ -1006,6 +1020,18 @@ function migrateSchema(st){
     for(const c of st.categories){const d=CATS0.find(k=>k.id===c.id);if(d&&OLD_NAMES[c.id]===c.name){c.name=d.name;c.icon=d.icon}}
     st.schemaVersion=4;
   }
+  if(st.schemaVersion<5){
+    /* v4 → v5 : heures par semaine au lieu de par mois (160 h par mois par défaut devient 40 h par semaine) */
+    const h=+st.settings.heures;
+    st.settings.heuresSemaine=!h||h===160?40:Math.max(1,Math.round(h*12/52));
+    delete st.settings.heures;
+    /* Remboursement d'emprunt : rubrique du foyer ; un emprunt payé uniquement depuis un compte pro passe dans la rubrique de l'activité */
+    const pret=st.categories.find(c=>c.id==='pret');
+    if(pret){if(pret.name==='Remboursement de prêt'){pret.name='Remboursement d’emprunt';pret.icon='banknote'}if(pret.univers==='auto')pret.univers='perso';pret.fixed=true}
+    const pro=new Set(st.accounts.filter(a=>a.type==='pro').map(a=>a.id));
+    for(const [m,c] of Object.entries(st.rules)) if(c==='pret'){const ops=st.ops.filter(o=>o.merchant===m.replace(/\|[+-]$/,''));if(ops.length&&ops.every(o=>pro.has(o.acct)))st.rules[m]='empruntpro'}
+    st.schemaVersion=5;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }
@@ -1042,7 +1068,7 @@ function migrate(){
     const nm=merchantOf(o.label);
     if(nm!==o.merchant){ if(S.rules[o.merchant]&&!S.rules[nm]&&!brandOf(o.label)) S.rules[nm]=S.rules[o.merchant];
       old.add(o.merchant); o.merchant=nm; dirtyMonths.add(o.date.slice(0,7)); ch=true }
-    const ac=autoCatOf(o.label); if(ac&&!S.rules[o.merchant]){S.rules[o.merchant]=ac;delete S.sugg[o.merchant];ch=true}
+    const ac=autoCatOf(o.label,acctType(o)); if(ac&&!S.rules[o.merchant]){S.rules[o.merchant]=ac;delete S.sugg[o.merchant];ch=true}
   }
   const live=new Set(S.ops.map(o=>o.merchant));
   old.forEach(m=>{if(!live.has(m)){delete S.rules[m];delete S.sugg[m]}});
@@ -1098,8 +1124,8 @@ const nbAVerifier=()=>pendingGroups().length+virementsInconnus().length;
 function icons(){ if(window.lucide&&lucide.createIcons) lucide.createIcons({icons:lucide.icons,attrs:{'stroke-width':1.5}}) }
 const CAT_GROUPS=[['perso','Rubriques du foyer'],['auto','Rubriques communes'],['pro','Rubriques de l’activité'],['in','Rentrées et virements']];
 const catGroup=c=>c.type==='expense'?(c.univers||'perso'):'in';
-function catOptions(sel,withAuto,mark){
-  return (withAuto?`<option value="">Selon la règle</option>`:'')+CAT_GROUPS.map(([g,l])=>{const cs=S.categories.filter(c=>catGroup(c)===g);return cs.length?`<optgroup label="${l}">${cs.map(c=>`<option value="${c.id}"${c.id===sel?' selected':''}>${esc(c.name)}${mark&&c.id===sel?mark:''}</option>`).join('')}</optgroup>`:''}).join('');
+function catOptions(sel,withAuto,mark,nouvelle){
+  return (withAuto?`<option value="">Selon la règle</option>`:'')+CAT_GROUPS.map(([g,l])=>{const cs=S.categories.filter(c=>catGroup(c)===g);return cs.length?`<optgroup label="${l}">${cs.map(c=>`<option value="${c.id}"${c.id===sel?' selected':''}>${esc(c.name)}${mark&&c.id===sel?mark:''}</option>`).join('')}</optgroup>`:''}).join('')+(nouvelle?'<option value="__new">+ Nouvelle rubrique…</option>':'');
 }
 function opUniv(o){if(o.src==='rev')return 'pro';if(INTERNAL[o.id]&&!o.cat)return acctType(o)==='pro'?'pro':'perso';const c=catOf(o);if(c&&typeOf(c)==='remu')return o.amount<0?'pro':'perso';return univOf(o,c)}
 const inUniv=o=>UNIV==='all'||opUniv(o)===UNIV;
@@ -1121,8 +1147,8 @@ function render(){
   else if(!S.ops.length&&['accueil','bilan','operations'].includes(view)) v.innerHTML=libBanner()+vide();
   else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,reglages:vReglages}[view]();
   if(view!=='bilan') BCAT=null;
-  v.insertAdjacentHTML('beforeend',FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'');
-  document.body.classList.toggle('fige',!!(FICHE||BCAT));
+  v.insertAdjacentHTML('beforeend',(FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'')+(NEWCAT?fenetreRubrique():''));
+  document.body.classList.toggle('fige',!!(FICHE||BCAT||NEWCAT));
   icons(); setStatus();
 }
 function libBanner(){return window.pdfjsLib&&window.XLSX?'':`<div class="note-box alerte-box" role="alert"><i data-lucide="wifi-off"></i><p>${MSG_RESEAU}</p></div>`}
@@ -1169,7 +1195,7 @@ function aVerifier(){
   ${g.map(x=>`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
     <p class="q-s">${x.n>1?`${x.n} opérations, `:''}${x.total<0?'−':'+'}${eur(Math.abs(x.total))}. ${esc(x.label)}</p>
     <div class="choix">${choixRubriques(x)}</div>
-    <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions()}</select></details></div>`).join('')}
+    <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details></div>`).join('')}
   </section>`;
 }
 function opLine(o){
@@ -1198,7 +1224,7 @@ function fiche(id){
     ${opExtra(o)?`<p class="f-x">${esc(opExtra(o))}</p>`:''}
     ${vir?`<p class="f-lbl">Ce virement de votre compte pro, c’est :</p><div class="choix"><button class="choix-btn${virKind(deb,cre)!=='ndf'?' suggere':''}" data-vir="${esc(deb.merchant)}" data-k="remu">Ma rémunération</button><button class="choix-btn${virKind(deb,cre)==='ndf'?' suggere':''}" data-vir="${esc(deb.merchant)}" data-k="ndf">Un remboursement de frais</button></div>`:''}
     ${o.src==='rev'||x?'':`<label class="f-lbl" for="ficheCat">Rubrique</label>
-    <select class="grand" id="ficheCat">${c?'':'<option value="">À vérifier</option>'}${catOptions(c)}</select>
+    <select class="grand" id="ficheCat">${c||FICHESEL?'':'<option value="">À vérifier</option>'}${catOptions(FICHESEL||c,false,'',true)}</select>
     <div class="radios"><label><input type="radio" name="portee" value="tout" checked> Pour toutes les opérations de ce marchand</label>
     <label><input type="radio" name="portee" value="une"> Pour cette opération seulement</label></div>
     <button class="btn" data-act="savefiche" data-id="${o.id}">Enregistrer</button>`}
@@ -1251,6 +1277,35 @@ function vImport(){
   <div class="radios"><p class="f-lbl">Compter vos encaissements depuis</p>
     <label><input type="radio" name="incsrc" data-inc="bank"${S.incomeSource!=='file'?' checked':''}> mes relevés bancaires</label>
     <label><input type="radio" name="incsrc" data-inc="file"${S.incomeSource==='file'?' checked':''}> mon tableau</label></div></details>`;
+}
+/* ============ Nouvelle rubrique : petite fenêtre ============ */
+let NEWCAT=null, FICHESEL=null;
+const ICONES=[['tag','Étiquette'],['dumbbell','Sport'],['graduation-cap','Études'],['music','Musique'],['palette','Création'],['book-open','Lecture'],
+  ['coffee','Café'],['wrench','Bricolage'],['flower-2','Jardin'],['bike','Vélo'],['heart','Cœur'],['star','Étoile']];
+/* ctx : { de:'accueil'|'fiche'|'question'|'reglages', m: marchand, id: opération } */
+function ouvrirRubrique(ctx){NEWCAT={nom:'',univers:'perso',icon:'tag',...ctx};render();setTimeout(()=>$('#nrNom')?.focus(),30)}
+function fenetreRubrique(){
+  const n=NEWCAT;
+  return `<div class="fiche-fond haut" data-act="nrannule"></div><div class="fiche fenetre haut" role="dialog" aria-modal="true" aria-label="Nouvelle rubrique">
+    <button class="fermer" data-act="nrannule" aria-label="Fermer"><i data-lucide="x"></i></button>
+    <p class="f-m">Nouvelle rubrique</p>
+    <label class="champ">Nom<input id="nrNom" type="text" maxlength="40" value="${esc(n.nom)}" placeholder="par exemple : Sport"></label>
+    <p class="f-lbl">Pour</p>
+    <div class="seg" role="group" aria-label="Type de rubrique"><button data-nru="perso" aria-pressed="${n.univers==='perso'}">Perso</button><button data-nru="pro" aria-pressed="${n.univers==='pro'}">Activité</button></div>
+    <p class="f-lbl">Icône</p>
+    <div class="icones">${ICONES.map(([ic,l])=>`<button class="icone${n.icon===ic?' choisie':''}" data-nri="${ic}" aria-label="${l}" aria-pressed="${n.icon===ic}"><i data-lucide="${ic}"></i></button>`).join('')}</div>
+    ${n.err?`<p class="ko-txt">${esc(n.err)}</p>`:''}
+    <div class="boutons"><button class="btn" data-act="nrcree">Créer la rubrique</button><button class="btn secondaire" data-act="nrannule">Annuler</button></div></div>`;
+}
+function creerRubrique(){
+  const n=NEWCAT, nom=($('#nrNom')?.value||'').trim().slice(0,40);
+  if(!nom){n.err='Donnez un nom à la rubrique.';render();return}
+  if(S.categories.some(c=>c.name.toLowerCase()===nom.toLowerCase())){n.nom=nom;n.err='Une rubrique porte déjà ce nom.';render();return}
+  const c={id:'c_'+Math.random().toString(36).slice(2,8),name:nom,icon:n.icon,type:'expense',univers:n.univers,budget:0,fixed:false,custom:true};
+  S.categories.push(c); save();
+  if(n.de==='question'&&n.m) setRule(n.m,c.id);
+  if(n.de==='fiche') FICHESEL=c.id;
+  NEWCAT=null; render();
 }
 /* ============ Fichier de revenus ============ */
 let revDraft=null, revError='', revMsg='';
@@ -1386,7 +1441,9 @@ function recurring(){
   return out.sort((a,b)=>b.annual-a.annual);
 }
 /* ============ Taux horaire et revenu net visé ============ */
-const heures=()=>+S.settings.heures||SET0.heures;
+const hSemaine=()=>+S.settings.heuresSemaine||SET0.heuresSemaine;
+/* Heures par mois : heures par semaine × 52 ÷ 12 */
+const heures=()=>hSemaine()*52/12;
 const netVise=()=>+S.settings.netVise||SET0.netVise;
 const tauxCible=()=>netVise()/heures();
 /* Revenu net et taux horaire réel : sur la période affichée (moyenne par mois) et lissés sur 12 mois */
@@ -1487,7 +1544,12 @@ document.addEventListener('click',async e=>{
   const part=e.target.closest&&e.target.closest('circle[data-bcat]'); if(part){BCAT=part.dataset.bcat;render();return}
   const t=e.target.closest&&e.target.closest('button,[data-act="closefiche"]'); if(!t) return;
   const d=t.dataset;
-  if(d.act==='closefiche'){FICHE=null;BCAT=null;render();return}
+  if(d.act==='nrannule'){NEWCAT=null;render();return}
+  if(d.act==='nrcree'){creerRubrique();return}
+  if(d.nru){NEWCAT.nom=$('#nrNom').value;NEWCAT.univers=d.nru;render();return}
+  if(d.nri){NEWCAT.nom=$('#nrNom').value;NEWCAT.icon=d.nri;render();return}
+  if(d.act==='nouvrub'){ouvrirRubrique({de:d.de||'accueil'});return}
+  if(d.act==='closefiche'){FICHE=null;BCAT=null;FICHESEL=null;render();return}
   if(d.blvl){PB.lvl=d.blvl;BTOUT=false;render();return}
   if(d.bshift){PB=shift(PB,+d.bshift);BTOUT=false;render();return}
   if(d.bu){BU=d.bu;BCAT=null;render();return}
@@ -1500,7 +1562,7 @@ document.addEventListener('click',async e=>{
   if(d.tab){aller(d.tab,d.ancre);return}
   if(d.scroll){const el=document.getElementById(d.scroll);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
-  if(d.op){FICHE=d.op;render();setTimeout(()=>$('.fiche .fermer')?.focus(),30);return}
+  if(d.op){FICHE=d.op;FICHESEL=null;render();setTimeout(()=>$('.fiche .fermer')?.focus(),30);return}
   if(d.cat){openCat=openCat===d.cat?null:d.cat;render();return}
   if(d.qcat){setRule(d.qcat,d.c);render();return}
   if(d.vir){S.virements=S.virements||{};S.virements[d.vir]=d.k;stateDirty=true;save();render();return}
@@ -1509,7 +1571,7 @@ document.addEventListener('click',async e=>{
   if(d.undefi){S.challenges=S.challenges.filter(c=>c.key!==d.undefi);save();render();return}
   if(d.act==='savefiche'){const o=BYID[d.id], v=$('#ficheCat').value, tout=document.querySelector('input[name="portee"]:checked')?.value!=='une';
     if(o&&v){if(tout){delete o.cat;const k=S.rules[o.merchant]&&typeOf(v)!==typeOf(S.rules[o.merchant])?o.merchant+(o.amount>0?'|+':'|-'):o.merchant;setRule(k,v);S.ops.forEach(x=>{if(x.merchant===o.merchant&&x.cat){delete x.cat;dirtyMonths.add(x.date.slice(0,7))}})}else{o.cat=v;dirtyMonths.add(o.date.slice(0,7))}save()}
-    FICHE=null;render();return}
+    FICHE=null;FICHESEL=null;render();return}
   if(d.settype){const [id,ty]=d.settype.split(':');const a=acctById(id);if(a){a.type=ty;a.confirmed=true;stateDirty=true;save();render()}return}
   if(d.renacct){const a=acctById(d.renacct);if(!a)return;const n=(prompt('Nouveau nom du compte',a.name)||'').trim();if(!n||n===a.name)return;a.name=n.slice(0,40);stateDirty=true;save();render();return}
   if(d.rencat){const c=catById(d.rencat);if(!c)return;const n=(prompt('Nouveau nom de la rubrique',c.name)||'').trim();if(!n||n===c.name)return;c.name=n.slice(0,40);save();render();return}
@@ -1539,7 +1601,8 @@ document.addEventListener('click',async e=>{
 document.addEventListener('change',e=>{
   const t=e.target, d=t.dataset;
   if(d.rule){S.rules[d.rule]=t.value;save();render();return}
-  if(d.qsel){if(t.value){setRule(d.qsel,t.value);render()}return}
+  if(d.qsel){if(t.value==='__new'){t.value='';ouvrirRubrique({de:'question',m:d.qsel});return}if(t.value){setRule(d.qsel,t.value);render()}return}
+  if(t.id==='ficheCat'){if(t.value==='__new'){t.value=FICHESEL||'';ouvrirRubrique({de:'fiche',id:FICHE})}else FICHESEL=t.value||null;return}
   if(d.budget){const c=catById(d.budget);c.budget=Math.max(0,+t.value||0);save();return}
   if(d.repacct){let v=t.value;const r=reports.find(x=>x.imp===d.repacct);if(!r)return;
     if(v==='__new'){const n=(prompt('Nom du compte')||'').trim();if(!n){render();return}v=addAccount({name:n.slice(0,40),type:guessType('','',n)}).id;r.isNew=true}
@@ -1556,10 +1619,10 @@ document.addEventListener('change',e=>{
   if(t.id==='revfile'&&t.files.length){if(demo)exitDemo();readRev(t.files[0]);t.value=''}
   if(d.rev){const v=+t.value;if(d.rev==='sheet'){revDraft.sheet=v;detect()}else revDraft[d.rev]=v;render()}
 });
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(FICHE||BCAT){FICHE=null;BCAT=null;render();return}if($('#review')){$('#review').remove();document.body.style.overflow=''}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='nrNom'){e.preventDefault();creerRubrique();return}if(e.key!=='Escape')return;if(NEWCAT){NEWCAT=null;render();return}if(FICHE||BCAT){FICHE=null;BCAT=null;render();return}if($('#review')){$('#review').remove();document.body.style.overflow=''}});
 document.addEventListener('input',e=>{
   const d=e.target.dataset||{};
-  if(d.set==='netVise'||d.set==='heures'){const el=$('#cibleLive');if(el){const s={...S.settings,[d.set]:+e.target.value||0};el.textContent=eurH((+s.netVise||SET0.netVise)/(+s.heures||SET0.heures))}}
+  if(d.set==='netVise'||d.set==='heuresSemaine'){const el=$('#cibleLive');if(el)el.innerHTML=phraseCible({...S.settings,[d.set]:+e.target.value||0})}
   if(e.target.id==='search'){q=e.target.value;const pos=e.target.selectionStart;render();const s=$('#search');s.focus();s.setSelectionRange(pos,pos)}
 });
 ['dragover','dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{
@@ -1632,7 +1695,7 @@ function demoData(){
   st.rules=cats; st.virements={'MARTIN PERSO':'remu'};
   st.categories.find(c=>c.id==='courses').budget=0;
   const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
-  st.settings={...SET0,epargne:7000,taux:22,heures:160,netVise:2000,objectif:6,assiette:'ca'};
+  st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);
   /* Défis : le mois dernier (manqué de peu), ce mois-ci (réussi) ; le prochain sera proposé */
   const courses=k=>ops.filter(o=>o.date.startsWith(mk(k))&&cats[o.merchant]==='courses').reduce((s,o)=>s-o.amount,0);
@@ -1727,7 +1790,7 @@ function vAccueil(){
     gagne=`<section class="carte gagne"><h3>Ce que vous avez gagné ${P.m===new Date().getMonth()+1&&P.y===new Date().getFullYear()?'ce mois-ci':'en '+MOIS[P.m-1]}</h3>
       <p class="grand-chiffre">${signed(n)}</p>
       <p class="etiquette ${d>=0?'ok':'ko'}">${d>=0?`${eur0(d)} de plus que votre objectif de ${eur0(V)}`:`Il manque ${eur0(-d)} pour atteindre votre objectif de ${eur0(V)}`}</p>
-      <p class="phrase${t<tauxCible()?' rouge':''}">${n>0?`Une heure de travail vous a rapporté ${eurH(t)}.`:'Ce mois-ci, votre activité ne vous a rien rapporté.'}</p>
+      <p class="phrase ${t<tauxCible()?'rouge':'or'}">${n>0?`Sur une base de ${hSemaine()} h par semaine, une heure de travail vous a rapporté ${eurH(t)}.${t<tauxCible()?` Il manque ${eurH(tauxCible()-t)} par heure pour atteindre les ${eurH(tauxCible())} visés.`:''}`:'Ce mois-ci, votre activité ne vous a rien rapporté.'}</p>
       ${part?`<p class="aide">Votre dernier relevé s’arrête au ${part} ${MOIS[P.m-1]}.</p>`:''}</section>
     <section class="carte" id="activite"><h3>Mon activité</h3>
       <div class="ligne"><span>Encaissé</span><b>${eur0(X.ca)}</b></div>
@@ -1744,12 +1807,15 @@ function vAccueil(){
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
         <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}</span>
         <span class="rub-amt">${eur0(e.net)}</span><span class="barre"><span style="width:${Math.max(1.5,e.net/max*100)}%"></span></span></button>
-        ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div></section>`:''}
+        ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div>
+    <button class="lien ajout-rub" data-act="nouvrub"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>`:''}
   ${blocDefi()}
   ${cs.length?`<section class="conseils">${cs.map(c=>`<button class="conseil ${c.lvl}" ${c.go}><i data-lucide="${c.lvl==='ko'?'triangle-alert':'lightbulb'}"></i><span>${esc(c.t)}</span><i data-lucide="chevron-right"></i></button>`).join('')}</section>`:''}
   ${revue?`<button class="carte revue" data-act="review" data-year="${P.m===12?P.y:P.y-1}"><span><span class="r-t">Votre année ${P.m===12?P.y:P.y-1} en revue</span><span class="aide">Vos meilleurs et vos pires moments, en quelques écrans.</span></span><i data-lucide="sparkles"></i></button>`:''}`;
 }
 /* ============ Réglages ============ */
+function phraseCible(st){st=st||S.settings;const v=+st.netVise||SET0.netVise, h=+st.heuresSemaine||SET0.heuresSemaine;
+  return `Pour atteindre ${eur0(v)} par mois à ${h} h par semaine, une heure doit vous rapporter <b>${eurH(v/(h*52/12))}</b>.`}
 function vReglages(){
   const s=S.settings, st=S.ops.length?stats({lvl:'M',...endOf(defaultPeriod())},'all'):null;
   const r=Object.entries(S.rules).sort((a,b)=>a[0].localeCompare(b[0]));
@@ -1761,8 +1827,8 @@ function vReglages(){
   return `<h2 class="titre-page">Réglages</h2>
   <section class="carte" id="objectif"><h3>Votre objectif</h3>
     <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
-    <label class="champ">Heures travaillées par mois<input type="number" inputmode="numeric" min="1" step="5" data-set="heures" value="${s.heures||''}" placeholder="160"></label>
-    <p class="phrase">Une heure de travail doit vous rapporter <b id="cibleLive">${eurH(tauxCible())}</b>.</p>
+    <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
+    <p class="phrase" id="cibleLive">${phraseCible()}</p>
     <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
     <p class="aide">Si vous ne savez pas, demandez à votre comptable.</p></section>
   <section class="carte" id="reserve"><h3>Votre réserve</h3>
@@ -1777,9 +1843,7 @@ function vReglages(){
     <p class="aide">Un budget est facultatif : sans budget, une rubrique est comparée à ce que vous dépensez d’habitude.</p>
     ${perso.map(rub).join('')}
     <details class="autre"><summary>Rubriques de l’activité</summary>${act.map(rub).join('')}</details>
-    <div class="ajout"><input id="newcat" class="grand" placeholder="Nom de la nouvelle rubrique" maxlength="40" aria-label="Nom de la nouvelle rubrique">
-      <select class="grand" id="newcattype" aria-label="Type de rubrique"><option value="perso">Dépense perso</option><option value="pro">Dépense de l’activité</option></select>
-      <button class="btn secondaire" data-act="addcat">Ajouter</button></div></section>
+    <button class="btn secondaire ajout-btn" data-act="nouvrub" data-de="reglages"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>
   <section class="carte" id="donnees"><h3>Vos données</h3>
     <p class="aide">${mode==='db'?'Vos données sont dans votre espace privé.':'Vos données sont enregistrées dans ce navigateur, sur cet appareil.'} Pour changer d’appareil, sauvegardez ici, puis restaurez sur l’autre appareil.</p>
     <div class="boutons"><button class="btn" data-act="backup">Sauvegarder mes données</button><label class="btn secondaire">Restaurer une sauvegarde<input type="file" id="restorefile" accept=".json,application/json" hidden></label></div>
@@ -1814,7 +1878,8 @@ function vDemarrage(){
     <button class="lien" data-act="onbfin">Passer</button></section>`;
   if(ONB===1) return `<section class="demarrage">${pas}<h2>Votre objectif</h2>
     <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
-    <label class="champ">Heures travaillées par mois<input type="number" inputmode="numeric" min="1" step="5" data-set="heures" value="${s.heures||''}" placeholder="160"></label>
+    <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
+    <p class="phrase" id="cibleLive">${phraseCible()}</p>
     <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
     <p class="aide">Si vous ne savez pas, demandez à votre comptable. Vous pourrez tout changer plus tard.</p>
     <div class="boutons"><button class="btn" data-onb="2">Continuer</button></div><button class="lien" data-act="onbfin">Passer</button></section>`;

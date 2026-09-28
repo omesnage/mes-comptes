@@ -63,7 +63,7 @@ function demoData(){
   st.rules=cats; st.virements={'MARTIN PERSO':'remu'};
   st.categories.find(c=>c.id==='courses').budget=0;
   const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
-  st.settings={...SET0,epargne:7000,taux:22,heures:160,netVise:2000,objectif:6,assiette:'ca'};
+  st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);
   /* Défis : le mois dernier (manqué de peu), ce mois-ci (réussi) ; le prochain sera proposé */
   const courses=k=>ops.filter(o=>o.date.startsWith(mk(k))&&cats[o.merchant]==='courses').reduce((s,o)=>s-o.amount,0);
