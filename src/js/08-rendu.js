@@ -172,21 +172,47 @@ function vRules(){
   <p class="note" style="margin-bottom:18px">La sauvegarde est un petit fichier à garder en lieu sûr. Pour changer d’appareil, sauvegardez sur l’ancien, puis restaurez sur le nouveau.${backupMsg?`<br><span style="color:var(--gold)">${esc(backupMsg)}</span>`:''}</p>
   <button class="link danger" data-act="wipe">Tout effacer</button></section>`;
 }
+/* Résultat complet de la lecture d'un relevé : essai ou import réel */
+function reportCard(r){
+  const nd=r.lus.filter(o=>o.dup).length, pl=(n,a,b)=>n>1?b:a;
+  const head=r.test?`<p class="test-flag">Essai de lecture : rien n’a été enregistré.</p>`:'';
+  if(r.error) return `<div class="report${r.test?' test':''}"><h4>${esc(r.name)}</h4>${head}<p class="count danger">${esc(r.error)}</p></div>`;
+  const info=r.acctInfo?`<div class="lecture">
+      <div><span>Banque</span><b>${esc(r.bank||'non reconnue')}</b></div>
+      <div><span>Compte</span><b>${esc(r.acctInfo.name)}</b><em>${r.acctInfo.isNew?'nouveau compte, ':'déjà connu, '}${ACCT_TYPES[r.acctInfo.type].toLowerCase()}${r.acctInfo.isNew?' (supposé)':''}</em></div>
+      <div><span>Opérations</span><b>${r.found}</b><em>${r.lus.length?`du ${dfmt(r.lus.reduce((m,o)=>o.date<m?o.date:m,'9'))} au ${dfmt(r.lus.reduce((m,o)=>o.date>m?o.date:m,''))}`:''}</em></div>
+    </div>`:'';
+  const ctl=r.controle?(r.controle.ok?`<p class="verif ok">Relevé vérifié ✓ L’ancien solde (${eur(r.controle.ancien)}) plus les opérations lues donnent bien le nouveau solde (${eur(r.controle.nouveau)}).</p>`
+    :`<p class="verif ko">Attention : il y a un écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes du relevé et les opérations lues. Une opération a peut-être été oubliée ou mal lue : vérifiez la liste ci-dessous.</p>`)
+    :r.found?`<p class="verif">Ce relevé n’indique pas clairement ses soldes : la lecture n’a pas pu être vérifiée automatiquement.</p>`:'';
+  const bilan=r.test?(r.found?`${r.found} ${pl(r.found,'opération lue','opérations lues')}${nd?`, dont ${nd} déjà ${pl(nd,'importée','importées')}`:''}.`:'')
+    :r.found&&!r.added?`${r.found} ${pl(r.found,'opération lue','opérations lues')}, toutes déjà importées : rien n’a été ajouté.`
+    :`${r.found} ${pl(r.found,'opération trouvée','opérations trouvées')}${r.reader?` avec le lecteur « ${esc(r.reader)} »`:''}, ${r.added} ${pl(r.added,'ajoutée','ajoutées')}, ${r.dups} déjà ${pl(r.dups,'connue','connues')}.`;
+  const liste=r.lus.length?`<details class="apercu"${r.test||!r.added?' open':''}><summary>${r.test||!r.added?'Opérations lues':'Voir toutes les opérations lues'} (${r.lus.length})</summary>
+    ${r.lus.slice().sort((a,b)=>a.date<b.date?-1:1).slice(0,200).map(o=>`<div class="pv${o.dup?' dup':''}"><span>${dfmt(o.date)}</span><span>${esc(o.label)}${o.dup?' <em>déjà importée</em>':''}</span><span class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></div>`).join('')}
+    ${r.lus.length>200?`<p class="note">Et ${r.lus.length-200} autres.</p>`:''}</details>`:'';
+  return `<div class="report${r.test?' test':''}"><h4>${esc(r.name)}</h4>${head}
+    <p class="count">${bilan}${!r.found?' Aucune ligne n’a été reconnue : voir ci-dessous.':''}</p>
+    ${info}${ctl}
+    ${r.test&&r.found?`<div class="btn-row" style="margin:14px 0 6px"><button class="btn" data-realimp="${r.imp}">Importer pour de bon</button><button class="link" data-dropreport="${r.imp}">Fermer</button></div>`:''}
+    ${!r.test&&r.found?`<div class="acct">Compte :<select class="quiet" data-repacct="${r.imp}">${S.accounts.map(a=>`<option value="${a.id}"${a.id===r.acct?' selected':''}>${esc(a.name)}</option>`).join('')}<option value="__new">Autre compte…</option></select></div>
+    ${(a=>a&&!a.confirmed?acctAsk(a,r.isNew):'')(acctById(r.acct))}`:''}
+    ${r.test?'':r.sample.slice(0,6).map(opRow).join('')}
+    ${liste}
+    ${r.raw&&!r.found?`<div class="privacy" style="border-color:var(--line);background:transparent;margin-top:12px"><i data-lucide="file-question"></i><span><b style="font-weight:400">Relevé mal reconnu ?</b> Voici le texte lu dans le PDF, déjà anonymisé : IBAN, numéros et noms sont masqués. Relisez-le, puis envoyez-le à la personne qui vous a transmis l’application : elle pourra faire adapter le lecteur à votre banque.
+      <textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="link" data-copy="${r.imp}" style="color:var(--ink)">Copier le texte</button>
+      <br><br>Vous avez Claude ? Faites-le vous-même en deux minutes : <button class="link" data-prompt="${r.imp}" style="color:var(--ink)">Copier la demande pour Claude</button>, puis suivez la marche à suivre plus bas, dans « Lecteurs de relevés ».</span></div>`:''}
+    ${r.raw&&r.found?`<details><summary>Des opérations manquent ? Voir le texte lu, anonymisé</summary><div class="privacy" style="border-color:var(--line);background:transparent;margin-top:10px"><span>IBAN, numéros et noms sont masqués. Relisez ce texte, puis envoyez-le à la personne qui vous a transmis l’application pour faire adapter le lecteur à votre banque.<textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="link" data-copy="${r.imp}" style="color:var(--ink)">Copier le texte</button> <button class="link" data-prompt="${r.imp}" style="color:var(--ink);margin-left:14px">Copier la demande pour Claude</button></span></div></details>`:''}</div>`;
+}
 function vImport(){
   const nRev=S.ops.filter(o=>o.src==='rev').length;
   return privacyBox()+`<section class="block"><h3 class="sec">Relevés bancaires</h3>
   <label class="drop" data-drop="bank"><input type="file" id="file" accept=".pdf,.csv,application/pdf,text/csv" multiple>
     <p>Déposer des relevés</p><span>PDF ou CSV, plusieurs à la fois. Les opérations déjà importées sont ignorées.</span></label>
+  <div class="test-row"><label class="btn gold">Tester un relevé<input type="file" id="testfile" accept=".pdf,.csv,application/pdf,text/csv" style="display:none"></label>
+    <span class="note">Pour voir comment un relevé est lu, sans rien enregistrer.</span></div>
   <p class="note">Vous pouvez déposer plusieurs relevés d’un coup, même de banques différentes, par exemple une année complète. Chaque relevé est rattaché à un compte, que vous pouvez renommer.</p>
-  <div style="margin-top:26px">${reports.map(r=>`<div class="report"><h4>${esc(r.name)}</h4>
-    ${r.error?`<p class="count danger">${esc(r.error)}</p>`:`<p class="count">${r.found} opération${r.found>1?'s':''} trouvée${r.found>1?'s':''}${r.reader?` avec le lecteur « ${esc(r.reader)} »`:''}, ${r.added} ajoutée${r.added>1?'s':''}, ${r.dups} déjà connue${r.dups>1?'s':''}.${!r.found?' Aucune ligne n’a été reconnue : voir ci-dessous.':''}</p>`}
-    ${!r.error&&r.found?`<div class="acct">Compte :<select class="quiet" data-repacct="${r.imp}">${S.accounts.map(a=>`<option value="${a.id}"${a.id===r.acct?' selected':''}>${esc(a.name)}</option>`).join('')}<option value="__new">Autre compte…</option></select></div>
-    ${(a=>a&&!a.confirmed?acctAsk(a,r.isNew):'')(acctById(r.acct))}`:''}
-    ${r.sample.slice(0,6).map(opRow).join('')}
-    ${r.raw&&!r.found?`<div class="privacy" style="border-color:var(--line);background:transparent;margin-top:12px"><i data-lucide="file-question"></i><span><b style="font-weight:400">Relevé mal reconnu ?</b> Voici le texte lu dans le PDF, déjà anonymisé : IBAN, numéros et noms sont masqués. Relisez-le, puis envoyez-le à la personne qui vous a transmis l’application : elle pourra faire adapter le lecteur à votre banque.
-      <textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="link" data-copy="${r.imp}" style="color:var(--ink)">Copier le texte</button>
-      <br><br>Vous avez Claude ? Faites-le vous-même en deux minutes : <button class="link" data-prompt="${r.imp}" style="color:var(--ink)">Copier la demande pour Claude</button>, puis suivez la marche à suivre plus bas, dans « Lecteurs de relevés ».</span></div>`:''}
-    ${r.raw&&r.found?`<details><summary>Des opérations manquent ? Voir le texte lu, anonymisé</summary><div class="privacy" style="border-color:var(--line);background:transparent;margin-top:10px"><span>IBAN, numéros et noms sont masqués. Relisez ce texte, puis envoyez-le à la personne qui vous a transmis l’application pour faire adapter le lecteur à votre banque.<textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="link" data-copy="${r.imp}" style="color:var(--ink)">Copier le texte</button> <button class="link" data-prompt="${r.imp}" style="color:var(--ink);margin-left:14px">Copier la demande pour Claude</button></span></div></details>`:''}</div>`).join('')}</div></section>
+  <div style="margin-top:26px">${reports.map(reportCard).join('')}</div></section>
   <section class="block" id="lecteurs"><h3 class="sec">Lecteurs de relevés</h3>
   <p class="lead">Si les relevés de votre banque sont mal lus, vous pouvez apprendre à l’application à les lire, avec l’aide de Claude. Aucune ligne de code à toucher, et vos données restent où elles sont.</p>
   <ol class="steps">

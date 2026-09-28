@@ -81,15 +81,29 @@ function detectAccountNo(text){
   return m?m[1]:'';
 }
 /* Solde de fin de relevé, s'il est écrit clairement. Renvoie {solde, date} ou null. */
-function detectSolde(text,fallbackDate){
-  const lines=norm(text||'').split('\n').filter(l=>/\b(NOUVEAU SOLDE|SOLDE (FINAL|CREDITEUR|DEBITEUR|AU))\b/.test(l));
-  const l=lines[lines.length-1]; if(!l) return null;
-  const am=l.match(/[-+]?(?:\d{1,3}(?:[ .\u202f]\d{3})+|\d{1,7}),\d{2}-?/g); if(!am) return null;
+const SOLDE_FIN=/\b(NOUVEAU SOLDE|SOLDE (FINAL|CREDITEUR|DEBITEUR|AU))\b/, SOLDE_DEBUT=/\b(ANCIEN SOLDE|SOLDE PRECEDENT|SOLDE INITIAL|SOLDE DE DEBUT|REPORT (DU )?SOLDE)\b/;
+function soldeDeLigne(l,fallbackDate){
+  const am=l.match(/[-+]?(?:\d{1,3}(?:[ . ]\d{3})+|\d{1,7}),\d{2}-?/g); if(!am) return null;
   const raw=am[am.length-1]; let v=Math.abs(toNum(raw)); if(!isFinite(v)) return null;
   if(/DEBITEUR/.test(l)||/^-|-$/.test(raw)) v=-v;
   const dm=l.match(/(\d{2})[\/.](\d{2})[\/.](\d{2,4})/);
   const date=dm?`${dm[3].length===2?'20'+dm[3]:dm[3]}-${dm[2]}-${dm[1]}`:fallbackDate;
-  return date?{solde:+v.toFixed(2),date}:null;
+  return {solde:+v.toFixed(2),date};
+}
+/* Solde de fin de relevé, s'il est écrit clairement. Renvoie {solde, date} ou null. */
+function detectSolde(text,fallbackDate){
+  const lines=norm(text||'').split('\n').filter(l=>SOLDE_FIN.test(l)&&!SOLDE_DEBUT.test(l));
+  const r=lines.length?soldeDeLigne(lines[lines.length-1],fallbackDate):null;
+  return r&&r.date?r:null;
+}
+/* Contrôle : ancien solde + opérations lues = nouveau solde. null si le relevé n'indique pas les deux soldes. */
+function controleSoldes(res){
+  const lines=norm(res.full||'').split('\n');
+  const d=lines.find(l=>SOLDE_DEBUT.test(l)), f=[...lines].reverse().find(l=>SOLDE_FIN.test(l)&&!SOLDE_DEBUT.test(l));
+  const a=d&&soldeDeLigne(d,''), b=f&&soldeDeLigne(f,'');
+  if(!a||!b) return null;
+  const ecart=+(a.solde+res.ops.reduce((s,o)=>s+o.amount,0)-b.solde).toFixed(2);
+  return {ok:Math.abs(ecart)<0.01,ancien:a.solde,nouveau:b.solde,ecart};
 }
 function anonymize(t){return (t||'').replace(/\bFR\d{2}[\d A-Z]{10,34}/g,'FR•• (IBAN masqué)').replace(/\b[A-Z]{4}FR[A-Z0-9]{2,5}\b/g,'(BIC masqué)').replace(/\d{6,}/g,m=>'#'.repeat(m.length)).replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,'(e-mail masqué)').replace(/\b(M\.|MR|MME|MLLE|MONSIEUR|MADAME)\s+[A-ZÀ-Üa-zà-ü' -]{1,40}/gi,'$1 (nom masqué)')}
 

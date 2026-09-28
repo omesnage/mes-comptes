@@ -15,6 +15,8 @@ document.addEventListener('click',async e=>{
   if(d.copy){const ta=t.closest('.privacy').querySelector('textarea');ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}if(!ok&&navigator.clipboard){navigator.clipboard.writeText(ta.value).then(()=>{t.textContent='Copié'},()=>{t.textContent='Sélectionnez le texte et copiez-le'});return}t.textContent=ok?'Copié':'Sélectionnez le texte et copiez-le';return}
   if(d.prompt){const r=reports.find(x=>x.imp===d.prompt);if(!r)return;copyText(claudePrompt(r.raw),t,'Demande copiée : collez-la dans Claude');return}
   if(d.act==='addreader'){addReader();return}
+  if(d.realimp){const i=reports.findIndex(x=>x.imp===d.realimp);if(i<0)return;const f=reports[i].file;reports.splice(i,1);importFiles([f]);return}
+  if(d.dropreport){const i=reports.findIndex(x=>x.imp===d.dropreport);if(i>=0)reports.splice(i,1);render();return}
   if(d.delreader){if(confirm('Supprimer ce lecteur ?')){S.readers.splice(+d.delreader,1);stateDirty=true;save();render()}return}
   if(d.fixed){const c=catById(d.fixed);if(c){c.fixed=!c.fixed;save();render()}return}
   if(d.act==='review'){openReview();return}
@@ -60,6 +62,7 @@ document.addEventListener('change',e=>{
   if(d.set){S.settings[d.set]=Math.max(0,+t.value||0);save();return}
   if(t.id==='restorefile'&&t.files.length){restore_(t.files[0]);t.value='';return}
   if(t.id==='file'&&t.files.length){importFiles([...t.files]);t.value=''}
+  if(t.id==='testfile'&&t.files.length){testerFichier(t.files[0]);t.value=''}
   if(t.id==='revfile'&&t.files.length){if(demo)exitDemo();readRev(t.files[0]);t.value=''}
   if(d.rev){const v=+t.value;if(d.rev==='sheet'){revDraft.sheet=v;detect()}else revDraft[d.rev]=v;render()}
 });

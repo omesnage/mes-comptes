@@ -294,6 +294,28 @@ textarea.anon{width:100%;min-height:180px;font:11px/1.45 ui-monospace,Menlo,mono
 .alerte .acts button{font-size:12.5px;text-decoration:underline;text-underline-offset:3px;color:var(--ink)}
 .calc{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
 .calc b{font-family:var(--serif);font-weight:400;font-size:22px;color:var(--gold);line-height:1.3}
+
+/* Lecture d'un relevé : essai et résultat complet */
+.test-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:-10px 0 22px}
+.report.test{border:1px dashed var(--gold);padding:16px 18px;margin-bottom:18px}
+.test-flag{margin:0 0 6px;font-size:12.5px;color:var(--gold);letter-spacing:.02em}
+.lecture{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:8px 0 12px}
+.lecture div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.lecture span{font-size:11.5px;color:var(--muted)}
+.lecture b{font-weight:400;font-size:14.5px;overflow-wrap:anywhere}
+.lecture em{font-style:normal;font-size:11.5px;color:var(--muted)}
+.verif{font-size:13px;margin:0 0 12px;color:var(--muted)}
+.verif.ok{color:var(--gold)}
+.verif.ko{color:var(--alert)}
+.apercu{margin-top:12px}
+.apercu summary{cursor:pointer;color:var(--ink);font-size:13px}
+.pv{display:grid;grid-template-columns:62px 1fr auto;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink)}
+.pv span:first-child{color:var(--muted);font-variant-numeric:tabular-nums}
+.pv span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pv .cr{color:var(--gold)}
+.pv.dup{opacity:.6}
+.pv em{font-style:normal;font-size:11px;color:var(--muted);margin-left:6px}
+@media (max-width:520px){.lecture{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -621,15 +643,29 @@ function detectAccountNo(text){
   return m?m[1]:'';
 }
 /* Solde de fin de relevé, s'il est écrit clairement. Renvoie {solde, date} ou null. */
-function detectSolde(text,fallbackDate){
-  const lines=norm(text||'').split('\n').filter(l=>/\b(NOUVEAU SOLDE|SOLDE (FINAL|CREDITEUR|DEBITEUR|AU))\b/.test(l));
-  const l=lines[lines.length-1]; if(!l) return null;
-  const am=l.match(/[-+]?(?:\d{1,3}(?:[ .\u202f]\d{3})+|\d{1,7}),\d{2}-?/g); if(!am) return null;
+const SOLDE_FIN=/\b(NOUVEAU SOLDE|SOLDE (FINAL|CREDITEUR|DEBITEUR|AU))\b/, SOLDE_DEBUT=/\b(ANCIEN SOLDE|SOLDE PRECEDENT|SOLDE INITIAL|SOLDE DE DEBUT|REPORT (DU )?SOLDE)\b/;
+function soldeDeLigne(l,fallbackDate){
+  const am=l.match(/[-+]?(?:\d{1,3}(?:[ . ]\d{3})+|\d{1,7}),\d{2}-?/g); if(!am) return null;
   const raw=am[am.length-1]; let v=Math.abs(toNum(raw)); if(!isFinite(v)) return null;
   if(/DEBITEUR/.test(l)||/^-|-$/.test(raw)) v=-v;
   const dm=l.match(/(\d{2})[\/.](\d{2})[\/.](\d{2,4})/);
   const date=dm?`${dm[3].length===2?'20'+dm[3]:dm[3]}-${dm[2]}-${dm[1]}`:fallbackDate;
-  return date?{solde:+v.toFixed(2),date}:null;
+  return {solde:+v.toFixed(2),date};
+}
+/* Solde de fin de relevé, s'il est écrit clairement. Renvoie {solde, date} ou null. */
+function detectSolde(text,fallbackDate){
+  const lines=norm(text||'').split('\n').filter(l=>SOLDE_FIN.test(l)&&!SOLDE_DEBUT.test(l));
+  const r=lines.length?soldeDeLigne(lines[lines.length-1],fallbackDate):null;
+  return r&&r.date?r:null;
+}
+/* Contrôle : ancien solde + opérations lues = nouveau solde. null si le relevé n'indique pas les deux soldes. */
+function controleSoldes(res){
+  const lines=norm(res.full||'').split('\n');
+  const d=lines.find(l=>SOLDE_DEBUT.test(l)), f=[...lines].reverse().find(l=>SOLDE_FIN.test(l)&&!SOLDE_DEBUT.test(l));
+  const a=d&&soldeDeLigne(d,''), b=f&&soldeDeLigne(f,'');
+  if(!a||!b) return null;
+  const ecart=+(a.solde+res.ops.reduce((s,o)=>s+o.amount,0)-b.solde).toFixed(2);
+  return {ok:Math.abs(ecart)<0.01,ancien:a.solde,nouveau:b.solde,ecart};
 }
 function anonymize(t){return (t||'').replace(/\bFR\d{2}[\d A-Z]{10,34}/g,'FR•• (IBAN masqué)').replace(/\b[A-Z]{4}FR[A-Z0-9]{2,5}\b/g,'(BIC masqué)').replace(/\d{6,}/g,m=>'#'.repeat(m.length)).replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,'(e-mail masqué)').replace(/\b(M\.|MR|MME|MLLE|MONSIEUR|MADAME)\s+[A-ZÀ-Üa-zà-ü' -]{1,40}/gi,'$1 (nom masqué)')}
 
@@ -726,38 +762,56 @@ function parseCSV(text){
 }
 
 /* ============ Import ============ */
-/* Retrouve le compte d'un relevé (par numéro, sinon par banque) ou en crée un nouveau, avec un type supposé */
-function resolveAccount(res,fileName){
+/* Retrouve le compte d'un relevé (par numéro, sinon par banque) ou en crée un nouveau, avec un type supposé.
+   En mode essai (dry), rien n'est créé ni modifié : on renvoie seulement ce qui se passerait. */
+function resolveAccount(res,fileName,dry){
   const text=res.full||res.raw||'';
   const bank=detectBank(text)||'', no=detectAccountNo(text);
   let a=no&&S.accounts.find(x=>x.no===no);
   if(!a&&bank){const same=S.accounts.filter(x=>x.bank===bank);
     const free=same.filter(x=>!x.no);
-    if(no&&free.length===1){a=free[0];a.no=no;stateDirty=true}
+    if(no&&free.length===1){a=free[0];if(!dry){a.no=no;stateDirty=true}}
     else if(!no&&same.length===1) a=same[0];}
   if(!a&&!bank&&!no&&S.accounts.length===1) a=S.accounts[0];
-  if(a) return {a,isNew:false};
+  if(a) return {a,isNew:false,bank,no};
   let name=bank||fileName.replace(/\.[a-z]+$/i,'').replace(/[_-]+/g,' ').trim().slice(0,30)||'Compte principal';
   if(S.accounts.some(x=>x.name===name)) name+=no?' ····'+no.slice(-4):' ('+(S.accounts.filter(x=>x.name.startsWith(name)).length+1)+')';
-  return {a:addAccount({name,bank,no,type:guessType(bank,res.header||text.slice(0,1500),name)}),isNew:true};
+  const x={name,bank,no,type:guessType(bank,res.header||text.slice(0,1500),name)};
+  return {a:dry?x:addAccount(x),isNew:true,bank,no};
+}
+async function lireFichier(f){return /\.csv$/i.test(f.name)?parseCSV(await f.text()):await parsePDF(f)}
+const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;
+/* Lecture complète d'un relevé, commune à l'essai et à l'import */
+function analyse(res,f,dry,rep){
+  rep.raw=res.raw; rep.found=res.ops.length; rep.reader=res.reader||'';
+  rep.controle=res.ops.length?controleSoldes(res):null;
+  const seen=new Set(S.ops.map(cleOp));
+  rep.lus=res.ops.map(o=>({...o,dup:seen.has(cleOp(o))}));
+  if(res.ops.length){const r=resolveAccount(res,f.name,dry);rep.bank=r.bank;rep.acctInfo={name:r.a.name,type:r.a.type,isNew:r.isNew};if(!dry){rep.acct=r.a.id;rep.isNew=r.isNew&&!r.a.confirmed}return r.a}
+  return null;
+}
+function newReport(f,test){return {name:f.name,found:0,added:0,dups:0,sample:[],lus:[],raw:'',error:null,imp:Math.random().toString(36).slice(2,9),acct:'',isNew:false,test:!!test,file:test?f:null}}
+async function testerFichier(f){
+  const rep=newReport(f,true);
+  try{analyse(await lireFichier(f),f,true,rep)}catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
+  reports.unshift(rep); render();
 }
 async function importFiles(files){
   if(demo) exitDemo();
   for(const f of files){
-    const rep={name:f.name,found:0,added:0,dups:0,sample:[],raw:'',error:null,imp:Math.random().toString(36).slice(2,9),acct:'',isNew:false};
+    const rep=newReport(f,false);
     try{
-      const res=/\.csv$/i.test(f.name)?parseCSV(await f.text()):await parsePDF(f);
-      rep.raw=res.raw; rep.found=res.ops.length; rep.reader=res.reader||'';
-      if(res.ops.length){
-        const {a,isNew}=resolveAccount(res,f.name); rep.acct=a.id; rep.isNew=isNew&&!a.confirmed;
+      const res=await lireFichier(f);
+      const a=analyse(res,f,false,rep);
+      if(a){
         const last=res.ops.reduce((m,o)=>o.date>m?o.date:m,'');
         const so=detectSolde(res.full||'',last);
         if(so&&(!a.soldeDate||so.date>=a.soldeDate)){a.solde=so.solde;a.soldeDate=so.date;a.soldeSrc='releve';stateDirty=true}
       }
-      const seen=new Set(S.ops.map(o=>o.date+'|'+o.label+'|'+o.amount));
+      const seen=new Set(S.ops.map(cleOp));
       const atype=(acctById(rep.acct)||{}).type||'perso';
       for(const o of res.ops){
-        const k=o.date+'|'+o.label+'|'+o.amount;
+        const k=cleOp(o);
         if(seen.has(k)){rep.dups++;continue}
         seen.add(k);
         const op={id:Math.random().toString(36).slice(2,10),date:o.date,label:o.label,amount:o.amount,merchant:merchantOf(o.label),acct:rep.acct,imp:rep.imp};
@@ -1163,21 +1217,47 @@ function vRules(){
   <p class="note" style="margin-bottom:18px">La sauvegarde est un petit fichier à garder en lieu sûr. Pour changer d’appareil, sauvegardez sur l’ancien, puis restaurez sur le nouveau.${backupMsg?`<br><span style="color:var(--gold)">${esc(backupMsg)}</span>`:''}</p>
   <button class="link danger" data-act="wipe">Tout effacer</button></section>`;
 }
+/* Résultat complet de la lecture d'un relevé : essai ou import réel */
+function reportCard(r){
+  const nd=r.lus.filter(o=>o.dup).length, pl=(n,a,b)=>n>1?b:a;
+  const head=r.test?`<p class="test-flag">Essai de lecture : rien n’a été enregistré.</p>`:'';
+  if(r.error) return `<div class="report${r.test?' test':''}"><h4>${esc(r.name)}</h4>${head}<p class="count danger">${esc(r.error)}</p></div>`;
+  const info=r.acctInfo?`<div class="lecture">
+      <div><span>Banque</span><b>${esc(r.bank||'non reconnue')}</b></div>
+      <div><span>Compte</span><b>${esc(r.acctInfo.name)}</b><em>${r.acctInfo.isNew?'nouveau compte, ':'déjà connu, '}${ACCT_TYPES[r.acctInfo.type].toLowerCase()}${r.acctInfo.isNew?' (supposé)':''}</em></div>
+      <div><span>Opérations</span><b>${r.found}</b><em>${r.lus.length?`du ${dfmt(r.lus.reduce((m,o)=>o.date<m?o.date:m,'9'))} au ${dfmt(r.lus.reduce((m,o)=>o.date>m?o.date:m,''))}`:''}</em></div>
+    </div>`:'';
+  const ctl=r.controle?(r.controle.ok?`<p class="verif ok">Relevé vérifié ✓ L’ancien solde (${eur(r.controle.ancien)}) plus les opérations lues donnent bien le nouveau solde (${eur(r.controle.nouveau)}).</p>`
+    :`<p class="verif ko">Attention : il y a un écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes du relevé et les opérations lues. Une opération a peut-être été oubliée ou mal lue : vérifiez la liste ci-dessous.</p>`)
+    :r.found?`<p class="verif">Ce relevé n’indique pas clairement ses soldes : la lecture n’a pas pu être vérifiée automatiquement.</p>`:'';
+  const bilan=r.test?(r.found?`${r.found} ${pl(r.found,'opération lue','opérations lues')}${nd?`, dont ${nd} déjà ${pl(nd,'importée','importées')}`:''}.`:'')
+    :r.found&&!r.added?`${r.found} ${pl(r.found,'opération lue','opérations lues')}, toutes déjà importées : rien n’a été ajouté.`
+    :`${r.found} ${pl(r.found,'opération trouvée','opérations trouvées')}${r.reader?` avec le lecteur « ${esc(r.reader)} »`:''}, ${r.added} ${pl(r.added,'ajoutée','ajoutées')}, ${r.dups} déjà ${pl(r.dups,'connue','connues')}.`;
+  const liste=r.lus.length?`<details class="apercu"${r.test||!r.added?' open':''}><summary>${r.test||!r.added?'Opérations lues':'Voir toutes les opérations lues'} (${r.lus.length})</summary>
+    ${r.lus.slice().sort((a,b)=>a.date<b.date?-1:1).slice(0,200).map(o=>`<div class="pv${o.dup?' dup':''}"><span>${dfmt(o.date)}</span><span>${esc(o.label)}${o.dup?' <em>déjà importée</em>':''}</span><span class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></div>`).join('')}
+    ${r.lus.length>200?`<p class="note">Et ${r.lus.length-200} autres.</p>`:''}</details>`:'';
+  return `<div class="report${r.test?' test':''}"><h4>${esc(r.name)}</h4>${head}
+    <p class="count">${bilan}${!r.found?' Aucune ligne n’a été reconnue : voir ci-dessous.':''}</p>
+    ${info}${ctl}
+    ${r.test&&r.found?`<div class="btn-row" style="margin:14px 0 6px"><button class="btn" data-realimp="${r.imp}">Importer pour de bon</button><button class="link" data-dropreport="${r.imp}">Fermer</button></div>`:''}
+    ${!r.test&&r.found?`<div class="acct">Compte :<select class="quiet" data-repacct="${r.imp}">${S.accounts.map(a=>`<option value="${a.id}"${a.id===r.acct?' selected':''}>${esc(a.name)}</option>`).join('')}<option value="__new">Autre compte…</option></select></div>
+    ${(a=>a&&!a.confirmed?acctAsk(a,r.isNew):'')(acctById(r.acct))}`:''}
+    ${r.test?'':r.sample.slice(0,6).map(opRow).join('')}
+    ${liste}
+    ${r.raw&&!r.found?`<div class="privacy" style="border-color:var(--line);background:transparent;margin-top:12px"><i data-lucide="file-question"></i><span><b style="font-weight:400">Relevé mal reconnu ?</b> Voici le texte lu dans le PDF, déjà anonymisé : IBAN, numéros et noms sont masqués. Relisez-le, puis envoyez-le à la personne qui vous a transmis l’application : elle pourra faire adapter le lecteur à votre banque.
+      <textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="link" data-copy="${r.imp}" style="color:var(--ink)">Copier le texte</button>
+      <br><br>Vous avez Claude ? Faites-le vous-même en deux minutes : <button class="link" data-prompt="${r.imp}" style="color:var(--ink)">Copier la demande pour Claude</button>, puis suivez la marche à suivre plus bas, dans « Lecteurs de relevés ».</span></div>`:''}
+    ${r.raw&&r.found?`<details><summary>Des opérations manquent ? Voir le texte lu, anonymisé</summary><div class="privacy" style="border-color:var(--line);background:transparent;margin-top:10px"><span>IBAN, numéros et noms sont masqués. Relisez ce texte, puis envoyez-le à la personne qui vous a transmis l’application pour faire adapter le lecteur à votre banque.<textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="link" data-copy="${r.imp}" style="color:var(--ink)">Copier le texte</button> <button class="link" data-prompt="${r.imp}" style="color:var(--ink);margin-left:14px">Copier la demande pour Claude</button></span></div></details>`:''}</div>`;
+}
 function vImport(){
   const nRev=S.ops.filter(o=>o.src==='rev').length;
   return privacyBox()+`<section class="block"><h3 class="sec">Relevés bancaires</h3>
   <label class="drop" data-drop="bank"><input type="file" id="file" accept=".pdf,.csv,application/pdf,text/csv" multiple>
     <p>Déposer des relevés</p><span>PDF ou CSV, plusieurs à la fois. Les opérations déjà importées sont ignorées.</span></label>
+  <div class="test-row"><label class="btn gold">Tester un relevé<input type="file" id="testfile" accept=".pdf,.csv,application/pdf,text/csv" style="display:none"></label>
+    <span class="note">Pour voir comment un relevé est lu, sans rien enregistrer.</span></div>
   <p class="note">Vous pouvez déposer plusieurs relevés d’un coup, même de banques différentes, par exemple une année complète. Chaque relevé est rattaché à un compte, que vous pouvez renommer.</p>
-  <div style="margin-top:26px">${reports.map(r=>`<div class="report"><h4>${esc(r.name)}</h4>
-    ${r.error?`<p class="count danger">${esc(r.error)}</p>`:`<p class="count">${r.found} opération${r.found>1?'s':''} trouvée${r.found>1?'s':''}${r.reader?` avec le lecteur « ${esc(r.reader)} »`:''}, ${r.added} ajoutée${r.added>1?'s':''}, ${r.dups} déjà connue${r.dups>1?'s':''}.${!r.found?' Aucune ligne n’a été reconnue : voir ci-dessous.':''}</p>`}
-    ${!r.error&&r.found?`<div class="acct">Compte :<select class="quiet" data-repacct="${r.imp}">${S.accounts.map(a=>`<option value="${a.id}"${a.id===r.acct?' selected':''}>${esc(a.name)}</option>`).join('')}<option value="__new">Autre compte…</option></select></div>
-    ${(a=>a&&!a.confirmed?acctAsk(a,r.isNew):'')(acctById(r.acct))}`:''}
-    ${r.sample.slice(0,6).map(opRow).join('')}
-    ${r.raw&&!r.found?`<div class="privacy" style="border-color:var(--line);background:transparent;margin-top:12px"><i data-lucide="file-question"></i><span><b style="font-weight:400">Relevé mal reconnu ?</b> Voici le texte lu dans le PDF, déjà anonymisé : IBAN, numéros et noms sont masqués. Relisez-le, puis envoyez-le à la personne qui vous a transmis l’application : elle pourra faire adapter le lecteur à votre banque.
-      <textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="link" data-copy="${r.imp}" style="color:var(--ink)">Copier le texte</button>
-      <br><br>Vous avez Claude ? Faites-le vous-même en deux minutes : <button class="link" data-prompt="${r.imp}" style="color:var(--ink)">Copier la demande pour Claude</button>, puis suivez la marche à suivre plus bas, dans « Lecteurs de relevés ».</span></div>`:''}
-    ${r.raw&&r.found?`<details><summary>Des opérations manquent ? Voir le texte lu, anonymisé</summary><div class="privacy" style="border-color:var(--line);background:transparent;margin-top:10px"><span>IBAN, numéros et noms sont masqués. Relisez ce texte, puis envoyez-le à la personne qui vous a transmis l’application pour faire adapter le lecteur à votre banque.<textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="link" data-copy="${r.imp}" style="color:var(--ink)">Copier le texte</button> <button class="link" data-prompt="${r.imp}" style="color:var(--ink);margin-left:14px">Copier la demande pour Claude</button></span></div></details>`:''}</div>`).join('')}</div></section>
+  <div style="margin-top:26px">${reports.map(reportCard).join('')}</div></section>
   <section class="block" id="lecteurs"><h3 class="sec">Lecteurs de relevés</h3>
   <p class="lead">Si les relevés de votre banque sont mal lus, vous pouvez apprendre à l’application à les lire, avec l’aide de Claude. Aucune ligne de code à toucher, et vos données restent où elles sont.</p>
   <ol class="steps">
@@ -1543,7 +1623,7 @@ function hoursTxt(eur,rate){const h=eur/rate;const H=Math.floor(h),M=Math.round(
 function vEco(){
   const A=agg(P), B=agg(shift(P,-1)), st=stats(P,'all'), rec=recurring();
   const recTot=rec.reduce((s,r)=>s+r.annual,0);
-  const X=activite(P), rate=X.tauxLisse>0?X.tauxLisse:0;
+  const X=activite(P), surCible=!(X.tauxLisse>=X.cible*.3), rate=surCible?X.cible:X.tauxLisse;
   const top=Object.values(A.by).flatMap(e=>e.ops).filter(o=>o.amount<0&&!catById(catOf(o))?.fixed).sort((a,b)=>a.amount-b.amount).slice(0,6);
   const fixedCats=S.categories.filter(c=>c.fixed&&c.type==='expense');
   const l3=st.ms.filter(x=>x.a.any).slice(-3);
@@ -1559,7 +1639,7 @@ function vEco(){
     ${rec.map(r=>`<div class="row"><span>${esc(r.m)}</span><b>${eur0(r.annual)} / an</b><span class="sub">${esc(catById(r.c)?.name||'')}, environ ${eur(r.monthly)} par mois</span></div>`).join('')}`:'<p class="note">Rien de régulier repéré pour l’instant. Il faut au moins trois mois de relevés.</p>'}
   </section>
   <section class="block"><h3 class="sec">Le vrai prix de vos dépenses</h3>
-    ${rate?`<p class="lead">Votre heure de travail vous rapporte réellement ${eur(rate)}, d’après votre revenu net des ${X.nLisse} derniers mois et ${X.H} h travaillées par mois. Voici ce que vos plus grosses dépenses de la période, hors charges fixes, vous ont coûté en temps de travail.</p>
+    ${rate?`<p class="lead">${surCible?`Voici ce que vos plus grosses dépenses de la période, hors charges fixes, représentent en heures de travail.`:`Votre heure de travail vous rapporte réellement ${eur(rate)}, d’après votre revenu net des ${X.nLisse} derniers mois et ${X.H} h travaillées par mois. Voici ce que vos plus grosses dépenses de la période, hors charges fixes, vous ont coûté en temps de travail.`}</p>${surCible?`<p class="note" style="margin-top:-14px">Calculé sur votre taux visé de ${eur(X.cible)}.</p>`:''}
     ${top.map(o=>`<div class="row"><span>${esc(o.merchant)}</span><b>${hoursTxt(-o.amount,rate)}</b><span class="sub">${dfmt(o.date)}, ${eur(-o.amount)}</span></div>`).join('')||'<p class="note">Aucune dépense sur cette période.</p>'}`
     :`<p class="note">${X.nLisse?'Votre revenu net est nul ou négatif sur les derniers mois : impossible de donner un prix à votre heure pour l’instant.':'Il faut des encaissements professionnels pour calculer ce que vous rapporte une heure de travail.'}</p>`}
   </section>
@@ -1786,6 +1866,8 @@ document.addEventListener('click',async e=>{
   if(d.copy){const ta=t.closest('.privacy').querySelector('textarea');ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}if(!ok&&navigator.clipboard){navigator.clipboard.writeText(ta.value).then(()=>{t.textContent='Copié'},()=>{t.textContent='Sélectionnez le texte et copiez-le'});return}t.textContent=ok?'Copié':'Sélectionnez le texte et copiez-le';return}
   if(d.prompt){const r=reports.find(x=>x.imp===d.prompt);if(!r)return;copyText(claudePrompt(r.raw),t,'Demande copiée : collez-la dans Claude');return}
   if(d.act==='addreader'){addReader();return}
+  if(d.realimp){const i=reports.findIndex(x=>x.imp===d.realimp);if(i<0)return;const f=reports[i].file;reports.splice(i,1);importFiles([f]);return}
+  if(d.dropreport){const i=reports.findIndex(x=>x.imp===d.dropreport);if(i>=0)reports.splice(i,1);render();return}
   if(d.delreader){if(confirm('Supprimer ce lecteur ?')){S.readers.splice(+d.delreader,1);stateDirty=true;save();render()}return}
   if(d.fixed){const c=catById(d.fixed);if(c){c.fixed=!c.fixed;save();render()}return}
   if(d.act==='review'){openReview();return}
@@ -1831,6 +1913,7 @@ document.addEventListener('change',e=>{
   if(d.set){S.settings[d.set]=Math.max(0,+t.value||0);save();return}
   if(t.id==='restorefile'&&t.files.length){restore_(t.files[0]);t.value='';return}
   if(t.id==='file'&&t.files.length){importFiles([...t.files]);t.value=''}
+  if(t.id==='testfile'&&t.files.length){testerFichier(t.files[0]);t.value=''}
   if(t.id==='revfile'&&t.files.length){if(demo)exitDemo();readRev(t.files[0]);t.value=''}
   if(d.rev){const v=+t.value;if(d.rev==='sheet'){revDraft.sheet=v;detect()}else revDraft[d.rev]=v;render()}
 });

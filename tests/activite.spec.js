@@ -90,3 +90,13 @@ test('mois en cours incomplet : signalé',async({page})=>{
   await page.click('[data-univ="pro"]');
   await expect(page.locator('.alerte')).toContainText('votre dernier relevé s’arrête au 10');
 });
+
+test('le vrai prix se rabat sur le taux visé si le taux réel est trop bas',async({page})=>{
+  const e=etat([[1,500,300],[2,500,300],[3,500,300]]);
+  e.accounts.push({id:'pe',name:'Perso',type:'perso',confirmed:true});
+  e.ops.push({id:'z',date:'2026-03-15',label:'CB FNAC',amount:-250,merchant:'FNAC',acct:'pe'}); e.rules.FNAC='shopping';
+  await openWith(page,e);
+  await page.click('nav.tabs [data-tab="economies"]');
+  await expect(page.locator('#view')).toContainText('Calculé sur votre taux visé de 12,50 €.');
+  await expect(page.locator('.row',{hasText:'FNAC'})).toContainText('20 h');
+});

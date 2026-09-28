@@ -54,6 +54,38 @@ test('réimporter le même relevé n’ajoute rien et retrouve le même compte',
   await importer(page,f);
   await expect(page.locator('.report')).toHaveCount(1);
   await importer(page,f);
-  await expect(page.locator('.report').first()).toContainText('0 ajoutée, 5 déjà connues');
+  await expect(page.locator('.report').first()).toContainText('5 opérations lues, toutes déjà importées : rien n’a été ajouté.');
+  await expect(page.locator('.report').first().locator('.pv.dup')).toHaveCount(5);
   expect(await page.evaluate(()=>S.accounts.length)).toBe(1);
+});
+
+test('contrôle par les soldes : relevé vérifié, ou écart signalé',async({page},ti)=>{
+  await openWith(page,null);
+  await importer(page,await releveColonnes(ti.outputPath('ok.pdf')));
+  await expect(page.locator('.verif.ok')).toContainText('Relevé vérifié ✓');
+  await importer(page,await releveColonnes(ti.outputPath('ko.pdf'),'1 334,56'));
+  await expect(page.locator('.report').first().locator('.verif.ko')).toContainText('écart de 100,00 €');
+});
+
+test('tester un relevé : lecture complète sans rien enregistrer, puis import pour de bon',async({page},ti)=>{
+  await openWith(page,null);
+  await page.click('nav.tabs [data-tab="importer"]');
+  await page.setInputFiles('#testfile',await releveColonnes(ti.outputPath('ca.pdf')));
+  const r=page.locator('.report.test');
+  await expect(r).toContainText('Essai de lecture : rien n’a été enregistré.');
+  await expect(r).toContainText('5 opérations lues.');
+  await expect(r.locator('.lecture')).toContainText('Crédit Agricole');
+  await expect(r.locator('.lecture')).toContainText('nouveau compte, personnel (supposé)');
+  await expect(r.locator('.verif.ok')).toBeVisible();
+  await expect(r.locator('.pv')).toHaveCount(5);
+  await page.waitForTimeout(800);
+  expect(await page.evaluate(()=>[S.ops.length,S.accounts.length,localStorage.getItem('mes-comptes-v1')])).toEqual([0,0,null]);
+  await r.locator('[data-realimp]').click();
+  await expect(page.locator('.report.test')).toHaveCount(0);
+  await expect(page.locator('.report')).toContainText('5 opérations trouvées, 5 ajoutées');
+  expect(await page.evaluate(()=>S.ops.length)).toBe(5);
+  // Un nouvel essai du même relevé montre que tout est déjà importé
+  await page.setInputFiles('#testfile',await releveColonnes(ti.outputPath('ca.pdf')));
+  await expect(page.locator('.report.test')).toContainText('dont 5 déjà importées');
+  await expect(page.locator('.report.test .lecture')).toContainText('déjà connu');
 });

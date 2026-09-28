@@ -4,8 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node scripts/build.mjs && playwright test",
-    "captures": "node scripts/build.mjs && CAPTURES=1 FONTS=1 playwright test tests/captures.spec.js"
+    "test": "node scripts/build.mjs && playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

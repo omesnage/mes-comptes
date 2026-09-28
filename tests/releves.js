@@ -8,11 +8,11 @@ async function pdf(rows,file){
   fs.writeFileSync(file,await doc.save()); return file;
 }
 /* 1. Colonnes Débit et Crédit séparées, montants sans signe (compte perso) */
-export const releveColonnes=f=>pdf([
+export const releveColonnes=(f,ancien='1 234,56')=>pdf([
   [[40,'CREDIT AGRICOLE ATLANTIQUE VENDEE']],
   [[40,'Relevé de compte courant']],
   [[40,'IBAN : FR76 1470 6000 1234 5678 9012 345']],
-  [[40,'Ancien solde créditeur au 28/02/2026'],[500,'1 234,56']],
+  [[40,'Ancien solde créditeur au 28/02/2026'],[500,ancien]],
   [[40,'Date'],[100,'Libellé'],[420,'Débit'],[500,'Crédit']],
   [[40,'02/03'],[100,'CB CARREFOUR MARKET GUERANDE'],[420,'45,20']],
   [[40,'05/03'],[100,'PRLV SEPA EDF CLIENTS PARTICULIERS'],[420,'94,00']],
