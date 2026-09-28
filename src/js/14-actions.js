@@ -9,11 +9,12 @@ document.addEventListener('click',async e=>{
   if(d.lvl){P.lvl=d.lvl;openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
   if(d.cat==='_pending'){view='valider';openCat=null;render();window.scrollTo({top:0});return}
-  if(d.univ){UNIV=d.univ;saveUI();openCat=null;if(!['synthese','economies','objectifs','operations','remb'].includes(view))view='synthese';OPACC='';render();window.scrollTo({top:0});return}
+  if(d.univ){if(t.closest('.alerte'))view='synthese';UNIV=d.univ;saveUI();openCat=null;if(!['synthese','economies','objectifs','operations','remb'].includes(view))view='synthese';OPACC='';render();window.scrollTo({top:0});return}
   if(d.settype){const [id,ty]=d.settype.split(':');const a=acctById(id);if(a){a.type=ty;a.confirmed=true;stateDirty=true;save();render()}return}
   if(d.renacct){const a=acctById(d.renacct);if(!a)return;const n=(prompt('Nouveau nom du compte',a.name)||'').trim();if(!n||n===a.name)return;a.name=n.slice(0,40);stateDirty=true;save();render();return}
   if(d.copy){const ta=t.closest('.privacy').querySelector('textarea');ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}if(!ok&&navigator.clipboard){navigator.clipboard.writeText(ta.value).then(()=>{t.textContent='Copié'},()=>{t.textContent='Sélectionnez le texte et copiez-le'});return}t.textContent=ok?'Copié':'Sélectionnez le texte et copiez-le';return}
   if(d.prompt){const r=reports.find(x=>x.imp===d.prompt);if(!r)return;copyText(claudePrompt(r.raw),t,'Demande copiée : collez-la dans Claude');return}
+  if(d.mask){const a=[...computeAlerts('all'),...computeAlerts('pro'),...computeAlerts('perso')].find(x=>x.id===d.mask);S.masked=S.masked||{};S.masked[d.mask]={k:periodeKey(),s:a?a.score||0:0};stateDirty=true;save();render();return}
   if(d.act==='addreader'){addReader();return}
   if(d.realimp){const i=reports.findIndex(x=>x.imp===d.realimp);if(i<0)return;const f=reports[i].file;reports.splice(i,1);importFiles([f]);return}
   if(d.dropreport){const i=reports.findIndex(x=>x.imp===d.dropreport);if(i>=0)reports.splice(i,1);render();return}
@@ -24,6 +25,7 @@ document.addEventListener('click',async e=>{
   if(d.act==='backup'){backup_();return}
   if(d.defi){S.challenges=S.challenges.filter(c=>!(c.month===thisMonth()&&c.id===d.defi));S.challenges.push({id:d.defi,month:thisMonth()});save();render();return}
   if(d.undefi){S.challenges=S.challenges.filter(c=>!(c.month===thisMonth()&&c.id===d.undefi));save();render();return}
+  if(d.cat&&t.closest('.alerte')){openCat=d.cat;render();const el=document.querySelector(`.cat-row[data-cat="${CSS.escape(openCat)}"]`);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});return}
   if(d.cat){const fromLegend=!!t.closest('.legend');openCat=fromLegend?d.cat:(openCat===d.cat?null:d.cat);render();
     if(fromLegend){const el=document.querySelector(`.cat-row[data-cat="${CSS.escape(openCat)}"]`);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})}return}
   if(d.qok){const s=document.querySelector(`[data-qsel="${CSS.escape(d.qok)}"]`);if(!s.value){s.focus();return}setRule(d.qok,s.value);render();return}

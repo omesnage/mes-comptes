@@ -5,10 +5,10 @@ async function backup_(){
   const name=`mes-comptes-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
   try{
     const dl=window.claude&&claude.use?await claude.use('downloads'):null;
-    if(dl){await dl.save({filename:name,data});backupMsg='Sauvegarde enregistrée.';render();return}
+    if(dl){await dl.save({filename:name,data});S.lastBackup=Date.now();save();backupMsg='Sauvegarde enregistrée.';render();return}
   }catch(e){backupMsg='Sauvegarde annulée.';render();return}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();
-  backupMsg='Sauvegarde téléchargée. Gardez ce fichier en lieu sûr.';render();
+  S.lastBackup=Date.now();save();backupMsg='Sauvegarde téléchargée. Gardez ce fichier en lieu sûr.';render();
 }
 async function restore_(file){
   try{

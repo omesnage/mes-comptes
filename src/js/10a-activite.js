@@ -27,23 +27,6 @@ function pistes(X){
     out.push(d<=frais?`Ou réduire vos frais pro de ${eur0(d)} par mois, sur ${eur0(frais)} aujourd’hui.`:`Ou réduire vos frais pro, qui s’élèvent à ${eur0(frais)} par mois.`)}
   return out;
 }
-/* Message en tête des synthèses Pro et Vue d'ensemble */
-function alerteRevenu(){
-  const X=activite(P); if(!X.any) return '';
-  const quand=P.lvl==='M'?'Ce mois-ci':P.lvl==='Q'?'Ce trimestre':'Cette année', moy=P.lvl==='M'?'':' en moyenne par mois';
-  const part=moisPartiel(P), note=part?` Le mois n’est pas terminé : votre dernier relevé s’arrête au ${part}.`:'';
-  const lis=X.tauxLisse!=null&&X.nLisse>=3?`Sur les ${X.nLisse} derniers mois, en moyenne : ${eur(X.tauxLisse)} de l’heure, soit ${eur0(X.lisse)} nets par mois${X.lisse>=X.V?', au-dessus de votre objectif : ce mois plus faible n’est pas une tendance':''}.`:'';
-  if(X.ok) return `<div class="alerte good" role="status"><i data-lucide="sparkles"></i><div>
-    <p class="t">${quand}, votre travail vous a rapporté <b>${eur(X.taux)} de l’heure</b>${moy}, pour ${eur(X.cible)} visés.</p>
-    <p class="d">Objectif de ${eur0(X.V)} nets atteint, avec ${eur0(X.net-X.V)} d’avance.${note}</p>${lis?`<p class="d">${lis}</p>`:''}</div></div>`;
-  const ps=pistes(X);
-  return `<div class="alerte crit" role="alert"><i data-lucide="triangle-alert"></i><div>
-    <p class="t">${X.net<=0?`${quand}, votre travail ne vous a rien rapporté : le revenu net est de ${signed(X.net)}${moy}.`:`${quand}, votre travail vous a rapporté <b>${eur(X.taux)} de l’heure</b>${moy}, pour ${eur(X.cible)} visés.`}</p>
-    <p class="d">Il manque <b>${eur0(X.manque)}</b>${moy} pour atteindre ${eur0(X.V)} nets, pour ${X.H} heures travaillées.${note}</p>
-    ${lis?`<p class="d">${lis}</p>`:''}
-    ${ps.length?`<ul class="pistes">${ps.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
-    <div class="acts">${UNIV!=='pro'?'<button data-univ="pro">Voir mes chiffres pro</button>':''}<button data-tab="regles">Ajuster mon objectif ou mes heures</button></div></div></div>`;
-}
 /* Taux horaire réel sur 12 mois, avec la ligne du taux visé */
 function courbeTaux(){
   const e=endOf(P), ms=monthsTo(e.y,e.m,12).map(q=>{const a=agg(q,'pro');return {q,any:a.any,v:a.revenuNet/heures()}});

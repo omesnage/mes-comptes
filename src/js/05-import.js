@@ -59,6 +59,7 @@ async function importFiles(files){
     }catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
     reports.unshift(rep);
   }
+  if(!S.since&&S.ops.length) S.since=Date.now();
   S.ops.sort((a,b)=>a.date<b.date?1:-1);
   P=null; save(); render();
 }

@@ -1,13 +1,13 @@
 /* ============ Synthèses : vue d'ensemble, pro, perso ============ */
 function alertFor(cid,net,months,U){
   const c=catById(cid);
-  if(c&&c.budget>0){const b=c.budget*months; if(net>b) return ['🔥',`budget dépassé de ${eur0(net-b)}`]; if(net>b*.9) return ['⚠️','budget presque atteint']; return null}
+  if(c&&c.budget>0){const b=c.budget*months; if(net>b) return [net>b*1.2?'crit':'warn',`budget dépassé de ${eur0(net-b)}`]; if(net>b*.9) return ['warn','budget presque atteint']; return null}
   let sum=0,k=0; for(let i=1;i<=3;i++){const a=agg(shift(P,-i),U); if(a.any){sum+=(a.by[cid]?.net||0);k++}}
   if(!k||net<=0) return null; const avg=sum/k; if(avg<20) return null;
   const r=net/avg;
-  if(r>1.5) return ['🔥',`+${Math.round((r-1)*100)} % sur la moyenne`];
-  if(r>1.15) return ['⚠️',`+${Math.round((r-1)*100)} % sur la moyenne`];
-  if(r<.8) return ['🎉',`${Math.round((r-1)*100)} % sous la moyenne`];
+  if(r>1.5) return ['crit',`+${Math.round((r-1)*100)} % sur la moyenne`];
+  if(r>1.15) return ['warn',`+${Math.round((r-1)*100)} % sur la moyenne`];
+  if(r<.8) return ['good',`${Math.round((r-1)*100)} % sous la moyenne`];
   return null;
 }
 /* Barres mensuelles : dépenses (perso, vue d'ensemble) ou chiffre d'affaires (pro) */
@@ -50,12 +50,12 @@ function catList(rows,A,U){
     const c=catById(cid), pend=cid==='_pending';
     const al=pend?null:alertFor(cid,e.net,A.months,U);
     const bud=c&&c.budget>0?c.budget*A.months:0;
-    const meta=[A.months>1?`${eur0(e.net/A.months)} par mois en moyenne`:'',e.ref>0?`dont ${eur0(e.ref)} remboursés`:'',al?al[1]:'',pend?'à classer dans l’onglet À valider':''].filter(Boolean).join(', ');
+    const meta=esc([A.months>1?`${eur0(e.net/A.months)} par mois en moyenne`:'',e.ref>0?`dont ${eur0(e.ref)} remboursés`:'',pend?'à classer dans l’onglet À valider':''].filter(Boolean).join(', '))+(al?`${e.ref>0||A.months>1?', ':''}<span class="m-${al[0]}">${esc(al[1])}</span>`:'');
     const open=openCat===cid;
     return `<div class="cat${pend?' pending':''}">
       <button class="cat-row" data-cat="${cid}" aria-expanded="${open}">
         <i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
-        <div><div class="cat-name">${esc(pend?'À classer':c?.name||cid)}${al?`<span class="cat-emoji" aria-hidden="true">${al[0]}</span>`:''}</div>${meta?`<div class="cat-meta">${esc(meta)}</div>`:''}</div>
+        <div><div class="cat-name">${esc(pend?'À classer':c?.name||cid)}</div>${meta?`<div class="cat-meta">${meta}</div>`:''}</div>
         <div class="cat-amt">${eur0(e.net)}</div>
         <div class="meter"><span style="width:${Math.max(0,e.net/max*100)}%"></span>${bud?`<em style="left:${Math.min(100,bud/max*100)}%" title="Budget"></em>`:''}</div>
       </button>
@@ -83,7 +83,7 @@ function retenirBox(ret){return ret.length?`<div class="retenir" aria-label="À 
 function askAccounts(){return S.accounts.filter(a=>!a.confirmed).map(a=>acctAsk(a,false)).join('')}
 function sortRows(by){return Object.entries(by).filter(([,e])=>e.spent||e.ref).sort((a,b)=>b[1].net-a[1].net)}
 
-function vSynth(){return askAccounts()+periodBar()+(UNIV!=='perso'?alerteRevenu():'')+({pro:vSynthPro,perso:vSynthPerso}[UNIV]||vSynthAll)()}
+function vSynth(){return askAccounts()+periodBar()+bandeau(UNIV)+({pro:vSynthPro,perso:vSynthPerso}[UNIV]||vSynthAll)()}
 
 function vSynthPerso(){
   const A=agg(P,'perso'), B=agg(shift(P,-1),'perso');

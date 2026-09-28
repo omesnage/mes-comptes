@@ -17,6 +17,8 @@ function mergeCats(saved){
 let MIGRATED=false;
 function merge(x){
   const st={...x,schemaVersion:x.schemaVersion||1,accounts:x.accounts||[],categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]};
+  if(!st.since&&st.ops.length){st.since=Date.now();MIGRATED=true}
+  if(!st.masked) st.masked={};
   if(migrateSchema(st)){MIGRATED=true;st.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)))}
   return st;
 }

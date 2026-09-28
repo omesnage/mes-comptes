@@ -21,11 +21,13 @@ const inUniv=o=>UNIV==='all'||opUniv(o)===UNIV;
 let ACCN=0;
 const UNIVS=[['all','Vue d’ensemble'],['pro','Pro'],['perso','Perso']];
 function render(){
-  AGG={}; RAW={}; relink(); ACCN=S.accounts.length;
+  AGG={}; RAW={}; ALERTS={}; relink(); ACCN=S.accounts.length;
+  if(!P) P=defaultPeriod();
+  const crit=S.ops.length?ongletsCritiques():new Set();
   const n=pendingGroups().length, nw=waitingReturns().length;
   const tabs=[['synthese','Synthèse'],['economies','Économies'],['objectifs','Objectifs'],['operations','Opérations'],['remb','Remboursements'],['valider','À valider'],['regles','Réglages'],['importer','Importer']];
   $('#univ').innerHTML=S.ops.length&&!['regles','importer','valider'].includes(view)?`<div class="univ" role="group" aria-label="Univers affiché">${UNIVS.map(([k,l])=>`<button data-univ="${k}" aria-pressed="${UNIV===k}">${l}</button>`).join('')}</div>`:'';
-  $('#tabs').innerHTML=tabs.map(([k,l])=>`<button data-tab="${k}" aria-current="${view===k}">${l}${k==='valider'&&n?`<span class="badge">${n}</span>`:''}${k==='remb'&&nw?`<span class="badge">${nw}</span>`:''}</button>`).join('');
+  $('#tabs').innerHTML=tabs.map(([k,l])=>`<button data-tab="${k}" aria-current="${view===k}">${l}${k==='valider'&&n?`<span class="badge">${n}</span>`:''}${k==='remb'&&nw?`<span class="badge">${nw}</span>`:''}${crit.has(k)?'<span class="dot" title="Alerte importante"></span>':''}</button>`).join('');
   $('#demoBar').innerHTML=demo?`<div class="demo-bar"><span>Vous regardez des données fictives.</span><button data-act="exitdemo">Quitter l’exemple</button></div>`:'';
   if(!P) P=defaultPeriod();
   const v=$('#view');
