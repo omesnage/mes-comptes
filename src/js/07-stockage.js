@@ -68,6 +68,17 @@ function migrateSchema(st){
     for(const [m,c] of Object.entries(st.rules)) if(c==='pret'){const ops=st.ops.filter(o=>o.merchant===m.replace(/\|[+-]$/,''));if(ops.length&&ops.every(o=>pro.has(o.acct)))st.rules[m]='empruntpro'}
     st.schemaVersion=5;
   }
+  if(st.schemaVersion<6){
+    /* v5 → v6 : une rubrique par défaut retirée est remplacée par « Conseils et services », sans perte */
+    const ids=new Set(CATS0.map(c=>c.id)), retirees=new Set(st.categories.filter(c=>!c.custom&&!ids.has(c.id)).map(c=>c.id));
+    if(retirees.size){
+      st.categories=st.categories.filter(c=>!retirees.has(c.id));
+      for(const m in st.rules) if(retirees.has(st.rules[m])) st.rules[m]='conseils';
+      for(const m in st.sugg) if(retirees.has(st.sugg[m].c)) st.sugg[m].c='conseils';
+      st.ops.forEach(o=>{if(retirees.has(o.cat))o.cat='conseils'});
+    }
+    st.schemaVersion=6;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }

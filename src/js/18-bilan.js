@@ -22,8 +22,8 @@ function anneau(parts,total){
   const R=80,C=2*Math.PI*R,GAP=parts.length>1?1.6:0; let off=0;
   const arcs=parts.map((x,i)=>{const len=x.v/sum*C;const s=`<circle ${x.cid?`data-bcat="${x.cid}" role="button" tabindex="0" aria-label="${esc(x.nom)}"`:''} class="part" cx="100" cy="100" r="${R}" fill="none" stroke="var(--c${i+1})" stroke-width="26" stroke-dasharray="${Math.max(.5,len-GAP)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"><title>${esc(x.nom)} : ${esc(eur0(x.v))}</title></circle>`;off+=len;return s}).join('');
   return `<svg viewBox="0 0 200 200" class="anneau-bilan" role="img" aria-label="Répartition des dépenses">${arcs}
-    <text x="100" y="104" text-anchor="middle" font-family="Bodoni Moda, Didot, serif" font-size="27" fill="var(--ink)">${esc(eur0(total))}</text>
-    <text x="100" y="126" text-anchor="middle" font-family="Jost, sans-serif" font-size="12.5" fill="var(--muted)">au total</text></svg>`;
+    <text x="100" y="104" text-anchor="middle" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-weight="300" font-size="27" fill="var(--ink)">${esc(eur0(total))}</text>
+    <text x="100" y="126" text-anchor="middle" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="12.5" fill="var(--muted)">au total</text></svg>`;
 }
 function barres(mois,val,actif,cls){
   const v=mois.map(q=>({q,v:Math.max(0,val(q)),any:(BYMONTH[ymOf(q)]||[]).length>0}));

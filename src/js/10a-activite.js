@@ -67,3 +67,14 @@ function justePrix(){
   const caAn=ms.length>=3?ms.reduce((s,a)=>s+a.ca,0)/ms.length*12:null;
   return {...r,fraisAn,moyen:caAn!=null&&caAn>0?caAn/r.hFact:null,nMois:ms.length};
 }
+
+/* Cascade complète, par heure : de ce que paient les clients jusqu'au vrai salaire net */
+function cascade(p){
+  const A=agg(p,'pro'); if(!A.any) return null;
+  const mo=A.months, enc=A.ca/mo, frais=A.fraisExpl/mo, prov=A.provision/mo, H=heures(), nf=nonFact();
+  if(!(enc>0)||enc-frais-prov<=0) return {rien:true};
+  const hFact=H*(1-nf), corr=correctionConges(p), ep=epRet(), poche=enc-frais-prov;
+  const a=enc/hFact, b=enc/H, c=(enc-frais)/H, d=poche/H, e=d*corr, f=e*(1-ep);
+  return {a,b,c,d,e,f,enc,frais,prov,poche,H,hFact,corr,ep,nf,congesInclus:corr===1};
+}
+const tauxRegle=()=>+S.settings.taux>0;

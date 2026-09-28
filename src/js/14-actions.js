@@ -1,9 +1,9 @@
 /* ============ Actions ============ */
 function setRule(m,c){S.rules[m]=c;delete S.sugg[m];const mm=m.replace(/\|[+-]$/,'');S.ops.forEach(o=>{if(o.merchant===mm)dirtyMonths.add(o.date.slice(0,7))});save()}
 function aller(tab,ancre){
-  view=tab;openCat=null;FICHE=null;render();
+  view=tab;openCat=null;FICHE=null;MODAL=null;BCAT=null;render();
   const el=ancre&&document.getElementById(ancre);
-  if(el){if(el.tagName==='DETAILS')el.open=true;el.scrollIntoView({block:'start'})}else window.scrollTo({top:0});
+  if(el){if(el.tagName==='DETAILS')el.open=true;el.scrollIntoView({block:'start'});const i=el.querySelector('input');if(i&&el.id==='taux-champ')i.focus()}else window.scrollTo({top:0});
 }
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.bcat&&e.target.tagName==='circle'){e.preventDefault();BCAT=e.target.dataset.bcat;render()}});
 document.addEventListener('click',async e=>{

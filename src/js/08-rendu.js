@@ -74,7 +74,7 @@ function choixRubriques(x){
   const s=S.sugg[x.m]?.c, acc=[...new Set(x.accts.map(id=>(acctById(id)||{}).type||'perso'))];
   let ids;
   if(x.credit) ids=['revenus','rentrees','remb'];
-  else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','comptable','pro'];
+  else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','conseils','pro'];
   else ids=['courses','resto','transport','shopping','maison','loisirs','sante','divers'];
   if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','pro','fraisrembourses','divers'];
   if(s) ids=[s,...ids.filter(i=>i!==s)];

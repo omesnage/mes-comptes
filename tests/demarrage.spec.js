@@ -6,7 +6,7 @@ test('première ouverture : trois écrans, objectif enregistré, puis Importer',
   await expect(page.locator('.demarrage')).toContainText('personne d’autre ne peut les voir');
   await page.click('[data-onb="1"]');
   await expect(page.locator('.demarrage h2')).toHaveText('Votre objectif');
-  await expect(page.locator('.demarrage')).toContainText('Si vous ne savez pas, demandez à votre comptable.');
+  await expect(page.locator('.demarrage')).toContainText('Souvent entre 25 et 45 % selon votre statut.');
   await page.fill('[data-set="netVise"]','2500'); await page.fill('[data-set="taux"]','22'); await page.locator('[data-set="taux"]').blur();
   await page.click('[data-onb="2"]');
   await expect(page.locator('.demarrage h2')).toHaveText('Ajoutez vos relevés');

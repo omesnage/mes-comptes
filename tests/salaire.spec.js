@@ -14,20 +14,62 @@ test('cascade de l’exemple : 17,66 → 15,28 → 13,75',async({page})=>{
   expect(r).toEqual([17.66,15.28,13.75]);
 });
 
-test('Accueil : vrai salaire, cascade dans « D’où vient ce chiffre ? »',async({page})=>{
-  // En poche : 3 924,44 × 0,78 = 3 061,06 € ; ÷ 173,33 h = 17,66 €
-  await openWith(page,etat([['2026-06',3924.44,0]]));
-  await page.evaluate(()=>{S.ops.push({id:'z',date:'2026-06-29',label:'X',amount:-0.01,merchant:'X',acct:'pr',cat:'pro'});S.ops.push({id:'z2',date:'2026-06-29',label:'X',amount:0.01,merchant:'X',acct:'pr',cat:'pro'});render()});
-  await expect(page.locator('.gagne .salaire')).toHaveText(n('Votre vrai salaire : 13,75 € nets de l’heure'));
-  await expect(page.locator('.gagne .salaire')).toHaveClass(/or/);
+/* Valeurs de l'exemple : 30 % non facturé, 7 semaines de congés, 10 % d'épargne et retraite, 40 h par semaine.
+   Encaissé 4 599,75 € et frais 419,20 € par mois. Pour arriver exactement à 17,66 €, la part mise de côté doit être de 24,34 % :
+   avec 25 %, on obtient 17,48 € (voir le test suivant). */
+const valeurs=async(page,sel)=>(await page.locator(sel+' .cas-v').allTextContents()).map(t=>t.replace(/\s/g,' '));
+test('cascade de l’exemple : 37,91 → 26,54 → 24,12 → 17,66 → 15,28 → 13,75',async({page})=>{
+  await openWith(page,etat([['2026-06',4599.75,419.20]],{taux:24.34}));
+  await page.evaluate(()=>{S.ops.push({id:'z',date:'2026-06-29',label:'X',amount:0,merchant:'X',acct:'pr',cat:'pro'});render()});
+  await expect(page.locator('.gagne .salaire')).toHaveText('Votre vrai salaire : 13,75 € nets de l’heure'.replace(' €',' €'));
   await page.click('[data-modal="cascade"]');
-  const l=page.locator('.fenetre .ligne');
-  await expect(l.nth(0)).toHaveText(/Ce qui vous reste en poche, par heure travaillée\s*17,66\s€/);
-  await expect(l.nth(1)).toHaveText(/Moins vos congés \(7 semaines par an sans revenu\)\s*15,28\s€/);
-  await expect(l.nth(2)).toHaveText(/Moins l’épargne et la retraite à constituer vous-même \(10 %\)\s*13,75\s€/);
+  expect(await valeurs(page,'.fenetre')).toEqual(['37,91 €','26,54 €','24,12 €','17,66 €','15,28 €','13,75 €','13,75 €']);
+  await expect(page.locator('.fenetre .cascade > .phrase').first()).toHaveText('Sur vos 40 h par semaine, environ 28 h sont facturées à vos clients. Le reste sert à trouver des clients et à faire tourner l’activité.');
+  const l=(await page.locator('.fenetre .cas-l').allTextContents());
+  expect(l[0]).toBe('Ce que vos clients vous paient par heure facturée');
+  expect(l[1]).toBe('Moins le temps non facturé (prospection, communication, devis, administratif… 30 %)');
+  expect(l[2]).toContain('Moins les frais de fonctionnement');
+  expect(l[2]).toContain('remboursements d’emprunt de l’activité compris');
+  expect(l[3]).toBe('Moins les cotisations sociales et impôts (la somme mise de côté, 24 %)');
+  expect(l[4]).toBe('Moins vos congés (7 semaines par an sans revenu)');
+  expect(l[5]).toBe('Moins l’épargne et la retraite à constituer vous-même (10 %)');
+  expect(l[6]).toBe('Votre vrai salaire net de l’heure');
   await expect(page.locator('.fenetre')).toContainText('Vous, vous devez les financer vous-même.');
+  await expect(page.locator('.fenetre')).not.toContainText('Calculé sur');
+  await expect(page.locator('.fenetre .cas-s').first()).toContainText('encaissés ce mois-ci');
+  // Même cascade dans le Bilan, partie Activité
+  await page.click('.fenetre .fermer');
+  await page.click('nav.tabs [data-tab="bilan"]'); await page.click('[data-bu="pro"]');
+  expect(await valeurs(page,'.salaire-bilan')).toEqual(['37,91 €','26,54 €','24,12 €','17,66 €','15,28 €','13,75 €','13,75 €']);
 });
-
+test('avec 25 % mis de côté : 37,91 → 26,54 → 24,12 → 17,48 → 15,13 → 13,62',async({page})=>{
+  await openWith(page,etat([['2026-06',4599.75,419.20]],{taux:25}));
+  const r=await page.evaluate(()=>{const c=cascade({lvl:'M',y:2026,m:6});return [c.a,c.b,c.c,c.d,c.e,c.f].map(x=>+x.toFixed(2))});
+  expect(r).toEqual([37.91,26.54,24.12,17.48,15.13,13.62]);
+});
+test('a = b ÷ (1 − part non facturée), et le résultat final ne dépend pas de cette part',async({page})=>{
+  await openWith(page,etat([['2026-06',4000,300]]));
+  const r=await page.evaluate(()=>[0,.1,.3,.5,.8].map(nf=>{S.settings.nonFacture=nf*100;render();const c=cascade({lvl:'M',y:2026,m:6});return {nf,a:c.a,b:c.b,f:c.f}}));
+  for(const x of r) expect(x.a).toBeCloseTo(x.b/(1-x.nf),9);
+  for(const x of r) expect(x.f).toBeCloseTo(r[0].f,9);
+});
+test('part à mettre de côté non réglée : alerte rouge et bouton « Régler maintenant », qui disparaît une fois réglée',async({page})=>{
+  await openWith(page,etat([['2026-06',3000,200]],{taux:0}));
+  const a=page.locator('.gagne .alerte-taux');
+  await expect(a).toContainText('Vous n’avez pas indiqué la part à mettre de côté pour vos cotisations et impôts : ce chiffre est trop optimiste.');
+  await page.click('[data-modal="cascade"]'); await expect(page.locator('.fenetre .alerte-taux')).toHaveCount(1);
+  await page.click('.fenetre .alerte-taux [data-ancre="taux-champ"]');
+  await expect(page.locator('.titre-page')).toHaveText('Réglages');
+  await expect(page.locator('#taux-champ input')).toBeFocused();
+  await expect(page.locator('#taux-champ + .sous-champ')).toHaveText('Souvent entre 25 et 45 % selon votre statut. En cas de doute, renseignez-vous auprès de votre centre de formalités ou d’un conseiller.');
+  await page.fill('#taux-champ input','30'); await page.locator('#taux-champ input').blur();
+  await page.click('nav.tabs [data-tab="accueil"]');
+  await expect(page.locator('.alerte-taux')).toHaveCount(0);
+  await page.click('nav.tabs [data-tab="bilan"]'); await page.click('[data-bu="pro"]');
+  await expect(page.locator('.alerte-taux')).toHaveCount(0);
+  await page.evaluate(()=>{S.settings.taux=0;render()});
+  await expect(page.locator('.salaire-bilan .alerte-taux')).toHaveCount(1);
+});
 test('sous le taux visé : rouge, avec ce qu’il manque de l’heure',async({page})=>{
   await openWith(page,etat([['2026-06',2600,400]]));
   const s=await page.evaluate(()=>vraiSalaire({lvl:'M',y:2026,m:6}));

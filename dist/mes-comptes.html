@@ -6,7 +6,7 @@
 <title>Mes comptes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -16,8 +16,7 @@
   --bg:#FAF7F0; --surface:#FFFDF8; --ink:#1A1918; --muted:#5F5850; --line:#E2DBCD;
   --gold:#9A763C; --gold-soft:#F3EAD8; --alert:#A3402F; --alert-soft:#F8EAE5;
   --amber:#A15F12; --amber-soft:#F8EDDB; --ok:#3B6A4A; --ok-soft:#E6EFE4;
-  --serif:"Bodoni Moda","Didot","Bodoni 72",Georgia,serif;
-  --sans:"Jost","Futura","Avenir Next",system-ui,sans-serif;
+  --sans:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --nav:0px;
   box-sizing:border-box;
 }
@@ -44,7 +43,7 @@ svg{flex:none}
 
 /* En-tête et navigation */
 header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding-top:env(safe-area-inset-top,0px)}
-.brand{font-family:var(--serif);font-style:italic;font-size:28px}
+.brand{font-size:26px;font-weight:500;letter-spacing:-.01em}
 .top-droite{display:flex;align-items:center;gap:10px}
 .status{font-size:15px;color:var(--muted)}
 #gear{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;color:var(--ink)}
@@ -73,10 +72,10 @@ body.onb .wrap{padding-bottom:40px}
 
 /* Éléments communs */
 .carte{display:block;background:var(--surface);border:1px solid var(--line);padding:22px 20px;margin:0 0 20px;width:100%}
-.carte h3{font-family:var(--serif);font-weight:400;font-size:22px;line-height:1.3;margin:0 0 14px;display:flex;align-items:center;gap:10px}
+.carte h3{font-weight:500;font-size:22px;line-height:1.3;margin:0 0 14px;display:flex;align-items:center;gap:10px}
 .carte h3 svg{width:22px;height:22px;color:var(--gold)}
 .carte h4{font-weight:500;font-size:17px;margin:26px 0 8px}
-.titre-page{font-family:var(--serif);font-weight:400;font-size:30px;margin:0 0 20px}
+.titre-page{font-weight:500;font-size:30px;margin:0 0 20px}
 .phrase{font-size:18px;margin:8px 0}
 .phrase.rouge{color:var(--alert)}
 .aide{font-size:16px;color:var(--muted);margin:8px 0;line-height:1.5}
@@ -104,7 +103,7 @@ details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;f
 details summary::-webkit-details-marker{display:none}
 details summary::before{content:"›";display:inline-block;width:18px;color:var(--gold);transition:transform .15s}
 details[open]>summary::before{transform:rotate(90deg)}
-.repli>summary{font-family:var(--serif);font-size:20px}
+.repli>summary{font-size:20px;font-weight:500}
 .radios{display:flex;flex-direction:column;gap:4px;margin:12px 0}
 .radios label{display:flex;align-items:center;gap:12px;min-height:44px;font-size:17px;cursor:pointer}
 .radios input{width:22px;height:22px;accent-color:var(--gold)}
@@ -112,20 +111,20 @@ details[open]>summary::before{transform:rotate(90deg)}
 
 /* Mois */
 .mois{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 20px}
-.mois h2{font-family:var(--serif);font-weight:400;font-size:28px;margin:0;text-align:center;flex:1}
+.mois h2{font-weight:500;font-size:26px;margin:0;text-align:center;flex:1}
 .fleche{width:52px;height:52px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center}
 .fleche svg{width:22px;height:22px}
 .fleche:hover{border-color:var(--gold)}
 
 /* Accueil */
-.grand-chiffre{font-family:var(--serif);font-size:clamp(52px,14vw,64px);line-height:1.05;margin:4px 0 14px;font-variant-numeric:lining-nums}
+.grand-chiffre{font-size:clamp(52px,14vw,64px);font-weight:300;letter-spacing:-.02em;line-height:1.05;margin:4px 0 14px;font-variant-numeric:tabular-nums lining-nums}
 .etiquette{display:inline-block;padding:8px 14px;font-size:17px;font-weight:500;margin:0 0 6px}
 .etiquette.ok{background:var(--ok-soft);color:var(--ok)}
 .etiquette.ko{background:var(--alert-soft);color:var(--alert)}
 .ligne{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);font-size:18px}
 .ligne b{font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap}
-.ligne.total{border-bottom:0;border-top:2px solid var(--ink);margin-top:4px;font-weight:600}
-.ligne.total b{font-weight:600;font-size:22px}
+.ligne.total{border-bottom:0;border-top:2px solid var(--ink);margin-top:4px;font-weight:500}
+.ligne.total b{font-weight:500;font-size:22px}
 .rubriques{margin-top:10px}
 .rub{display:grid;grid-template-columns:30px 1fr auto;gap:4px 14px;align-items:center;width:100%;padding:14px 0 12px;border-bottom:1px solid var(--line);min-height:56px}
 .rub>svg{width:24px;height:24px;color:var(--gold)}
@@ -139,7 +138,7 @@ details[open]>summary::before{transform:rotate(90deg)}
 .rub-ops{padding:4px 0 10px 44px}
 .defi .d-t{font-size:18px;margin:0 0 14px}
 .defi .d-t.sep{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
-.defi .d-res{font-family:var(--serif);font-size:24px;margin:0 0 6px}
+.defi .d-res{font-size:24px;font-weight:500;margin:0 0 6px}
 .defi .d-res.ok{color:var(--ok)}
 .conseils{margin:0 0 20px}
 .conseil{display:grid;grid-template-columns:24px 1fr 20px;gap:14px;align-items:center;width:100%;padding:16px 18px;min-height:60px;border:1px solid var(--line);border-left:4px solid var(--gold);background:var(--surface);margin-bottom:10px;font-size:17px}
@@ -148,7 +147,7 @@ details[open]>summary::before{transform:rotate(90deg)}
 .conseil.ko{border-left-color:var(--alert);background:var(--alert-soft)}
 .conseil.ko svg:first-child{color:var(--alert)}
 .revue{display:flex;justify-content:space-between;align-items:center;gap:16px;text-align:left;background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.revue .r-t{display:block;font-family:var(--serif);font-style:italic;font-size:24px}
+.revue .r-t{display:block;font-size:24px;font-weight:500}
 .revue .aide{color:var(--bg);opacity:.8;display:block;margin:4px 0 0}
 .revue svg{width:24px;height:24px;color:var(--gold)}
 
@@ -178,7 +177,7 @@ details[open]>summary::before{transform:rotate(90deg)}
 .fiche .fermer{position:absolute;top:14px;right:14px;width:48px;height:48px;display:grid;place-items:center}
 .fiche .fermer svg{width:24px;height:24px}
 .f-m{font-size:22px;font-weight:500;margin:0 50px 4px 0;overflow-wrap:anywhere}
-.f-amt{font-family:var(--serif);font-size:36px;margin:0 0 6px}
+.f-amt{font-size:36px;font-weight:300;font-variant-numeric:tabular-nums;margin:0 0 6px}
 .f-x{font-size:16px;color:var(--gold);margin:6px 0}
 .f-actions{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
 body.fige{overflow:hidden}
@@ -221,7 +220,7 @@ textarea.anon{width:100%;min-height:160px;font:15px/1.45 ui-monospace,Menlo,mono
 
 /* Démarrage */
 .demarrage{max-width:520px;margin:6vh auto 0;display:flex;flex-direction:column;gap:6px}
-.demarrage h2{font-family:var(--serif);font-weight:400;font-size:38px;margin:10px 0 10px}
+.demarrage h2{font-weight:500;font-size:34px;margin:10px 0 10px}
 .demarrage .boutons{flex-direction:column}
 .demarrage .boutons .btn{width:100%}
 .demarrage>.lien{align-self:center}
@@ -231,7 +230,7 @@ textarea.anon{width:100%;min-height:160px;font:15px/1.45 ui-monospace,Menlo,mono
 
 /* Vide */
 .vide{text-align:center;padding:40px 0}
-.vide h2{font-family:var(--serif);font-weight:400;font-size:30px;margin:0 0 12px}
+.vide h2{font-weight:500;font-size:28px;margin:0 0 12px}
 .vide p{font-size:18px;color:var(--muted);max-width:32ch;margin:0 auto}
 .vide .boutons{justify-content:center;margin-top:26px}
 
@@ -239,7 +238,7 @@ textarea.anon{width:100%;min-height:160px;font:15px/1.45 ui-monospace,Menlo,mono
 #review{position:fixed;inset:0;z-index:30;background:var(--ink);color:var(--bg);overflow-y:auto;scroll-snap-type:y mandatory}
 #review .slide{min-height:100vh;min-height:100dvh;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:40px 28px;max-width:640px;margin:0 auto}
 #review .lbl{font-size:18px;opacity:.8;margin-bottom:14px}
-#review .v{font-family:var(--serif);font-size:clamp(52px,15vw,100px);line-height:1;color:var(--gold)}
+#review .v{font-size:clamp(52px,15vw,100px);font-weight:300;font-variant-numeric:tabular-nums;line-height:1;color:var(--gold)}
 #review .v.txt{font-size:clamp(36px,10vw,60px);color:var(--bg)}
 #review .v.txt::first-letter{text-transform:uppercase}
 #review .c{font-size:18px;opacity:.85;margin-top:18px;max-width:36ch}
@@ -317,19 +316,31 @@ select,input,textarea,button,label,details,summary{box-sizing:border-box}
 .ajout-rub svg,.ajout-btn svg{width:20px;height:20px}
 .ajout-btn{margin-top:18px}
 @media (max-width:380px){.icones{grid-template-columns:repeat(4,1fr)}}
-.salaire{font-size:24px;line-height:1.35;margin:14px 0 2px}
-.salaire b{font-weight:600}
+.salaire{font-size:24px;font-weight:500;line-height:1.35;margin:14px 0 2px}
+.salaire b{font-weight:500}
 .salaire.or{color:var(--gold)}.salaire.rouge{color:var(--alert)}
 .sal-sous{font-size:16px;color:var(--muted);margin:0 0 4px}
 .sal-manque{font-size:17px;color:var(--alert);margin:4px 0}
 .salaire-bilan .salaire{margin-top:0}
-.juste-prix .phrase b{font-weight:600}
+.juste-prix .phrase b{font-weight:500}
 .phrase.or{color:var(--gold)}
 .sous-champ{margin:-8px 0 18px}
 input.mini{width:88px;min-height:44px;padding:4px 8px;font-size:18px;text-align:center;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
 select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17px;margin:4px 0}
 .total-prix{border-top:2px solid var(--ink);padding-top:12px;margin-top:14px}
 @media (min-width:701px){.salaire{font-size:26px}}
+.cascade{margin-top:14px}
+.cas{display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}
+.cas-g{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cas-l{font-size:17px;line-height:1.45}
+.cas-s{font-size:15px;color:var(--muted)}
+.cas-v{font-size:24px;font-weight:300;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cas.depart .cas-v{font-weight:400}
+.cas.final{border-top:2px solid var(--ink);border-bottom:0;margin-top:6px}
+.cas.final .cas-l{font-weight:500;font-size:18px}
+.cas.final .cas-v{font-weight:500;font-size:26px;color:var(--gold)}
+.alerte-taux{border:1px solid var(--alert);border-left-width:4px;background:var(--alert-soft);padding:14px 16px;margin:12px 0}
+.alerte-taux p{margin:0 0 10px;color:var(--alert);font-size:17px;font-weight:500}
 </style>
 </head>
 <body>
@@ -345,7 +356,7 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 
 <script>
 /* ============ Données de base ============ */
-const SCHEMA=5;
+const SCHEMA=6;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
@@ -371,7 +382,7 @@ const CATS0=[
  ['materiel','Matériel et fournitures','monitor','expense','pro'],
  ['deplacements','Déplacements de l’activité','train-front','expense','pro'],
  ['soustraitance','Sous-traitance','handshake','expense','pro'],
- ['comptable','Comptable','calculator','expense','pro'],
+ ['conseils','Conseils et services','messages-square','expense','pro'],
  ['cotisations','Versements de ce qui est mis de côté','piggy-bank','expense','pro'],
  ['impots','Impôts de l’activité','receipt-text','expense','pro'],
  ['fraisrembourses','Frais remboursés par l’activité','car-front','expense','pro'],
@@ -384,7 +395,7 @@ const CATS0=[
  ['interne','Virements entre vos comptes','repeat','transfer','auto']
 ].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,budget:0,fixed:!!fixed}));
 /* Anciens noms par défaut, remplacés par les nouveaux lors de la migration (un nom personnalisé est gardé) */
-const OLD_NAMES={courses:'Courses alimentaires',resto:'Restaurants & cafés',transport:'Transport & carburant',logement:'Logement & énergie',sante:'Santé',abonnements:'Abonnements & téléphonie',loisirs:'Loisirs & culture',shopping:'Shopping',frais:'Frais bancaires',pret:'Remboursement de prêt',logiciels:'Logiciels & outils',materiel:'Matériel & fournitures',deplacements:'Déplacements professionnels',soustraitance:'Sous-traitance',comptable:'Comptable & juridique',cotisations:'Cotisations sociales',impots:'Impôts sur l’activité',pro:'Autres frais professionnels',remb:'Remboursements',rentrees:'Rentrées d’argent',revenus:'Revenus',remu:'Rémunération (pro vers perso)',interne:'Virements internes',divers:'Divers'};
+const OLD_NAMES={courses:'Courses alimentaires',resto:'Restaurants & cafés',transport:'Transport & carburant',logement:'Logement & énergie',sante:'Santé',abonnements:'Abonnements & téléphonie',loisirs:'Loisirs & culture',shopping:'Shopping',frais:'Frais bancaires',pret:'Remboursement de prêt',logiciels:'Logiciels & outils',materiel:'Matériel & fournitures',deplacements:'Déplacements professionnels',soustraitance:'Sous-traitance',cotisations:'Cotisations sociales',impots:'Impôts sur l’activité',pro:'Autres frais professionnels',remb:'Remboursements',rentrees:'Rentrées d’argent',revenus:'Revenus',remu:'Rémunération (pro vers perso)',interne:'Virements internes',divers:'Divers'};
 /* Remboursement de frais par l'activité (indemnités kilométriques, notes de frais) */
 const NDF_RE=/\b(IK|INDEMNITES? (KM|KILOMETRIQUES?)|FRAIS KM|NOTES? DE FRAIS|NDF|REMBOURSEMENT( DE)? FRAIS|REMB FRAIS)\b/;
 /* Rubriques qui correspondent au paiement de la provision (cotisations, impôts) */
@@ -396,8 +407,8 @@ function autoCatOf(label,atype){if(LOAN_RE.test(norm(label)))return atype==='pro
 
 /* Mots-clés toujours professionnels, quel que soit le compte */
 const KW_PRO=[
- [/URSSAF|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
- [/EXPERT COMPTABLE|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE/,'comptable']
+ [/\bURS{2}AF\b|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
+ [/EXPERT.?COMPTA|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE|AVOCAT|NOTAIRE/,'conseils']
 ];
 /* Mots-clés professionnels seulement sur un compte pro */
 const KW_PROACC=[
@@ -1045,6 +1056,17 @@ function migrateSchema(st){
     for(const [m,c] of Object.entries(st.rules)) if(c==='pret'){const ops=st.ops.filter(o=>o.merchant===m.replace(/\|[+-]$/,''));if(ops.length&&ops.every(o=>pro.has(o.acct)))st.rules[m]='empruntpro'}
     st.schemaVersion=5;
   }
+  if(st.schemaVersion<6){
+    /* v5 → v6 : une rubrique par défaut retirée est remplacée par « Conseils et services », sans perte */
+    const ids=new Set(CATS0.map(c=>c.id)), retirees=new Set(st.categories.filter(c=>!c.custom&&!ids.has(c.id)).map(c=>c.id));
+    if(retirees.size){
+      st.categories=st.categories.filter(c=>!retirees.has(c.id));
+      for(const m in st.rules) if(retirees.has(st.rules[m])) st.rules[m]='conseils';
+      for(const m in st.sugg) if(retirees.has(st.sugg[m].c)) st.sugg[m].c='conseils';
+      st.ops.forEach(o=>{if(retirees.has(o.cat))o.cat='conseils'});
+    }
+    st.schemaVersion=6;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }
@@ -1191,7 +1213,7 @@ function choixRubriques(x){
   const s=S.sugg[x.m]?.c, acc=[...new Set(x.accts.map(id=>(acctById(id)||{}).type||'perso'))];
   let ids;
   if(x.credit) ids=['revenus','rentrees','remb'];
-  else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','comptable','pro'];
+  else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','conseils','pro'];
   else ids=['courses','resto','transport','shopping','maison','loisirs','sante','divers'];
   if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','pro','fraisrembourses','divers'];
   if(s) ids=[s,...ids.filter(i=>i!==s)];
@@ -1522,6 +1544,17 @@ function justePrix(){
   const caAn=ms.length>=3?ms.reduce((s,a)=>s+a.ca,0)/ms.length*12:null;
   return {...r,fraisAn,moyen:caAn!=null&&caAn>0?caAn/r.hFact:null,nMois:ms.length};
 }
+
+/* Cascade complète, par heure : de ce que paient les clients jusqu'au vrai salaire net */
+function cascade(p){
+  const A=agg(p,'pro'); if(!A.any) return null;
+  const mo=A.months, enc=A.ca/mo, frais=A.fraisExpl/mo, prov=A.provision/mo, H=heures(), nf=nonFact();
+  if(!(enc>0)||enc-frais-prov<=0) return {rien:true};
+  const hFact=H*(1-nf), corr=correctionConges(p), ep=epRet(), poche=enc-frais-prov;
+  const a=enc/hFact, b=enc/H, c=(enc-frais)/H, d=poche/H, e=d*corr, f=e*(1-ep);
+  return {a,b,c,d,e,f,enc,frais,prov,poche,H,hFact,corr,ep,nf,congesInclus:corr===1};
+}
+const tauxRegle=()=>+S.settings.taux>0;
 /* ============ Votre année en revue ============ */
 function openReview(y){
   y=+y||P.y;
@@ -1595,9 +1628,9 @@ function addReader(){
 /* ============ Actions ============ */
 function setRule(m,c){S.rules[m]=c;delete S.sugg[m];const mm=m.replace(/\|[+-]$/,'');S.ops.forEach(o=>{if(o.merchant===mm)dirtyMonths.add(o.date.slice(0,7))});save()}
 function aller(tab,ancre){
-  view=tab;openCat=null;FICHE=null;render();
+  view=tab;openCat=null;FICHE=null;MODAL=null;BCAT=null;render();
   const el=ancre&&document.getElementById(ancre);
-  if(el){if(el.tagName==='DETAILS')el.open=true;el.scrollIntoView({block:'start'})}else window.scrollTo({top:0});
+  if(el){if(el.tagName==='DETAILS')el.open=true;el.scrollIntoView({block:'start'});const i=el.querySelector('input');if(i&&el.id==='taux-champ')i.focus()}else window.scrollTo({top:0});
 }
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.bcat&&e.target.tagName==='circle'){e.preventDefault();BCAT=e.target.dataset.bcat;render()}});
 document.addEventListener('click',async e=>{
@@ -1711,10 +1744,10 @@ function demoData(){
   for(let k=11;k>=0;k--){
     const ca=CA[11-k], n=ca>4000?3:2;
     for(let i=0;i<n;i++) add(k,4+i*9,'VIR SEPA RECU '+CLIENTS[(k+i)%4],ca/n,'revenus',pr.id);
-    add(k,6,'PRLV SEPA URSSAF',-Math.round((k<11?CA[10-k]:3500)*.212),'cotisations',pr.id);
+    add(k,6,'PRLV SEPA SECURITE SOCIALE DES INDEPENDANTS',-Math.round((k<11?CA[10-k]:3500)*.212),'cotisations',pr.id);
     add(k,3,'PRLV SEPA OVH CLOUD',-23.99,'logiciels',pr.id);
     add(k,8,'PRLV SEPA ADOBE SYSTEMS',-71.99,'logiciels',pr.id);
-    add(k,10,'PRLV SEPA INDY COMPTABILITE',-24,'comptable',pr.id);
+    add(k,10,'PRLV SEPA INDY COMPTABILITE',-24,'conseils',pr.id);
     add(k,27,'FRAIS TENUE DE COMPTE QONTO',-11,'frais',pr.id);
     if(k%3===1) add(k,15,'CB LDLC',-vary(260,.4),'materiel',pr.id);
     if(k===8) add(k,14,'PRLV SEPA DGFIP CFE',-356,'impots',pr.id);
@@ -1876,6 +1909,7 @@ function vAccueil(){
   ${revue?`<button class="carte revue" data-act="review" data-year="${P.m===12?P.y:P.y-1}"><span><span class="r-t">Votre année ${P.m===12?P.y:P.y-1} en revue</span><span class="aide">Vos meilleurs et vos pires moments, en quelques écrans.</span></span><i data-lucide="sparkles"></i></button>`:''}`;
 }
 /* ============ Réglages ============ */
+const CONSEIL_TAUX='Souvent entre 25 et 45 % selon votre statut. En cas de doute, renseignez-vous auprès de votre centre de formalités ou d’un conseiller.';
 function phraseCible(st){st=st||S.settings;const v=+st.netVise||SET0.netVise, h=+st.heuresSemaine||SET0.heuresSemaine;
   return `Pour atteindre ${eur0(v)} par mois à ${h} h par semaine, une heure doit vous rapporter <b>${eurH(v/(h*52/12))}</b>.`}
 function vReglages(){
@@ -1901,8 +1935,8 @@ function vReglages(){
     <p class="aide sous-champ">Prospection, devis, administratif, formation, déplacements : du temps travaillé que personne ne vous paie.</p>
     <label class="champ">Heures par jour facturé<input type="number" inputmode="numeric" min="1" max="24" step="1" data-set="hJour" value="${s.hJour??''}" placeholder="7"></label>
     <p class="aide sous-champ">Pour calculer votre prix à la journée.</p>
-    <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
-    <p class="aide sous-champ">Si vous ne savez pas, demandez à votre comptable.</p></section>
+    <label class="champ" id="taux-champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 30"></label>
+    <p class="aide sous-champ">${CONSEIL_TAUX}</p></section>
   <section class="carte" id="reserve"><h3>Votre réserve</h3>
     <label class="champ">Épargne disponible (€)<input type="number" inputmode="numeric" min="0" step="100" data-set="epargne" value="${s.epargne||''}" placeholder="0"></label>
     ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:'<p class="aide">Elle indique combien de mois vous tiendriez sans rien encaisser.</p>'}</section>
@@ -1953,7 +1987,7 @@ function vDemarrage(){
     <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
     <p class="phrase" id="cibleLive">${phraseCible()}</p>
     <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
-    <p class="aide">Si vous ne savez pas, demandez à votre comptable. Vous pourrez tout changer plus tard.</p>
+    <p class="aide">${CONSEIL_TAUX} Vous pourrez tout changer plus tard.</p>
     <div class="boutons"><button class="btn" data-onb="2">Continuer</button></div><button class="lien" data-act="onbfin">Passer</button></section>`;
   return `<section class="demarrage">${pas}<h2>Ajoutez vos relevés</h2>
     <p class="phrase">Téléchargez vos relevés de compte en PDF sur le site de votre banque, pro et perso, puis ajoutez-les ici.</p>
@@ -1984,8 +2018,8 @@ function anneau(parts,total){
   const R=80,C=2*Math.PI*R,GAP=parts.length>1?1.6:0; let off=0;
   const arcs=parts.map((x,i)=>{const len=x.v/sum*C;const s=`<circle ${x.cid?`data-bcat="${x.cid}" role="button" tabindex="0" aria-label="${esc(x.nom)}"`:''} class="part" cx="100" cy="100" r="${R}" fill="none" stroke="var(--c${i+1})" stroke-width="26" stroke-dasharray="${Math.max(.5,len-GAP)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"><title>${esc(x.nom)} : ${esc(eur0(x.v))}</title></circle>`;off+=len;return s}).join('');
   return `<svg viewBox="0 0 200 200" class="anneau-bilan" role="img" aria-label="Répartition des dépenses">${arcs}
-    <text x="100" y="104" text-anchor="middle" font-family="Bodoni Moda, Didot, serif" font-size="27" fill="var(--ink)">${esc(eur0(total))}</text>
-    <text x="100" y="126" text-anchor="middle" font-family="Jost, sans-serif" font-size="12.5" fill="var(--muted)">au total</text></svg>`;
+    <text x="100" y="104" text-anchor="middle" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-weight="300" font-size="27" fill="var(--ink)">${esc(eur0(total))}</text>
+    <text x="100" y="126" text-anchor="middle" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="12.5" fill="var(--muted)">au total</text></svg>`;
 }
 function barres(mois,val,actif,cls){
   const v=mois.map(q=>({q,v:Math.max(0,val(q)),any:(BYMONTH[ymOf(q)]||[]).length>0}));
@@ -2048,13 +2082,32 @@ function ficheRub(cid){
 /* ============ Vrai salaire et juste prix : affichage ============ */
 let MODAL=null;
 const nb=n=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(n);
+const alerteTaux=()=>tauxRegle()?'':`<div class="alerte-taux"><p>Vous n’avez pas indiqué la part à mettre de côté pour vos cotisations et impôts : ce chiffre est trop optimiste.</p><button class="btn secondaire" data-tab="reglages" data-ancre="taux-champ">Régler maintenant</button></div>`;
 function salaireBloc(p,src){
   const s=vraiSalaire(p); if(s.vide) return '';
-  if(s.rien) return `<p class="salaire rouge">Votre activité ne vous a rien laissé en poche sur cette période : pas de salaire de l’heure à calculer.</p>`;
+  if(s.rien) return `<p class="salaire rouge">Votre activité ne vous a rien laissé en poche sur cette période : pas de salaire de l’heure à calculer.</p>${alerteTaux()}`;
   return `<p class="salaire ${s.ok?'or':'rouge'}">Votre vrai salaire : <b>${eur(s.vrai)} nets de l’heure</b></p>
     <p class="sal-sous">congés et retraite déjà déduits, sur une base de ${nb(hSemaine())} h par semaine</p>
     ${s.ok?'':`<p class="sal-manque">Il vous manque ${eur(s.manque)} de l’heure pour atteindre votre objectif</p>`}
-    <button class="lien" data-modal="cascade" data-src="${src}">D’où vient ce chiffre ?</button>`;
+    ${alerteTaux()}
+    ${src==='bilan'?cascadeHtml(p):`<button class="lien" data-modal="cascade" data-src="${src}">D’où vient ce chiffre ?</button>`}`;
+}
+/* La même cascade dans la fenêtre et dans le Bilan */
+function cascadeHtml(p){
+  const c=cascade(p); if(!c) return '';
+  if(c.rien) return '<p class="phrase">Votre activité ne vous a rien laissé en poche sur cette période.</p>';
+  const per=p.lvl==='M'?'ce mois-ci':'par mois en moyenne', pc=x=>nb(x*100);
+  const L=(lbl,sub,v,cls)=>`<div class="cas${cls?' '+cls:''}"><div class="cas-g"><span class="cas-l">${lbl}</span><span class="cas-s">${sub}</span></div><b class="cas-v">${eur(v)}</b></div>`;
+  return `<div class="cascade">
+    <p class="phrase">Sur vos ${nb(hSemaine())} h par semaine, environ ${nb(hSemaine()*(1-c.nf))} h sont facturées à vos clients. Le reste sert à trouver des clients et à faire tourner l’activité.</p>
+    ${L('Ce que vos clients vous paient par heure facturée',`${eur0(c.enc)} encaissés ${per}, pour ${nb(c.hFact)} heures facturées`,c.a,'depart')}
+    ${L(`Moins le temps non facturé (prospection, communication, devis, administratif… ${pc(c.nf)} %)`,`Les mêmes ${eur0(c.enc)}, répartis sur vos ${nb(c.H)} heures de travail`,c.b)}
+    ${L('Moins les frais de fonctionnement (logiciels, téléphone, internet, assurance, matériel…), remboursements d’emprunt de l’activité compris',`−${eur0(c.frais)} ${per}`,c.c)}
+    ${L(`Moins les cotisations sociales et impôts (la somme mise de côté, ${pc(reglage('taux',0,90)/100)} %)`,`−${eur0(c.prov)} ${per}`,c.d)}
+    ${L(c.congesInclus?'Vos congés : déjà compris dans vos 12 mois de relevés':`Moins vos congés (${nb(reglage('semNonTrav',0,51))} semaines par an sans revenu)`,c.congesInclus?'Aucune correction : vos mois de vacances sont dans vos relevés':`Soit environ ${eur0(c.poche*c.corr)} par mois sur l’année`,c.e)}
+    ${L(`Moins l’épargne et la retraite à constituer vous-même (${pc(c.ep)} %)`,`−${eur0(c.poche*c.corr*c.ep)} par mois`,c.f)}
+    ${L('Votre vrai salaire net de l’heure',`soit environ ${eur0(c.poche*c.corr*(1-c.ep))} par mois`,c.f,'final')}
+    <p class="phrase">Un salarié payé ${eur(c.f)} nets de l’heure a déjà ses congés et sa retraite compris. Vous, vous devez les financer vous-même.</p></div>`;
 }
 function justePrixBloc(){
   const j=justePrix();
@@ -2068,13 +2121,8 @@ const mini=(k,max,step)=>`<input class="mini" type="number" inputmode="decimal" 
 function fenetreModal(){
   let h='';
   if(MODAL.type==='cascade'){
-    const p=MODAL.src==='bilan'?PB:P, s=vraiSalaire(p);
-    h=s.vide||s.rien?`<p class="f-m">D’où vient ce chiffre ?</p><p class="phrase">Votre activité ne vous a rien laissé en poche sur cette période.</p>`:`<p class="f-m">D’où vient ce chiffre ?</p>
-      <div class="ligne"><span>Ce qui vous reste en poche, par heure travaillée</span><b>${eur(s.brut)}</b></div>
-      <div class="ligne"><span>${s.congesInclus?'Vos congés : déjà compris dans vos 12 mois de relevés':`Moins vos congés (${nb(reglage('semNonTrav',0,51))} semaines par an sans revenu)`}</span><b>${eur(s.conges)}</b></div>
-      <div class="ligne total"><span>Moins l’épargne et la retraite à constituer vous-même (${nb(epRet()*100)} %)</span><b>${eur(s.vrai)}</b></div>
-      <p class="phrase">Un salarié payé ${eur(s.vrai)} nets de l’heure a déjà ses congés et sa retraite compris. Vous, vous devez les financer vous-même.</p>
-      <p class="aide">Calculé sur ${eur0(s.poche)} en poche par mois (ce que vous avez encaissé, moins les frais de l’activité et la somme mise de côté), pour ${nb(heures())} heures de travail par mois.</p>`;
+    const p=MODAL.src==='bilan'?PB:P;
+    h=`<p class="f-m">D’où vient ce chiffre ?</p>${alerteTaux()}${cascadeHtml(p)||'<p class="phrase">Aucune activité sur cette période.</p>'}`;
   } else {
     const j=justePrix(), ms=douzeMois();
     h=`<p class="f-m">Comment c’est calculé ?</p>

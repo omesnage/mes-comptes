@@ -1,4 +1,5 @@
 /* ============ Réglages ============ */
+const CONSEIL_TAUX='Souvent entre 25 et 45 % selon votre statut. En cas de doute, renseignez-vous auprès de votre centre de formalités ou d’un conseiller.';
 function phraseCible(st){st=st||S.settings;const v=+st.netVise||SET0.netVise, h=+st.heuresSemaine||SET0.heuresSemaine;
   return `Pour atteindre ${eur0(v)} par mois à ${h} h par semaine, une heure doit vous rapporter <b>${eurH(v/(h*52/12))}</b>.`}
 function vReglages(){
@@ -24,8 +25,8 @@ function vReglages(){
     <p class="aide sous-champ">Prospection, devis, administratif, formation, déplacements : du temps travaillé que personne ne vous paie.</p>
     <label class="champ">Heures par jour facturé<input type="number" inputmode="numeric" min="1" max="24" step="1" data-set="hJour" value="${s.hJour??''}" placeholder="7"></label>
     <p class="aide sous-champ">Pour calculer votre prix à la journée.</p>
-    <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
-    <p class="aide sous-champ">Si vous ne savez pas, demandez à votre comptable.</p></section>
+    <label class="champ" id="taux-champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 30"></label>
+    <p class="aide sous-champ">${CONSEIL_TAUX}</p></section>
   <section class="carte" id="reserve"><h3>Votre réserve</h3>
     <label class="champ">Épargne disponible (€)<input type="number" inputmode="numeric" min="0" step="100" data-set="epargne" value="${s.epargne||''}" placeholder="0"></label>
     ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:'<p class="aide">Elle indique combien de mois vous tiendriez sans rien encaisser.</p>'}</section>
@@ -76,7 +77,7 @@ function vDemarrage(){
     <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
     <p class="phrase" id="cibleLive">${phraseCible()}</p>
     <label class="champ">Part de vos encaissements à mettre de côté (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
-    <p class="aide">Si vous ne savez pas, demandez à votre comptable. Vous pourrez tout changer plus tard.</p>
+    <p class="aide">${CONSEIL_TAUX} Vous pourrez tout changer plus tard.</p>
     <div class="boutons"><button class="btn" data-onb="2">Continuer</button></div><button class="lien" data-act="onbfin">Passer</button></section>`;
   return `<section class="demarrage">${pas}<h2>Ajoutez vos relevés</h2>
     <p class="phrase">Téléchargez vos relevés de compte en PDF sur le site de votre banque, pro et perso, puis ajoutez-les ici.</p>

@@ -41,7 +41,8 @@ async function parcours(page,f){
   await page.locator('.legende .leg[data-bcat]').first().click(); await f('fiche rubrique'); await page.click('.fiche .fermer');
   await page.click('[data-bu="pro"]'); await f('bilan activite');
   await page.click('[data-modal="prix"]'); await f('comment c’est calculé'); await page.click('.fenetre .fermer');
-  await page.click('[data-modal="cascade"]'); await f('d’où vient ce chiffre'); await page.click('.fenetre .fermer');
+  await page.click('nav.tabs [data-tab="accueil"]'); await page.click('[data-modal="cascade"]'); await f('d’où vient ce chiffre'); await page.click('.fenetre .fermer');
+  await page.evaluate(()=>{S.settings.taux=0;render()}); await f('accueil sans taux'); await page.evaluate(()=>{S.settings.taux=22;render()});
   await page.click('nav.tabs [data-tab="operations"]'); await f('operations');
   await page.locator('.ops .op').first().click(); await expect(page.locator('.fiche')).toBeVisible(); await f('fiche');
   await page.click('.fiche .fermer');
@@ -83,9 +84,11 @@ test('texte courant : 18 px sur mobile, 17 px sur ordinateur ; grand chiffre de 
 });
 
 test('aucun mot technique à l’écran',async({page})=>{
-  const INTERDITS=/URSSAF|cotisation|charges sociales|charges globales|provision|trésorerie|matelas|lissé|point mort|taux horaire/i;
+  const INTERDITS=/URSSAF|cotisation|comptable|charges sociales|charges globales|provision|trésorerie|matelas|lissé|point mort|taux horaire/i;
   await parcours(page,async nom=>{
-    const t=await page.evaluate(()=>{const c=document.body.cloneNode(true);c.querySelectorAll('.op-m,.q-t,.q-s,.f-m,.fiche .aide,.pv,textarea,script,style,#review,.regle>span:first-child').forEach(e=>e.remove());return c.innerText});
+    const t=await page.evaluate(()=>{const c=document.body.cloneNode(true);c.querySelectorAll('.op-m,.q-t,.q-s,.f-m,.fiche .aide,.pv,textarea,script,style,#review,.regle>span:first-child').forEach(e=>e.remove());
+      /* « cotisations sociales et impôts » est permis dans la cascade et l'alerte de réglage, et seulement là */
+      c.querySelectorAll('.cascade .cas-l,.alerte-taux p').forEach(e=>{e.textContent=e.textContent.replace(/cotisations( sociales)? et impôts/g,'')});return c.innerText});
     const m=t.match(INTERDITS); expect(m&&m[0],nom).toBeFalsy();
   });
 });
@@ -108,4 +111,28 @@ test('la démo ne touche pas aux données enregistrées',async({page})=>{
   await page.click('[data-act="demo"]');
   await page.waitForTimeout(900);
   expect(await page.evaluate(()=>(JSON.parse(localStorage.getItem('mes-comptes-v1')||'{}').ops||[]).length)).toBe(0);
+});
+
+test('aucune trace de Jost, Bodoni, URSSAF ni comptable dans le fichier livré ; police Plus Jakarta Sans',async({page})=>{
+  const fs=await import('fs'); const h=fs.readFileSync(new URL('../dist/mes-comptes.html',import.meta.url),'utf8');
+  expect(h.match(/jost|bodoni|urssaf|comptable/gi)).toBeNull();
+  expect(h).toContain('family=Plus+Jakarta+Sans:wght@300;400;500');
+  await openWith(page,null); await page.click('[data-act="demo"]');
+  const r=await page.evaluate(()=>{const f=e=>getComputedStyle(document.querySelector(e));return {body:f('body').fontFamily,bw:f('body').fontWeight,big:f('.grand-chiffre').fontWeight,bigNum:f('.grand-chiffre').fontVariantNumeric,h3:f('.carte h3').fontWeight,sal:f('.salaire').fontWeight}});
+  expect(r.body).toContain('Plus Jakarta Sans'); expect(r.bw).toBe('400'); expect(r.big).toBe('300'); expect(r.bigNum).toContain('tabular-nums');
+  expect(r.h3).toBe('500'); expect(r.sal).toBe('500');
+  // Jamais de graisse 300 sous 24 px
+  const fins=await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(e=>e.offsetParent&&getComputedStyle(e).fontWeight==='300'&&parseFloat(getComputedStyle(e).fontSize)<24&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())).map(e=>e.className));
+  expect(fins).toEqual([]);
+});
+test('aucun texte ne déborde de son cadre, sur mobile et sur ordinateur',async({page})=>{
+  for(const w of [360,1280]){
+    await page.setViewportSize({width:w,height:900});
+    await openWith(page,null); await page.click('[data-act="demo"]');
+    for(const v of ['accueil','bilan','operations','importer','reglages']){
+      await page.evaluate(v=>{view=v;BU=v==='bilan'?'pro':'perso';render();document.querySelectorAll('details').forEach(d=>d.open=true)},v);
+      const d=await page.evaluate(()=>[...document.querySelectorAll('#view *')].filter(e=>e.offsetParent&&e.scrollWidth>e.clientWidth+1&&getComputedStyle(e).overflowX==='visible'&&!e.closest('.barres')&&e.tagName!=='SELECT').map(e=>e.tagName+'.'+e.className).slice(0,5));
+      expect(d,`${w} ${v}`).toEqual([]);
+    }
+  }
 });

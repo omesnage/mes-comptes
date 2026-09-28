@@ -1,5 +1,5 @@
 /* ============ Données de base ============ */
-const SCHEMA=5;
+const SCHEMA=6;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
@@ -25,7 +25,7 @@ const CATS0=[
  ['materiel','Matériel et fournitures','monitor','expense','pro'],
  ['deplacements','Déplacements de l’activité','train-front','expense','pro'],
  ['soustraitance','Sous-traitance','handshake','expense','pro'],
- ['comptable','Comptable','calculator','expense','pro'],
+ ['conseils','Conseils et services','messages-square','expense','pro'],
  ['cotisations','Versements de ce qui est mis de côté','piggy-bank','expense','pro'],
  ['impots','Impôts de l’activité','receipt-text','expense','pro'],
  ['fraisrembourses','Frais remboursés par l’activité','car-front','expense','pro'],
@@ -38,7 +38,7 @@ const CATS0=[
  ['interne','Virements entre vos comptes','repeat','transfer','auto']
 ].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,budget:0,fixed:!!fixed}));
 /* Anciens noms par défaut, remplacés par les nouveaux lors de la migration (un nom personnalisé est gardé) */
-const OLD_NAMES={courses:'Courses alimentaires',resto:'Restaurants & cafés',transport:'Transport & carburant',logement:'Logement & énergie',sante:'Santé',abonnements:'Abonnements & téléphonie',loisirs:'Loisirs & culture',shopping:'Shopping',frais:'Frais bancaires',pret:'Remboursement de prêt',logiciels:'Logiciels & outils',materiel:'Matériel & fournitures',deplacements:'Déplacements professionnels',soustraitance:'Sous-traitance',comptable:'Comptable & juridique',cotisations:'Cotisations sociales',impots:'Impôts sur l’activité',pro:'Autres frais professionnels',remb:'Remboursements',rentrees:'Rentrées d’argent',revenus:'Revenus',remu:'Rémunération (pro vers perso)',interne:'Virements internes',divers:'Divers'};
+const OLD_NAMES={courses:'Courses alimentaires',resto:'Restaurants & cafés',transport:'Transport & carburant',logement:'Logement & énergie',sante:'Santé',abonnements:'Abonnements & téléphonie',loisirs:'Loisirs & culture',shopping:'Shopping',frais:'Frais bancaires',pret:'Remboursement de prêt',logiciels:'Logiciels & outils',materiel:'Matériel & fournitures',deplacements:'Déplacements professionnels',soustraitance:'Sous-traitance',cotisations:'Cotisations sociales',impots:'Impôts sur l’activité',pro:'Autres frais professionnels',remb:'Remboursements',rentrees:'Rentrées d’argent',revenus:'Revenus',remu:'Rémunération (pro vers perso)',interne:'Virements internes',divers:'Divers'};
 /* Remboursement de frais par l'activité (indemnités kilométriques, notes de frais) */
 const NDF_RE=/\b(IK|INDEMNITES? (KM|KILOMETRIQUES?)|FRAIS KM|NOTES? DE FRAIS|NDF|REMBOURSEMENT( DE)? FRAIS|REMB FRAIS)\b/;
 /* Rubriques qui correspondent au paiement de la provision (cotisations, impôts) */
@@ -50,8 +50,8 @@ function autoCatOf(label,atype){if(LOAN_RE.test(norm(label)))return atype==='pro
 
 /* Mots-clés toujours professionnels, quel que soit le compte */
 const KW_PRO=[
- [/URSSAF|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
- [/EXPERT COMPTABLE|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE/,'comptable']
+ [/\bURS{2}AF\b|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
+ [/EXPERT.?COMPTA|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE|AVOCAT|NOTAIRE/,'conseils']
 ];
 /* Mots-clés professionnels seulement sur un compte pro */
 const KW_PROACC=[

@@ -17,10 +17,10 @@ function demoData(){
   for(let k=11;k>=0;k--){
     const ca=CA[11-k], n=ca>4000?3:2;
     for(let i=0;i<n;i++) add(k,4+i*9,'VIR SEPA RECU '+CLIENTS[(k+i)%4],ca/n,'revenus',pr.id);
-    add(k,6,'PRLV SEPA URSSAF',-Math.round((k<11?CA[10-k]:3500)*.212),'cotisations',pr.id);
+    add(k,6,'PRLV SEPA SECURITE SOCIALE DES INDEPENDANTS',-Math.round((k<11?CA[10-k]:3500)*.212),'cotisations',pr.id);
     add(k,3,'PRLV SEPA OVH CLOUD',-23.99,'logiciels',pr.id);
     add(k,8,'PRLV SEPA ADOBE SYSTEMS',-71.99,'logiciels',pr.id);
-    add(k,10,'PRLV SEPA INDY COMPTABILITE',-24,'comptable',pr.id);
+    add(k,10,'PRLV SEPA INDY COMPTABILITE',-24,'conseils',pr.id);
     add(k,27,'FRAIS TENUE DE COMPTE QONTO',-11,'frais',pr.id);
     if(k%3===1) add(k,15,'CB LDLC',-vary(260,.4),'materiel',pr.id);
     if(k===8) add(k,14,'PRLV SEPA DGFIP CFE',-356,'impots',pr.id);
