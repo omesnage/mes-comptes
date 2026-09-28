@@ -125,3 +125,13 @@ test('graphiques : tout est étiqueté, avec une phrase qui dit ce qu’ils mont
     expect(Math.min(...tailles)).toBeGreaterThanOrEqual(15);
   }
 });
+
+test('couleurs d’état : vert tendre quand tout va bien, orange, rouge',async({page})=>{
+  await openWith(page,null); await page.click('[data-act="demo"]');
+  const c=await page.evaluate(()=>{const v=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim(),col=s=>{const e=document.querySelector(s);return e&&getComputedStyle(e).backgroundColor||getComputedStyle(e).color};
+    const bar=e=>getComputedStyle(document.querySelector(`.budget-an.${e} .barre-an span`)).backgroundColor;
+    return {ok:bar('or'),orange:bar('orange'),rouge:bar('rouge'),sal:getComputedStyle(document.querySelector('.salaire')).color,cls:document.querySelector('.salaire').className}});
+  expect(c.ok).toBe('rgb(140, 191, 133)');
+  expect(c.orange).not.toBe(c.ok); expect(c.rouge).not.toBe(c.ok); expect(c.orange).not.toBe(c.rouge);
+  if(c.cls.includes('or')) expect(c.sal).toBe('rgb(74, 122, 70)');
+});

@@ -395,3 +395,12 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 .rep-lim.orange{color:var(--amber)}.rep-lim.rouge{color:var(--alert)}
 @media (max-width:420px){nav.tabs button{font-size:15px;padding:6px 2px}nav.tabs button>span{white-space:normal;text-align:center;line-height:1.15}}
 .q-question{font-size:18px;font-weight:500;margin:6px 0 4px}
+
+/* États « tout va bien » : vert tendre (vert, orange, rouge) */
+:root{--ok:#4A7A46;--ok-bar:#8CBF85;--ok-soft:#E9F3E6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ok:#9FD098;--ok-bar:#6FA468;--ok-soft:#1C2A1B}}
+:root[data-theme="dark"]{--ok:#9FD098;--ok-bar:#6FA468;--ok-soft:#1C2A1B}
+.barre-an span,.barre-defi span{background:var(--ok-bar)}
+.salaire.or,.phrase.or,.h-reel.or,.heures-bilan .phrase.or,.juste-prix .phrase.or{color:var(--ok)}
+.ecart.baisse .e-fleche,.m-baisse,.verif.ok{color:var(--ok)}
+.defi .d-res.ok{color:var(--ok)}
