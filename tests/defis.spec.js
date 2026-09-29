@@ -48,3 +48,12 @@ test('« À vérifier » : un marchand avec achats et rentrées donne deux quest
   expect(s).toContain(nb('2 dépenses, 50,00 € au total'));
   expect(s).toContain(nb('2 rentrées, 607,32 € au total'));
 });
+
+test('fiche : « toutes les opérations » d’un marchand qui a achats et rentrées ne change que celles du même sens',async({page})=>{
+  await openWith(page,etat([['2026-01-05',-20,'AMAZON'],['2026-01-06',-30,'AMAZON'],['2026-01-08',599,'AMAZON']],{AMAZON:'shopping'}));
+  await page.evaluate(()=>{P={lvl:'M',y:2026,m:1};FICHE='o2';render()});
+  await page.selectOption('#ficheCat','remb');
+  await page.click('[data-act="savefiche"]');
+  expect(await page.evaluate(()=>S.ops.map(o=>catOf(o)))).toEqual(expect.arrayContaining(['shopping','shopping','remb']));
+  expect(await page.evaluate(()=>S.rules)).toEqual({AMAZON:'shopping','AMAZON|+':'remb'});
+});

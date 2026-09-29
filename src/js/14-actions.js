@@ -39,7 +39,7 @@ document.addEventListener('click',async e=>{
   if(d.defiok){S.challenges=S.challenges.filter(c=>!(c.id==='auto'&&c.month===d.month));S.challenges.push({id:'auto',key:newId('d_'),month:d.month,cat:d.defiok,limite:+d.limite,habitude:+d.hab});save();render();return}
   if(d.undefi){S.challenges=S.challenges.filter(c=>c.key!==d.undefi);save();render();return}
   if(d.act==='savefiche'){const o=BYID[d.id], v=$('#ficheCat').value, tout=document.querySelector('input[name="portee"]:checked')?.value!=='une';
-    if(o&&v){if(tout){delete o.cat;const dk=o.merchant+(o.amount>0?'|+':'|-'), k=S.rules[dk]||(S.rules[o.merchant]&&typeOf(v)!==typeOf(S.rules[o.merchant]))?dk:o.merchant;setRule(k,v);S.ops.forEach(x=>{if(x.merchant===o.merchant&&x.cat){delete x.cat;dirtyMonths.add(x.date.slice(0,7))}})}else{o.cat=v;dirtyMonths.add(o.date.slice(0,7))}save()}
+    if(o&&v){if(tout){delete o.cat;const dk=o.merchant+(o.amount>0?'|+':'|-'), mixte=S.ops.some(x=>x.merchant===o.merchant&&(x.amount>0)!==(o.amount>0)), k=S.rules[dk]||mixte||(S.rules[o.merchant]&&typeOf(v)!==typeOf(S.rules[o.merchant]))?dk:o.merchant;setRule(k,v);S.ops.forEach(x=>{if(x.merchant===o.merchant&&x.cat){delete x.cat;dirtyMonths.add(x.date.slice(0,7))}})}else{o.cat=v;dirtyMonths.add(o.date.slice(0,7))}save()}
     FICHE=null;FICHESEL=null;render();return}
   if(d.settype){const [id,ty]=d.settype.split(':');const a=acctById(id);if(a){a.type=ty;a.confirmed=true;stateDirty=true;save();render()}return}
   if(d.renacct){const a=acctById(d.renacct);if(!a)return;const n=(prompt('Nouveau nom du compte',a.name)||'').trim();if(!n||n===a.name)return;a.name=n.slice(0,40);stateDirty=true;save();render();return}
