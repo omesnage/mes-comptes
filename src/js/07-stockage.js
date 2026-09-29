@@ -1,8 +1,8 @@
 /* ============ Persistance ============ */
 let db=null, uid=null, mode='local', stateDirty=false, dirtyMonths=new Set(), timer=null, flushing=false, again=false, saveState='';
-const LS='mes-comptes-v1';
+const LS=SAL?'mes-comptes-salaries':'mes-comptes-v1';
 const base=()=>`data/users/${uid}/state`;
-const LSUI='mes-comptes-affichage';
+const LSUI=SAL?'mes-comptes-salaries-affichage':'mes-comptes-affichage';
 function loadUI(){UNIV='all'}
 function saveUI(){try{localStorage.setItem(LSUI,JSON.stringify({univ:UNIV}))}catch(e){}}
 function loadLocal(){try{const t=localStorage.getItem(LS);return t?JSON.parse(t):null}catch(e){return null}}
@@ -70,7 +70,7 @@ function migrateSchema(st){
   }
   if(st.schemaVersion<6){
     /* v5 → v6 : une rubrique par défaut retirée est remplacée par « Conseils et services », sans perte */
-    const ids=new Set(CATS0.map(c=>c.id)), retirees=new Set(st.categories.filter(c=>!c.custom&&!ids.has(c.id)&&c.id!=='fraisrembourses').map(c=>c.id));
+    const ids=new Set(CATS0.map(c=>c.id)), retirees=new Set(st.categories.filter(c=>!c.custom&&!ids.has(c.id)&&c.id!=='fraisrembourses'&&!FUSIONS_V13[c.id]).map(c=>c.id));
     if(retirees.size){
       st.categories=st.categories.filter(c=>!retirees.has(c.id));
       for(const m in st.rules) if(retirees.has(st.rules[m])) st.rules[m]='conseils';
@@ -123,6 +123,48 @@ function migrateSchema(st){
     /* v10 → v11 : « Vacances » devient « Vacances et séjours » (un nom personnalisé est gardé) */
     const c=st.categories.find(k=>k.id==='voyages'); if(c&&['Vacances','Voyages'].includes(c.name)) c.name='Vacances et séjours';
     st.schemaVersion=11;
+  }
+  if(st.schemaVersion<12){
+    /* v11 → v12 : « Transports » devient « Voiture et déplacements » (un nom personnalisé est gardé) */
+    const c=st.categories.find(k=>k.id==='transport'); if(c&&['Transports','Voiture et transports','Transport & carburant'].includes(c.name)) c.name='Voiture et déplacements';
+    st.schemaVersion=12;
+  }
+  if(st.schemaVersion<13){
+    /* v12 → v13 : rubriques resserrées. Énergie → Logement, Enfants → Cadeaux, Matériel → Logiciels, Impôts de l'activité → Versements.
+       Règles, suggestions, opérations, défis et limites suivent ; « Autres » devient « Espèces et divers ». */
+    for(const [de,vers] of Object.entries(FUSIONS_V13)){
+      const a=st.categories.find(c=>c.id===de), b=st.categories.find(c=>c.id===vers);
+      if(b&&a&&a.limite&&a.limite.montant>0){
+        if(!b.limite||!(b.limite.montant>0)) b.limite=a.limite;
+        else if(b.limite.per===a.limite.per) b.limite={...b.limite,montant:b.limite.montant+a.limite.montant};
+      }
+      st.categories=st.categories.filter(c=>c.id!==de);
+      for(const m in st.rules) if(st.rules[m]===de) st.rules[m]=vers;
+      for(const m in st.sugg) if(st.sugg[m].c===de) st.sugg[m].c=vers;
+      st.ops.forEach(o=>{if(o.cat===de){o.cat=vers;dirtyMonths.add(o.date.slice(0,7))}});
+      (st.challenges||[]).forEach(c=>{if(c.cat===de)c.cat=vers});
+    }
+    const ren={logement:['Logement','Logement et énergie'],cadeaux:['Cadeaux','Enfants et cadeaux'],logiciels:['Logiciels et outils','Logiciels et matériel'],divers:['Autres','Espèces et divers']};
+    for(const [id,[ancien,nouveau]] of Object.entries(ren)){const c=st.categories.find(k=>k.id===id);if(c&&c.name===ancien)c.name=nouveau}
+    st.schemaVersion=13;
+  }
+  if(st.schemaVersion<14){
+    /* v13 → v14 : un prélèvement « CESU » avait été rangé d'office dans les versements de la caisse sociale ; il redevient à classer */
+    const cesu=o=>CESU_RE.test(norm(o.label||''));
+    const tous=new Map(); st.ops.forEach(o=>{const a=tous.get(o.merchant);tous.set(o.merchant,(a===undefined||a)&&cesu(o))});
+    for(const m in st.rules){const mm=m.replace(/\|[+-]$/,'');if(st.rules[m]==='cotisations'&&tous.get(mm)===true)delete st.rules[m]}
+    st.ops.forEach(o=>{if(o.cat==='cotisations'&&cesu(o)){delete o.cat;dirtyMonths.add(o.date.slice(0,7))}});
+    st.schemaVersion=14;
+  }
+  if(st.schemaVersion<15){
+    /* v14 → v15 : « Versements de ce qui est mis de côté » devient « Charges sociales » (un nom personnalisé est gardé) ; les rubriques nouvelles sont ajoutées à la lecture */
+    const c=st.categories.find(k=>k.id==='cotisations'); if(c&&c.name==='Versements de ce qui est mis de côté') c.name='Charges sociales';
+    st.schemaVersion=15;
+  }
+  if(st.schemaVersion<16){
+    /* v15 → v16 : « Enfants et cadeaux » redevient « Cadeaux » (un nom personnalisé est gardé) */
+    const c=st.categories.find(k=>k.id==='cadeaux'); if(c&&c.name==='Enfants et cadeaux') c.name='Cadeaux';
+    st.schemaVersion=16;
   }
   return st.schemaVersion!==v0;
 }

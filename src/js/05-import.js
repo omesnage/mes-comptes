@@ -13,9 +13,11 @@ function resolveAccount(res,fileName,dry){
   if(a) return {a,isNew:false,bank,no};
   let name=bank||fileName.replace(/\.[a-z]+$/i,'').replace(/[_-]+/g,' ').trim().slice(0,30)||'Compte principal';
   if(S.accounts.some(x=>x.name===name)) name+=no?' ····'+no.slice(-4):' ('+(S.accounts.filter(x=>x.name.startsWith(name)).length+1)+')';
-  const x={name,bank,no,type:guessType(bank,res.header||text.slice(0,1500),name)};
+  const x={name,bank,no,type:IMPTYPE&&!SAL?IMPTYPE:guessType(bank,res.header||text.slice(0,1500),name),confirmed:!!IMPTYPE&&!SAL};
   return {a:dry?x:addAccount(x),isNew:true,bank,no};
 }
+/* Type choisi avant l'import pour un nouveau compte : 'perso', 'pro', 'mixte' ou null (l'application devine, puis pose la question) */
+let IMPTYPE=null;
 /* ---------- Rapprochement : une même opération venue du copier-coller et du relevé ---------- */
 function similaire(a,b){a=norm(a||'').trim();b=norm(b||'').trim();if(!a||!b)return false;if(a===b||a.includes(b)||b.includes(a))return true;
   const wa=a.split(/\s+/).filter(w=>w.length>=4&&!/^\d+$/.test(w)),wb=new Set(b.split(/\s+/).filter(w=>w.length>=4));return wa.some(w=>wb.has(w))}

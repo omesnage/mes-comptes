@@ -33,13 +33,19 @@ function parseCollage(txt,signeDefaut){
       else{const m=r.filter((c,i)=>i!==di).map(c=>c.match(RE_MONT)).filter(Boolean).map(x=>x[0]);if(m.length)ajoute(dateCollee(r[di]),label,m[0])}
     }
   } else {
-    /* Texte libre : une opération commence par une date, et se termine à son montant (le libellé peut tenir sur plusieurs lignes) */
-    let cur=null; const fin=()=>{if(!cur)return;const m=cur.txt.match(RE_MONT);if(m){const label=cur.txt.replace(RE_MONT,' ');ajoute(cur.date,label,m[0])}cur=null};
+    /* Texte libre : une opération commence par une date. Son libellé continue sur les lignes suivantes, même après le montant
+       (« PRÉLÈVEMENT -6,56 € » puis, dessous, le nom de l'enseigne), jusqu'à la date de l'opération suivante. */
+    const aMont=x=>{RE_MONT.lastIndex=0;const r=RE_MONT.test(x);RE_MONT.lastIndex=0;return r};
+    const premier=x=>{RE_MONT.lastIndex=0;const r=x.match(RE_MONT);RE_MONT.lastIndex=0;return r&&r[0]};
+    let cur=null; const fin=()=>{if(cur&&cur.m) ajoute(cur.date,(cur.txt+' '+cur.suite).replace(RE_MONT,' '),cur.m);cur=null};
     for(const l of lignes){
       const md=l.match(RE_DEBUT_DATE), dt=md&&dateCollee(md[0]);
-      if(dt){fin();cur={date:dt,txt:l.slice(md[0].length)}}
-      else if(cur) cur.txt+=' '+l;
-      if(cur&&RE_MONT.test(cur.txt)){RE_MONT.lastIndex=0;fin()} RE_MONT.lastIndex=0;
+      if(dt){fin();cur={date:dt,txt:l.slice(md[0].length),m:null,suite:'',n:0}; if(aMont(cur.txt)) cur.m=premier(cur.txt)}
+      else if(cur){
+        if(!cur.m){cur.txt+=' '+l; if(aMont(cur.txt)) cur.m=premier(cur.txt)}
+        else if(!aMont(l)&&!estHorsOp(l)&&cur.n<4&&l.length<90){cur.suite+=' '+l;cur.n++}
+        else fin();
+      }
     }
     fin();
   }
@@ -183,6 +189,21 @@ async function importerLecteur(file){
 }
 
 /* Supprimer un relevé ajouté par erreur : ses opérations, ses questions en attente, et le compte s'il n'a été créé que pour lui */
+/* Relevé rangé dans le mauvais compte (autre banque, autre numéro) : ses opérations passent dans le bon compte */
+function deplacerReleve(imp,vers){
+  const ops=S.ops.filter(o=>o.imp===imp); if(!ops.length||!vers) return;
+  const avant=new Set(ops.map(o=>o.acct));
+  if(vers==='__new'){
+    const n=(prompt('Nom du nouveau compte (par exemple « Crédit Agricole »)')||'').trim(); if(!n){render();return}
+    vers=addAccount({name:n.slice(0,40),bank:detectBank(n)||'',type:guessType(detectBank(n)||'','',n)}).id;
+  }
+  if(!acctById(vers)||(avant.size===1&&avant.has(vers))) {render();return}
+  ops.forEach(o=>{o.acct=vers;dirtyMonths.add(o.date.slice(0,7))});
+  /* Un compte resté sans aucune opération est retiré, sauf s'il a été confirmé par vous */
+  S.accounts=S.accounts.filter(a=>!(avant.has(a.id)&&a.id!==vers&&!a.confirmed&&!S.ops.some(o=>o.acct===a.id)));
+  for(const r of reports) if(r.imp===imp) r.acct=vers;
+  stateDirty=true; save(); render();
+}
 function supprimerReleve(imp){
   const ops=S.ops.filter(o=>o.imp===imp); if(!ops.length) return;
   const nom=(S.imports||{})[imp]?.nom||'ce relevé';

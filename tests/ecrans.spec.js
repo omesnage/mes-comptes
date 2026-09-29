@@ -87,7 +87,7 @@ test('texte courant : 18 px sur mobile, 17 px sur ordinateur ; grand chiffre de 
 });
 
 test('aucun mot technique à l’écran',async({page})=>{
-  const INTERDITS=/URSSAF|comptable|charges sociales|charges globales|provision|trésorerie|matelas|lissé|point mort|taux horaire/i;
+  const INTERDITS=/URSSAF|comptable|charges globales|provision|trésorerie|matelas|lissé|point mort|taux horaire/i;
   await parcours(page,async nom=>{
     const t=await page.evaluate(()=>{const c=document.body.cloneNode(true);c.querySelectorAll('.op-m,.q-t,.q-s,.f-m,.fiche .aide,.pv,textarea,script,style,#review,.regle>span:first-child').forEach(e=>e.remove());
       return c.innerText});

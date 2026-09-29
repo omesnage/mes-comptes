@@ -1,5 +1,7 @@
 import {test,expect,openWith,importer} from './helpers.js';
 import {releveColonnes,releveMoinsFin,releveLettres} from './releves.js';
+import {bforbank} from './banques.js';
+import os from 'os'; import path from 'path';
 
 const ops=page=>page.evaluate(()=>S.ops.map(o=>({date:o.date,label:o.label,amount:o.amount,acct:acctName(o.acct)})).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.amount-b.amount));
 
@@ -33,7 +35,7 @@ test('relevé avec signe moins en fin de montant : les montants sans signe sont 
   expect(await page.evaluate(()=>S.accounts.map(a=>[a.name,a.type,a.solde,a.soldeDate]))).toEqual([['Qonto','pro',5000,'2026-03-31']]);
   // Suggestions adaptées à un compte pro
   const sg=await page.evaluate(()=>Object.fromEntries(Object.entries(S.sugg).map(([m,s])=>[m,s.c])));
-  expect(sg).toMatchObject({URSSAF:'cotisations','ADOBE SYSTEMS':'logiciels',LDLC:'materiel'});
+  expect(sg).toMatchObject({URSSAF:'cotisations','ADOBE SYSTEMS':'logiciels',LDLC:'logiciels'});
   expect(Object.entries(sg).filter(([m])=>/CLIENT/.test(m)).every(([,c])=>c==='revenus')).toBe(true);
 });
 
@@ -90,4 +92,17 @@ test('tester un relevé : lecture complète sans rien enregistrer, puis import p
   // Un nouvel essai du même relevé montre que tout est déjà importé
   await page.setInputFiles('#testfile',await releveColonnes(ti.outputPath('ca.pdf')));
   await expect(page.locator('.releve.essai')).toContainText('5 opérations déjà importées');
+});
+
+test('import : le type du compte se choisit avant d’ajouter le relevé, sans question ensuite',async({page})=>{
+  const f=await bforbank(path.join(os.tmpdir(),'releve-bforbank-type.pdf'));
+  await openWith(page,null);
+  await page.click('nav.tabs [data-tab="importer"]');
+  await expect(page.locator('.type-import')).toContainText('Ces relevés viennent de quel compte ?');
+  await page.click('[data-imptype="pro"]');
+  await expect(page.locator('[data-imptype="pro"]')).toHaveAttribute('aria-pressed','true');
+  await page.setInputFiles('#file',[f]);
+  await expect(page.locator('.releve').first()).toContainText('Relevé vérifié ✓');
+  expect(await page.evaluate(()=>S.accounts.map(a=>[a.type,a.confirmed]))).toEqual([['pro',true]]);
+  await expect(page.locator('.compte-q')).toHaveCount(0);
 });

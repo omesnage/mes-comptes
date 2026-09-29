@@ -110,12 +110,12 @@ function etatLimite(c,p){
 }
 const avecLimite=()=>S.categories.filter(c=>c.type==='expense'&&c.limite&&+c.limite.montant>0);
 function barreLimite(e){return `<span class="barre-an ${e.etat}"><span style="width:${Math.min(100,e.dep/e.lim*100)}%"></span>${e.per!=='M'?`<em style="left:${Math.min(100,e.frac*100)}%" title="Temps écoulé"></em>`:''}</span>`}
-function blocLimites(){
+function blocLimites(p){
   const cs=avecLimite();
   if(!cs.length) return `<section class="carte limites-propose"><h3><i data-lucide="gauge"></i>Fixez-vous des limites pour le shopping, les sorties ou les vacances</h3>
     <p class="aide">Une limite vous montre, au fil des semaines, si vous êtes dans les clous.</p>
     <button class="btn secondaire" data-tab="objectifs" data-ancre="limites">Fixer mes limites</button></section>`;
-  return `<section class="carte budgets"><h3>Vos limites</h3>${cs.map(c=>{const e=etatLimite(c,P);
+  return `<section class="carte budgets"><h3>Vos limites</h3>${cs.map(c=>{const e=etatLimite(c,p);
     return `<div class="budget-an ${e.etat}"><p class="phrase">${esc(c.name)} : ${eur0(e.dep)} sur ${eur0(e.lim)} ${e.mot}</p>${barreLimite(e)}
       ${e.msg?`<p class="ba-msg">${esc(e.msg)}</p>`:`<p class="aide">Il reste : ${eur0(e.reste)}.</p>`}</div>`}).join('')}</section>`;
 }
@@ -139,27 +139,48 @@ function conseils(){
 /* ---------- Page d'accueil ---------- */
 /* Balance du mois : ce qui est entré (gagné par l'activité et autres rentrées) moins ce qui est parti côté perso.
    L'épargne et les virements entre comptes ne comptent ni d'un côté ni de l'autre. */
-function balanceBloc(n,Pe){
-  const R=aggRaw(P), autres=R.perso.income, dep=Pe.net, b=n+autres-dep;
-  const [a,z]=bounds(P); let ep=0; for(const k of monthKeys(a,z)) for(const o of (BYMONTH[k]||[])) if(catOf(o)==='epargne') ep-=o.amount;
+function balanceBloc(n,Pe,p){
+  if(SAL) return balanceSalarie(Pe,p);
+  const R=aggRaw(p), autres=R.perso.income, dep=Pe.net, b=n+autres-dep;
+  const [a,z]=bounds(p); let ep=0; for(const k of monthKeys(a,z)) for(const o of (BYMONTH[k]||[])) if(catOf(o)==='epargne') ep-=o.amount;
   return `<div class="balance" id="balance">
     <div class="ligne"><span>Gagné par votre activité</span><b>${signed(n)}</b></div>
     ${autres>0.005?`<div class="ligne"><span>Autres rentrées</span><b>+${eur0(autres)}</b></div>`:''}
     <div class="ligne"><span>Ce que vous avez dépensé</span><b>${dep>0.005?'−'+eur0(dep):eur0(0)}</b></div>
-    <div class="ligne total ${b>=0?'ok':'ko'}"><span>Balance du mois</span><b>${signed(b)}</b></div>
+    <div class="ligne total ${b>=0?'ok':'ko'}"><span>Balance ${TERME_PER[p.lvl]}</span><b>${signed(b)}</b></div>
     <p class="aide">${b>=0?`Vous avez dépensé moins que ce qui est entré : ${eur0(b)} de côté.`:`Vous avez dépensé ${eur0(-b)} de plus que ce qui est entré.`}${ep>0.005?` À part, ${eur0(ep)} versés sur votre épargne.`:ep<-0.005?` À part, ${eur0(-ep)} repris sur votre épargne.`:''}</p></div>`;
 }
+/* Salarié : ce qui est entré (salaire et autres rentrées), ce qui est parti, la balance de la période */
+function balanceSalarie(Pe,p){
+  const R=aggRaw(p), recu=R.perso.income, dep=Pe.net, b=recu-dep;
+  const [a,z]=bounds(p); let ep=0; for(const k of monthKeys(a,z)) for(const o of (BYMONTH[k]||[])) if(catOf(o)==='epargne') ep-=o.amount;
+  return `<div class="balance" id="balance">
+    <div class="ligne"><span>Ce que vous avez reçu</span><b>+${eur0(recu)}</b></div>
+    <div class="ligne"><span>Ce que vous avez dépensé</span><b>${dep>0.005?'−'+eur0(dep):eur0(0)}</b></div>
+    <div class="ligne total ${b>=0?'ok':'ko'}"><span>Balance ${TERME_PER[p.lvl]}</span><b>${signed(b)}</b></div>
+    <p class="aide">${b>=0?`Vous avez dépensé moins que ce qui est entré : ${eur0(b)} de côté.`:`Vous avez dépensé ${eur0(-b)} de plus que ce qui est entré.`}${ep>0.005?` À part, ${eur0(ep)} versés sur votre épargne.`:ep<-0.005?` À part, ${eur0(-ep)} repris sur votre épargne.`:''}</p></div>`;
+}
+/* Période affichée sur l'Accueil : mois, trimestre ou année (le mois P sert de repère) */
+let AL='M';
+const TERME_PER={M:'du mois',Q:'du trimestre',Y:'de l’année'};
+function periodeBarAccueil(PA){
+  const lvl=[['M','Mois'],['Q','Trimestre'],['Y','Année']];
+  return `<div class="seg" role="group" aria-label="Période">${lvl.map(([k,l])=>`<button data-alvl="${k}" aria-pressed="${AL===k}">${l}</button>`).join('')}</div>
+  <div class="mois"><button class="fleche" data-ashift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button>
+  <h2>${nomPeriode(PA)}</h2><button class="fleche" data-ashift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>`;
+}
 function vAccueil(){
-  const X=agg(P,'pro'), Pe=agg(P,'perso'), part=moisPartiel(P), V=netVise(), H=heures();
+  const PA={...P,lvl:AL}, nm=bounds(PA)[2], mens=AL==='M', PF={lvl:'M',...endOf(PA)};
+  const X=agg(PA,'pro'), Pe=agg(PA,'perso'), part=moisPartiel(PA), V=netVise()*nm, H=heures()*nm;
   const lignes=Object.entries(Pe.by).filter(([,e])=>e.net>0.005||e.surplus>0.005).sort((a,b)=>b[1].net-a[1].net), max=Math.max(1,...lignes.map(([,e])=>e.net));
-  const cs=conseils(), revue=(P.m===12||P.m===1)&&S.ops.some(o=>o.date.startsWith((P.m===12?P.y:P.y-1)+'-'));
+  const cs=mens?conseils():[], revue=mens&&(P.m===12||P.m===1)&&S.ops.some(o=>o.date.startsWith((P.m===12?P.y:P.y-1)+'-'));
   let gagne='';
   if(X.any){const n=X.revenuNet, d=n-V, t=n/H;
-    gagne=`<section class="carte gagne"><h3>Ce que vous avez gagné ${P.m===new Date().getMonth()+1&&P.y===new Date().getFullYear()?'ce mois-ci':'en '+MOIS[P.m-1]}</h3>
+    gagne=`<section class="carte gagne"><h3>Ce que vous avez gagné ${mens?(P.m===new Date().getMonth()+1&&P.y===new Date().getFullYear()?'ce mois-ci':'en '+MOIS[P.m-1]):AL==='Q'?'au '+plabel(PA):'en '+PA.y}</h3>
       <p class="grand-chiffre">${signed(n)}</p>
       <p class="etiquette ${d>=0?'ok':'ko'}">${d>=0?`${eur0(d)} de plus que votre objectif de ${eur0(V)}`:`Il manque ${eur0(-d)} pour atteindre votre objectif de ${eur0(V)}`}</p>
-      ${balanceBloc(n,Pe)}
-      ${salaireBloc(P,'accueil')}
+      ${balanceBloc(n,Pe,PA)}
+      ${salaireBloc(PA,'accueil')}
       ${part?`<p class="aide">Votre dernier relevé s’arrête au ${part} ${MOIS[P.m-1]}.</p>`:''}</section>
     <section class="carte" id="activite"><h3>Mon activité</h3>
       <div class="ligne"><span>Encaissé</span><b>${eur0(X.ca)}</b></div>
@@ -168,19 +189,20 @@ function vAccueil(){
       <p class="aide sous-ligne">Cet argent n’est pas à vous : il servira à payer vos cotisations sociales et vos impôts.</p>
       ${+S.settings.taux?'':`<p class="aide">Indiquez ce pourcentage dans <button class="lien" data-tab="objectifs" data-ancre="taux-champ">Mes objectifs</button>.</p>`}
       <div class="ligne total"><span>Il vous reste</span><b>${signed(X.revenuNet)}</b></div></section>`}
-  else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ce mois-ci.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p>${balanceBloc(0,Pe)}</section>`;
+  else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ${mens?'ce mois-ci':'sur cette période'}.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p>${balanceBloc(0,Pe,PA)}</section>`;
+  if(SAL) gagne=Pe.any?`<section class="carte gagne"><h3>Votre ${mens?'mois':AL==='Q'?'trimestre':'année'}</h3>${balanceBloc(0,Pe,PA)}</section>`:'';
   const q=S.accounts.filter(a=>!a.confirmed);
-  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+moisBar()+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ce mois-ci.</p>`:'')+gagne+`
+  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
     <p class="phrase">${eur0(Pe.net)} dépensés côté perso</p>
-    <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend?null:derapage(cid,e.net,P), open=openCat===cid;
+    <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
         <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}${e.surplus>0.005?`<span class="rub-sous">dont ${eur0(e.ref)} de remboursements</span>`:''}</span>
         <span class="rub-amt">${eur0(e.net)}</span><span class="barre"><span style="width:${Math.max(1.5,e.net/max*100)}%"></span></span></button>
         ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div>
     <button class="lien ajout-rub" data-act="nouvrub"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>`:''}
-  ${S.ops.length?blocLimites():''}
-  ${blocsDefi()}
+  ${S.ops.length?blocLimites(PF):''}
+  ${mens?blocsDefi():''}
   ${cs.length?`<section class="conseils">${cs.map(c=>`<button class="conseil ${c.lvl}" ${c.go}><i data-lucide="${c.lvl==='ko'?'triangle-alert':'lightbulb'}"></i><span>${esc(c.t)}</span><i data-lucide="chevron-right"></i></button>`).join('')}</section>`:''}
   ${revue?`<button class="carte revue" data-act="review" data-year="${P.m===12?P.y:P.y-1}"><span><span class="r-t">Votre année ${P.m===12?P.y:P.y-1} en revue</span><span class="aide">Vos meilleurs et vos pires moments, en quelques écrans.</span></span><i data-lucide="sparkles"></i></button>`:''}`;
 }

@@ -70,9 +70,9 @@ test('migration : plus aucune trace des frais remboursés ni de la voiture',asyn
       {id:'3',date:'2026-05-20',label:'VIR SEPA EMIS INDEMNITES KM',amount:-140,merchant:'INDEMNITES KM',acct:'pr'},{id:'4',date:'2026-05-21',label:'VIR SEPA RECU DE QONTO',amount:140,merchant:'QONTO',acct:'pe'}]});
   const s=await page.evaluate(()=>({v:S.schemaVersion,cat:S.categories.some(c=>c.id==='fraisrembourses'),rules:S.rules,sugg:S.sugg,vir:S.virements,op2:S.ops.find(o=>o.id==='2').cat,
     t:catById('transport'),l:catById('loisirs').name,vo:catById('voyages').name,remu:agg({lvl:'M',y:2026,m:5},'pro').remu}));
-  expect(s.v).toBe(11); expect(s.cat).toBe(false); expect(s.rules).toEqual({CARREFOUR:'courses'}); expect(s.sugg).toEqual({});
+  expect(s.v).toBe(16); expect(s.cat).toBe(false); expect(s.rules).toEqual({CARREFOUR:'courses'}); expect(s.sugg).toEqual({});
   expect(s.vir).toBeUndefined(); expect(s.op2).toBeUndefined();
-  expect(s.t).toMatchObject({name:'Transports',univers:'perso'}); expect(s.l).toBe('Sorties et loisirs'); expect(s.vo).toBe('Vacances et séjours');
+  expect(s.t).toMatchObject({name:'Voiture et déplacements',univers:'perso'}); expect(s.l).toBe('Sorties et loisirs'); expect(s.vo).toBe('Vacances et séjours');
   expect(s.remu).toBe(140);
   const h=(await import('fs')).readFileSync(new URL('../dist/mes-comptes.html',import.meta.url),'utf8');
   expect(h.match(/INDEMNITES|NOTE DE FRAIS|virKind|Voiture et transports(?![’'])/g)?.filter(x=>x!=='Voiture et transports')||[]).toEqual([]);

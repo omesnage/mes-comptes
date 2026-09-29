@@ -55,8 +55,8 @@ test('« + Nouvelle rubrique… » dans la fiche d’une opération et dans « �
   await openWith(page,null); await page.click('[data-act="demo"]'); await page.click('nav.tabs [data-tab="operations"]');
   // Question « À vérifier » : la rubrique créée devient la règle du marchand
   const q=page.locator('.verifier .question',{hasText:'ATELIER CERAMIQUE'});
-  await q.locator('summary').click();
-  await q.locator('select').selectOption('__new');
+  await q.locator('summary',{hasText:'Une autre rubrique'}).click();
+  await q.locator('select[data-qsel]').selectOption('__new');
   await page.fill('#nrNom','Poterie'); await page.click('[data-nri="palette"]'); await page.click('[data-act="nrcree"]');
   expect(await page.evaluate(()=>catById(S.rules['ATELIER CERAMIQUE'])?.name)).toBe('Poterie');
   // Fiche d'une opération : la rubrique créée est choisie, il reste à enregistrer

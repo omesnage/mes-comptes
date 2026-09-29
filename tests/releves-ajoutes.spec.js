@@ -37,3 +37,32 @@ test('supprimer un relevé ajouté par erreur : ses opérations et le compte cr�
   expect(s).toEqual({ops:0,accts:0,regle:'courses',imports:0});
   await expect(page.locator('#mes-releves')).toHaveCount(0);
 });
+
+test('un mois sauté entre deux relevés est signalé, pas un mois de bout',async({page})=>{
+  const op=(id,date)=>({id,date,label:'CB CARREFOUR',amount:-10,merchant:'CARREFOUR',acct:'a'});
+  await openWith(page,{schemaVersion:14,onboarded:true,accounts:[{id:'a',name:'BforBank',type:'perso',confirmed:true}],
+    ops:[op('1','2025-11-10'),op('2','2026-01-10'),op('3','2026-01-20'),op('4','2026-04-02')]});
+  const r=await page.evaluate(()=>[moisManquants('a'),phraseMoisManquants(moisManquants('a')),phraseMoisManquants(['2026-02']),phraseMoisManquants(['2025-12','2026-01'])]);
+  expect(r[0]).toEqual(['2025-12','2026-02','2026-03']);
+  expect(r[1]).toBe('Il manque des mois : décembre 2025, puis février et mars 2026.');
+  expect(r[2]).toBe('Il manque un mois : février 2026.');
+  expect(r[3]).toBe('Il manque des mois : décembre 2025 et janvier 2026.');
+  await page.evaluate(()=>{view='importer';render()});
+  await expect(page.locator('.manque')).toContainText('BforBank');
+  await expect(page.locator('.manque')).toContainText('décembre 2025');
+});
+
+test('relevé rangé dans le mauvais compte : ses opérations passent dans le bon, le compte vide disparaît',async({page})=>{
+  const op=(id,acct,imp)=>({id,date:'2026-01-1'+id,label:'CB CARREFOUR',amount:-10,merchant:'CARREFOUR',acct,imp,src:'pdf'});
+  await openWith(page,{schemaVersion:15,onboarded:true,
+    accounts:[{id:'a',name:'Crédit Agricole',type:'perso',confirmed:true},{id:'b',name:'Compte 2',type:'perso',confirmed:false}],
+    imports:{i1:{nom:'releve-a.pdf',quand:1},i2:{nom:'releve-b.pdf',quand:2}},
+    ops:[op('1','a','i1'),op('2','b','i2'),op('3','b','i2')]});
+  await page.evaluate(()=>{view='importer';render()});
+  await page.locator('#mes-releves summary').click();
+  const bloc=page.locator('.releve-ajoute',{hasText:'releve-b.pdf'});
+  await expect(bloc.locator('select[data-moveimp] option')).toHaveText(['Choisir le bon compte…','Crédit Agricole','Un nouveau compte…']);
+  await bloc.locator('select[data-moveimp]').selectOption('a');
+  const r=await page.evaluate(()=>({acc:S.accounts.map(a=>a.id),ops:S.ops.map(o=>o.acct)}));
+  expect(r).toEqual({acc:['a'],ops:['a','a','a']});
+});

@@ -71,3 +71,8 @@ npm test         # build + tests Playwright (Chromium)
 - `LISEZMOI.md` (pour Olivier : hébergement sur Netlify ou Squarespace, mise à jour).
 - `GUIDE-UTILISATEUR.md` (court, sans jargon : ouvrir l'application, importer, sauvegarder, changer d'appareil, données liées au navigateur).
 - Manifeste intégré, pour un joli nom et une icône sur l'écran d'accueil de l'iPhone.
+
+## Deux applications, un seul code
+- `node scripts/build.mjs` produit `dist/mes-comptes.html` (indépendants, « Mes comptes ») et `dist/mon-compte.html` (salariés, « Mon compte »), plus les dossiers à publier `en-ligne/mes-comptes/index.html` et `en-ligne/mon-compte/index.html` (ignorés par git).
+- La constante `SAL` (`00-base.js`) vaut `false` dans le source ; le build la remplace par `true` pour la version salariés : pas de rubriques de l'activité, comptes toujours perso, pas de question sur le type de compte, clés de stockage et de sauvegarde distinctes.
+- Une évolution touche les deux versions sauf si elle est protégée par `SAL`. Les tests de la version salariés sont dans `tests/salaries.spec.js`.

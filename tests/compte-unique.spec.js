@@ -24,7 +24,7 @@ test('compte sans compte pro : pour une rentrée d’argent inconnue, « Cet arg
   await page.click('nav.tabs [data-tab="operations"]');
   const q=page.locator('.client-q',{hasText:'CLIENT ALPHA'});
   await expect(q.locator('.q-question')).toHaveText('Cet argent vient-il d’un client ?');
-  await expect(q.locator('.choix-btn')).toHaveText(['Oui, c’est un client','Non (CAF, vente, remboursement, virement perso…)']);
+  await expect(q.locator('.choix-btn')).toHaveText(['Oui, c’est un client','Non (CAF, vente, remboursement, virement perso…)','Retrait d’épargne']);
   await q.locator('.choix-btn',{hasText:'Oui'}).click();
   await page.locator('.client-q').filter({has:page.locator('.q-t',{hasText:/^CAF$/})}).locator('.choix-btn',{hasText:'Non'}).click();
   const r=await page.evaluate(()=>{const p={lvl:'M',y:2026,m:6};return [agg(p,'pro').ca,agg(p,'perso').inc.rentrees]});
@@ -42,7 +42,7 @@ test('plus de comptable : ni rubrique, ni ligne dans la démo ; ancienne rubriqu
   await openWith(page,{schemaVersion:8,onboarded:true,accounts:[{id:'pr',name:'Pro',type:'pro',confirmed:true}],
     categories:[{id:'conseils',name:'Conseils et services',icon:'messages-square',type:'expense',univers:'pro'}],rules:{'CABINET DUPONT':'conseils'},
     ops:[{id:'1',date:'2026-06-10',label:'PRLV CABINET DUPONT',amount:-80,merchant:'CABINET DUPONT',acct:'pr'}]});
-  expect(await page.evaluate(()=>[!!catById('conseils'),S.rules['CABINET DUPONT'],S.schemaVersion])).toEqual([false,'pro',11]);
+  expect(await page.evaluate(()=>[!!catById('conseils'),S.rules['CABINET DUPONT'],S.schemaVersion])).toEqual([false,'pro',16]);
   const d=await page.evaluate(()=>demoData().ops.some(o=>/COMPTAB|INDY/.test(o.label)));
   expect(d).toBe(false);
   const h=(await import('fs')).readFileSync(new URL('../dist/mes-comptes.html',import.meta.url),'utf8');

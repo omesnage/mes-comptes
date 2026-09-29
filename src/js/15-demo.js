@@ -10,7 +10,10 @@ function demoData(){
   const ops=[], cats={}, st=blank();
   const pe=addAccountTo(st,{name:'Crédit Agricole',bank:'Crédit Agricole',type:'perso',confirmed:true});
   const pr=addAccountTo(st,{name:'Qonto',bank:'Qonto',type:'pro',confirmed:true});
-  const add=(k,day,label,amount,cat,acct,x)=>{const o={id:'d'+ops.length,date:date(k,day),label,amount:+amount.toFixed(2),merchant:merchantOf(label),acct:acct||pe.id,...(x||{})};ops.push(o);if(cat&&!cats[o.merchant])cats[o.merchant]=cat;return o};
+  const add=(k,day,label,amount,cat,acct,x)=>{
+    if(SAL&&acct===pr.id) return null;
+    if(SAL&&label==='VIR SEPA RECU DE QONTO'){label='VIR SALAIRE ATELIER MARTIN';cat='salaire';amount=amount+300}
+    const o={id:'d'+ops.length,date:date(k,day),label,amount:+amount.toFixed(2),merchant:merchantOf(label),acct:acct||pe.id,...(x||{})};ops.push(o);if(cat&&!cats[o.merchant])cats[o.merchant]=cat;return o};
   /* Encaissements mensuels, du plus ancien (k=11) au mois affiché (k=0) : un creux, un record, un mois faible juste avant */
   const CA=[3800,4600,2900,5100,1900,4200,7400,3300,5200,3600,2400,4300];
   const CLIENTS=['ATELIER NORD','STUDIO MAREE','LIBRAIRIE DES QUAIS','CABINET ROLLAND'];
@@ -21,14 +24,14 @@ function demoData(){
     add(k,3,'PRLV SEPA OVH CLOUD',-23.99,'logiciels',pr.id);
     add(k,8,'PRLV SEPA ADOBE SYSTEMS',-71.99,'logiciels',pr.id);
     add(k,27,'FRAIS TENUE DE COMPTE QONTO',-11,'frais',pr.id);
-    if(k%3===1) add(k,15,'CB LDLC',-vary(260,.4),'materiel',pr.id);
+    if(k%3===1) add(k,15,'CB LDLC',-vary(260,.4),'logiciels',pr.id);
     if(k===8) add(k,14,'PRLV SEPA DGFIP CFE',-356,'impots',pr.id);
     const remu=ca<3000?1400:2000;
     add(k,1,'VIR SEPA EMIS VERS O MARTIN PERSO',-remu,null,pr.id);
     add(k,2,'VIR SEPA RECU DE QONTO',remu,null,pe.id);
     /* Foyer */
     add(k,5,'PRLV SEPA LOYER SCI OCEAN',-820,'logement');
-    add(k,11,'PRLV SEPA EDF CLIENTS PARTICULIERS',-vary(k>2&&k<8?118:78,.08),'energie');
+    add(k,11,'PRLV SEPA EDF CLIENTS PARTICULIERS',-vary(k>2&&k<8?118:78,.08),'logement');
     add(k,7,'PRLV SEPA FREE MOBILE',-19.99,'abonnements');
     add(k,9,'PRLV SEPA NETFLIX.COM',-13.49,'abonnements');
     add(k,13,'PRLV SEPA SPOTIFY',k>=3?-10.99:-12.99,'abonnements');
@@ -60,9 +63,10 @@ function demoData(){
   add(2,10,'CB AMAZON PAYMENTS',-89.9,null,pe.id,{awaiting:true});
   st.ops=ops.sort((a,b)=>a.date<b.date?1:-1);
   st.rules=cats;
+  if(SAL){ st.accounts=st.accounts.filter(a=>a.id!==pr.id); for(const m in cats) if(!st.categories.some(c=>c.id===cats[m])) delete cats[m] }
   /* Limites réalistes : vacances dépassées (location d'été), sorties proches de la limite, shopping et cadeaux dans les clous */
   const li={shopping:[1200,'Y'],loisirs:[150,'M'],voyages:[2500,'Y'],cadeaux:[500,'Y']}; for(const id in li) st.categories.find(c=>c.id===id).limite={montant:li[id][0],per:li[id][1]};
-  const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
+  const pa=st.accounts.find(a=>a.id===pr.id); if(pa){pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01'}
   st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);
   /* Défi du mois dernier sur les courses (réussi) ; celui du mois en cours sera proposé */

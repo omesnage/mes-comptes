@@ -27,7 +27,7 @@ const V1={
   champFutur:{garde:true}
 };
 function checkMigrated(s){
-  expect(s.schemaVersion).toBe(11);
+  expect(s.schemaVersion).toBe(16);
   expect(s.ops).toHaveLength(6);
   expect(s.accounts.map(a=>[a.name,a.type,a.confirmed]).sort()).toEqual([['Compte principal','perso',false],['Crédit Agricole','perso',false],['Qonto pro','pro',false]]);
   const ids=new Set(s.accounts.map(a=>a.id));
@@ -37,7 +37,7 @@ function checkMigrated(s){
   const c=Object.fromEntries(s.categories.map(x=>[x.id,x]));
   expect(c.pro).toMatchObject({type:'expense',univers:'pro',name:'Autres frais de l’activité'});
   expect(c.courses.name).toBe('Courses');
-  expect(c.energie).toMatchObject({univers:'perso'});
+  expect(c.energie).toBeUndefined(); expect(c.logement).toMatchObject({univers:'perso',name:'Logement et énergie'});
   expect(c.c_form).toMatchObject({type:'expense',univers:'pro',name:'Formations',custom:true});
   expect(c.c_atel).toMatchObject({type:'expense',univers:'perso',budget:50});
   expect(c.c_loc).toMatchObject({type:'income',univers:'auto'});
@@ -98,7 +98,7 @@ test('vraies données produites par l’ancienne version de l’application',asy
   // 2. La nouvelle version ouvre les mêmes données
   await page.goto(APP); await page.waitForSelector('nav.tabs button');
   const s=await page.evaluate(()=>S);
-  expect(s.schemaVersion).toBe(11);
+  expect(s.schemaVersion).toBe(16);
   expect(s.ops.length).toBe(v1.ops.length);
   expect(s.rules).toEqual({...v1.rules,'URSSAF|-':'cotisations'});
   expect(s.settings).toMatchObject({taux:25,heuresSemaine:35});
@@ -116,5 +116,41 @@ test('heures : l’ancien réglage par défaut (140 h puis 160 h par mois) devie
 test('v3 → v4 : un nom de rubrique personnalisé est gardé, les noms par défaut sont simplifiés',async({page})=>{
   await openWith(page,{schemaVersion:3,ops:[{id:'1',date:'2026-06-01',label:'CB X',amount:-5,merchant:'X',acct:'a'}],accounts:[{id:'a',name:'A',type:'perso',confirmed:true}],
     categories:[{id:'resto',name:'Mes restos',icon:'utensils',type:'expense',univers:'perso'},{id:'frais',name:'Frais bancaires',icon:'landmark',type:'expense',univers:'auto'}]});
-  expect(await page.evaluate(()=>[catById('resto').name,catById('frais').name,S.schemaVersion,S.onboarded])).toEqual(['Mes restos','Banque',11,true]);
+  expect(await page.evaluate(()=>[catById('resto').name,catById('frais').name,S.schemaVersion,S.onboarded])).toEqual(['Mes restos','Banque',16,true]);
+});
+
+test('v11 → v12 : « Transports » devient « Voiture et déplacements »',async({page})=>{
+  await openWith(page,{schemaVersion:11,onboarded:true,categories:[{id:'transport',name:'Transports',icon:'car',type:'expense',univers:'perso'}]});
+  expect(await page.evaluate(()=>catById('transport').name)).toBe('Voiture et déplacements');
+});
+
+test('v11 → v12 : un nom de rubrique personnalisé est gardé',async({page})=>{
+  await openWith(page,{schemaVersion:11,onboarded:true,categories:[{id:'transport',name:'Ma bagnole',icon:'car',type:'expense',univers:'perso'}]});
+  expect(await page.evaluate(()=>catById('transport').name)).toBe('Ma bagnole');
+});
+
+test('v12 → v13 : énergie, enfants et matériel fusionnés sans rien perdre ; « Autres » devient « Espèces et divers »',async({page})=>{
+  const cat=(id,name,univers,limite)=>({id,name,icon:'tag',type:'expense',univers,limite:limite||null});
+  await openWith(page,{schemaVersion:12,onboarded:true,
+    accounts:[{id:'a',name:'Mixte',type:'mixte',confirmed:true}],
+    categories:[cat('logement','Logement','perso',{montant:600,per:'M'}),cat('energie','Énergie','perso',{montant:100,per:'M'}),cat('enfants','Enfants','perso'),cat('cadeaux','Cadeaux','perso'),
+      cat('logiciels','Logiciels et outils','pro'),cat('materiel','Matériel et fournitures','pro'),cat('cotisations','Versements','pro'),cat('impots','Impôts de l’activité','pro'),cat('divers','Autres','perso')],
+    rules:{EDF:'energie',CRECHE:'enfants',LDLC:'materiel',CFE:'impots',ADOBE:'logiciels'},sugg:{ENGIE:{c:'energie',src:'kw'}},
+    challenges:[{id:'auto',key:'d_1',month:'2026-05',cat:'energie',limite:100,habitude:120}],
+    ops:[{id:'1',date:'2026-05-03',label:'PRLV EDF',amount:-90,merchant:'EDF',acct:'a',cat:'energie'},{id:'2',date:'2026-05-04',label:'CB LDLC',amount:-200,merchant:'LDLC',acct:'a'}]});
+  const r=await page.evaluate(()=>({ids:S.categories.map(c=>c.id),rules:S.rules,sugg:S.sugg.ENGIE.c,cat:S.ops[0].cat,def:S.challenges[0].cat,lim:catById('logement').limite,
+    noms:['logement','cadeaux','logiciels','divers'].map(i=>catById(i).name),typeLDLC:catOf(S.ops[1])}));
+  for(const gone of ['energie','enfants','materiel']) expect(r.ids).not.toContain(gone);
+  expect(r.rules).toEqual({EDF:'logement',CRECHE:'cadeaux',LDLC:'logiciels',CFE:'impots',ADOBE:'logiciels'});
+  expect(r.sugg).toBe('logement'); expect(r.cat).toBe('logement'); expect(r.def).toBe('logement'); expect(r.typeLDLC).toBe('logiciels');
+  expect(r.lim).toEqual({montant:700,per:'M'});
+  expect(r.noms).toEqual(['Logement et énergie','Cadeaux','Logiciels et matériel','Espèces et divers']);
+});
+
+test('v13 → v14 : un prélèvement CESU rangé en cotisations redevient à classer, les vraies cotisations restent',async({page})=>{
+  await openWith(page,{schemaVersion:13,onboarded:true,accounts:[{id:'a',name:'Mixte',type:'mixte',confirmed:true}],
+    rules:{'URSSAF RHONE ALPES CESU|-':'cotisations','URSSAF PAYS DE LA LOIRE|-':'cotisations'},
+    ops:[{id:'1',date:'2026-01-05',label:'PRLV URSSAF RHONE ALPES CESU',amount:-80,merchant:'URSSAF RHONE ALPES CESU',acct:'a'},
+         {id:'2',date:'2026-01-06',label:'PRLV URSSAF PAYS DE LA LOIRE',amount:-300,merchant:'URSSAF PAYS DE LA LOIRE',acct:'a'}]});
+  expect(await page.evaluate(()=>[catOf(S.ops[0]),catOf(S.ops[1])])).toEqual([null,'cotisations']);
 });

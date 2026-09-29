@@ -61,3 +61,42 @@ test('Accueil : ce que vous avez dépensé et balance du mois ; objectif par dé
   const v=await page.evaluate(()=>{const n=agg(P,'pro').revenuNet,R=aggRaw(P),pe=agg(P,'perso');return signed(n+R.perso.income-pe.net)});
   expect(await b.locator('.ligne.total b').textContent()).toBe(v);
 });
+
+test('BforBank : le même relevé importé deux fois n’ajoute rien et ne change aucun total',async({page})=>{
+  const f=await bforbank(path.join(os.tmpdir(),'releve-bforbank.pdf'));
+  await openWith(page,null); await importer(page,f);
+  await expect(page.locator('.releve').first()).toContainText('Relevé vérifié ✓');
+  const avant=await page.evaluate(()=>({n:S.ops.length,somme:Math.round(S.ops.reduce((s,o)=>s+o.amount,0)*100)/100}));
+  await importer(page,f);
+  await expect(page.locator('.releve').first()).toContainText('déjà importé');
+  const apres=await page.evaluate(()=>({n:S.ops.length,somme:Math.round(S.ops.reduce((s,o)=>s+o.amount,0)*100)/100}));
+  expect(avant.n).toBe(8);
+  expect(apres).toEqual(avant);
+});
+
+test('une dépense n’est jamais suggérée en encaissement ; « PAIEMENT » et « CAFE » ne sont pas des revenus',async({page})=>{
+  await openWith(page,null);
+  const r=await page.evaluate(()=>[
+    kwSuggest('X','PAIEMENT PAR CARTE MACHIN INCONNU','mixte',-30),
+    kwSuggest('X','PRLV HONORAIRES COMPTABLE','pro',-200),
+    kwSuggest('X','VIR CAF LOIRE ATLANTIQUE','mixte',150),
+    kwSuggest('X','VIR SALAIRE MARS','perso',2000)]);
+  expect(r).toEqual([null,null,'revenus','revenus']);
+});
+
+test('prélèvement de la caisse sociale pour un CESU : pas une cotisation, proposé en dépense du foyer',async({page})=>{
+  await openWith(page,null);
+  const r=await page.evaluate(()=>[autoCatOf('PRLV SEPA URSSAF RHONE ALPES CESU','perso',-80),autoCatOf('PRLV SEPA URSSAF RHONE ALPES','perso',-300),
+    kwSuggest('URSSAF RHONE ALPES CESU','PRLV SEPA URSSAF RHONE ALPES CESU','mixte',-80)]);
+  expect(r).toEqual([null,'cotisations','maison']);
+});
+
+test('compte supposé perso : « SARL » ou « SAS » dans le nom d’un commerçant ne le fait pas passer en pro',async({page})=>{
+  await openWith(page,null);
+  const r=await page.evaluate(()=>[
+    guessType('BforBank','05/01/2026 VIREMENT AMAZON BUSINESS EU SARL-SUCCURSALE 15/01/2026 PAIEMENT PAR CARTE SAS L ETALE','Compte'),
+    guessType('','Relevé de votre compte professionnel','Compte'),
+    guessType('','Micro-entrepreneur Jean Dupont','Compte'),
+    guessType('Qonto','','Compte')]);
+  expect(r).toEqual(['perso','pro','pro','pro']);
+});

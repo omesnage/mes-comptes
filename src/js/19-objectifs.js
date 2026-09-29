@@ -15,7 +15,7 @@ function vObjectifs(){
   const perso=S.categories.filter(c=>c.type==='expense'&&c.univers!=='pro');
   const tete=LIMITES_TETE.map(catById).filter(Boolean), autres=perso.filter(c=>!LIMITES_TETE.includes(c.id));
   return `<h2 class="titre-page">Mes objectifs</h2>
-  <section class="carte" id="objectif"><h3>Mon objectif</h3>
+  ${SAL?'':`  <section class="carte" id="objectif"><h3>Mon objectif</h3>
     ${champ('netVise','Ce que je veux gagner par mois (€)','Ce que vous voulez vous verser chaque mois, une fois tout payé.',{step:50})}
     ${champ('heuresSemaine','Mes heures de travail par semaine','Tout compris : clients, prospection, devis, administratif, formation, déplacements.',{max:100})}
     ${champ('taux','Part à garder de côté pour mes cotisations et impôts (%)',CONSEIL_TAUX,{id:'taux-champ',max:80,dec:1})}
@@ -27,7 +27,7 @@ function vObjectifs(){
       ${champ('nonFacture','Part du temps non facturé (%)','Prospection, devis, administratif, formation, déplacements : du temps travaillé que personne ne vous paie.',{max:90})}
       ${champ('epRetraite','Épargne et retraite à constituer vous-même (%)','Un salarié les a déjà dans son salaire ; vous, vous devez les mettre de côté vous-même.',{max:90})}
       ${champ('hJour','Si vous facturez à la journée : combien d’heures compte une journée ?',(j=>`Sert seulement à calculer votre prix à la journée, à partir de votre prix à l’heure${j?` (par exemple ${eur0(j.heure)} × ${nb(hJour())} h = ${eur0(j.heure*hJour())} la journée)`:''}.`)(justePrix()),{max:24})}
-    </details></section>
+    </details></section>`}
   <section class="carte" id="limites"><h3>Mes limites de dépenses</h3>
     <p class="aide">Indiquez un montant pour les rubriques que vous voulez surveiller, par mois, par trimestre ou par an. Laissez vide pour ne pas fixer de limite.</p>
     ${tete.map(ligneLimite).join('')}

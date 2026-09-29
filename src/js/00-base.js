@@ -1,45 +1,51 @@
 /* ============ Données de base ============ */
-const SCHEMA=11;
+/* Version salariés : rien de ce qui concerne une activité indépendante (le build remplace false par true) */
+const SAL=/*@SAL*/false;
+const SCHEMA=16;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
- ['logement','Logement','house','expense','perso',1],
- ['energie','Énergie','zap','expense','perso',1],
+ ['logement','Logement et énergie','house','expense','perso',1],
  ['courses','Courses','shopping-basket','expense','perso'],
  ['resto','Restaurants et cafés','utensils','expense','perso'],
- ['transport','Transports','car','expense','perso'],
+ ['transport','Voiture et déplacements','car','expense','perso'],
  ['abonnements','Abonnements et téléphone','smartphone','expense','auto',1],
  ['sante','Santé','heart-pulse','expense','perso'],
+ ['mutuelle','Mutuelle','shield-plus','expense','perso',1],
  ['loisirs','Sorties et loisirs','ticket','expense','perso'],
  ['shopping','Vêtements et shopping','shirt','expense','perso'],
  ['maison','Maison et équipement','sofa','expense','perso'],
- ['enfants','Enfants','baby','expense','perso'],
  ['animaux','Animaux','paw-print','expense','perso'],
  ['cadeaux','Cadeaux','gift','expense','perso'],
  ['voyages','Vacances et séjours','luggage','expense','perso'],
  ['frais','Banque','landmark','expense','auto',1],
  ['impotsfoyer','Impôts et taxes du foyer','receipt','expense','perso',1],
  ['pret','Remboursement d’emprunt','banknote','expense','perso',1],
- ['divers','Autres','circle-dashed','expense','auto'],
- ['logiciels','Logiciels et outils','app-window','expense','pro'],
- ['materiel','Matériel et fournitures','monitor','expense','pro'],
+ ['divers','Espèces et divers','circle-dashed','expense','auto'],
+ ['logiciels','Logiciels et matériel','app-window','expense','pro'],
  ['deplacements','Déplacements de l’activité','train-front','expense','pro'],
+ ['communication','Communication','megaphone','expense','pro'],
+ ['compta','Comptabilité','calculator','expense','pro'],
+ ['mutuellepro','Mutuelle et prévoyance','shield-plus','expense','pro',1],
  ['soustraitance','Sous-traitance','handshake','expense','pro'],
- ['cotisations','Versements de ce qui est mis de côté','piggy-bank','expense','pro'],
- ['impots','Impôts de l’activité','receipt-text','expense','pro'],
+ ['cotisations','Charges sociales','piggy-bank','expense','pro'],
+ ['impots','Taxes, TVA et impôts','receipt-text','expense','pro'],
  ['empruntpro','Remboursement d’emprunt de l’activité','banknote','expense','pro',1],
  ['pro','Autres frais de l’activité','briefcase','expense','pro'],
  ['remb','Remboursements','rotate-ccw','expense','auto'],
+ ['salaire','Salaire','wallet','income','perso'],
  ['rentrees','Autres rentrées','hand-coins','income','perso'],
  ['retraite','Retraite et pensions','armchair','income','perso'],
  ['revenus','Revenus et encaissements','arrow-down-left','income','auto'],
  ['remu','Votre rémunération','arrow-left-right','remu','auto'],
  ['epargne','Épargne et placements','vault','transfer','auto'],
  ['interne','Virements entre vos comptes','repeat','transfer','auto']
-].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,limite:null,fixed:!!fixed}));
+].filter(([id,,,,univers])=>SAL?univers!=='pro'&&!['revenus','remu'].includes(id):id!=='salaire').map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,limite:null,fixed:!!fixed}));
 /* Anciens noms par défaut, remplacés par les nouveaux lors de la migration (un nom personnalisé est gardé) */
 const OLD_NAMES={courses:'Courses alimentaires',resto:'Restaurants & cafés',transport:'Transport & carburant',logement:'Logement & énergie',sante:'Santé',abonnements:'Abonnements & téléphonie',loisirs:'Loisirs & culture',shopping:'Shopping',frais:'Frais bancaires',pret:'Remboursement de prêt',logiciels:'Logiciels & outils',materiel:'Matériel & fournitures',deplacements:'Déplacements professionnels',soustraitance:'Sous-traitance',cotisations:'Cotisations sociales',impots:'Impôts sur l’activité',pro:'Autres frais professionnels',remb:'Remboursements',rentrees:'Rentrées d’argent',revenus:'Revenus',remu:'Rémunération (pro vers perso)',interne:'Virements internes',divers:'Divers'};
 /* Rubriques qui correspondent au paiement de la provision (cotisations, impôts) */
+/* Rubriques fusionnées au schéma 13 : ancienne → celle qui l'absorbe */
+const FUSIONS_V13={energie:'logement',enfants:'cadeaux',materiel:'logiciels'};
 const PROV_CATS=new Set(['cotisations','impots']);
 const typeOf=id=>(S.categories.find(c=>c.id===id)||{}).type||'expense';
 /* Remboursement d'emprunt : reconnu sans rien demander */
@@ -47,6 +53,8 @@ const LOAN_RE=/\b(ECHEANCES? (DE )?PRETS?|ECH\.? PRETS?|REMBOURSEMENTS? (DE )?PR
 /* Cotisations sociales : toujours une cotisation déjà payée (jamais une dépense perso).
    Les caisses de retraite des indépendants prélèvent des cotisations et versent des pensions. */
 const COTIS_RE=/\bURS{2}AF\b|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/;
+/* Chèque emploi service : les prélèvements de la caisse sociale portant ce mot sont une dépense du foyer (aide à domicile), pas des cotisations */
+const CESU_RE=/\bCESU\b|CHEQUE EMPLOI|PAJEMPLOI/;
 const CAISSES_RE=/\b(CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|IRCEC)\b/;
 /* Épargne et placements : ni une dépense ni une rentrée, dans un sens comme dans l'autre */
 const EPARGNE_RE=/\b(GENERALI VIE|ASSURANCES? ?VIE|PLACEMENTS?|LIVRETS?|LDDS?|LEP|PEA|PER|PERP|PERIN|PLAN (D )?EPARGNE|EPARGNE|COMPTE A TERME|LINXEA|YOMONI|NALO|SPIRICA|SURAVENIR)\b/;
@@ -55,13 +63,14 @@ const RETRAITE_RE=/\b(RETRAITES?|CARSAT|CNAV|IRCEC|AGIRC|ARRCO|CAISSE D.?ASSURAN
 function autoCatOf(label,atype,amount){
   const t=norm(label||'');
   if(LOAN_RE.test(t))return atype==='pro'?'empruntpro':'pret';
-  if(COTIS_RE.test(t))return 'cotisations';
-  if(CAISSES_RE.test(t)&&amount<0)return 'cotisations';
+  if(!SAL&&COTIS_RE.test(t)&&!CESU_RE.test(t))return 'cotisations';
+  if(!SAL&&CAISSES_RE.test(t)&&amount<0)return 'cotisations';
   if(EPARGNE_RE.test(t.replace(/CAISSE D.?EPARGNE/g,'')))return 'epargne';
+  if(SAL&&amount>0&&/\bSALAIRE\b|\bPAIE\b/.test(t))return 'salaire';
   if(RETRAITE_RE.test(t)&&amount>0)return 'retraite';
   const b=brandOf(label);if(b&&b[2])return b[2];return null}
 /* Rubriques reconnues d'office qui dépendent du sens (rentrée ou dépense) */
-const AUTO_SENS=new Set(['retraite','cotisations']);
+const AUTO_SENS=new Set(['retraite','cotisations','salaire']);
 /* Pose la règle reconnue d'office, sauf si une règle existe déjà pour ce marchand. Renvoie true si elle a été posée. */
 function appliqueAuto(o,atype){
   const c=autoCatOf(o.label,atype,o.amount); if(!c) return false;
@@ -72,31 +81,34 @@ function appliqueAuto(o,atype){
 /* Mots-clés toujours professionnels, quel que soit le compte */
 const KW_PRO=[
  [/\bURS{2}AF\b|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|IRCEC|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
- [/EXPERT.?COMPTA|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE|AVOCAT|NOTAIRE/,'pro']
+ [/EXPERT.?COMPTA|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE/,'compta'],
+ [/INFOGREFFE|GREFFE|AVOCAT|NOTAIRE/,'pro']
 ];
 /* Mots-clés professionnels seulement sur un compte pro */
 const KW_PROACC=[
+ [/MUTUELLE|PREVOYANCE/,'mutuellepro'],
  [/OVH|ADOBE|CANVA|NOTION|SLACK|GOOGLE WORKSPACE|GSUITE|MICROSOFT|SQUARESPACE|\bWIX\b|SHOPIFY|DROPBOX|ANTHROPIC|CLAUDE|OPENAI|FIGMA|\bZOOM\b|CALENDLY|MAILCHIMP|BREVO|GANDI|IONOS/,'logiciels'],
- [/LDLC|MATERIEL NET|BOULANGER|BUREAU VALLEE|OFFICE DEPOT|APPLE STORE|RAJA|MANUTAN/,'materiel'],
+ [/LDLC|MATERIEL NET|BOULANGER|BUREAU VALLEE|OFFICE DEPOT|APPLE STORE|RAJA|MANUTAN/,'logiciels'],
  [/SNCF|OUIGO|AIR FRANCE|EASYJET|RYANAIR|HOTEL|BOOKING|AIRBNB|IBIS|NOVOTEL/,'deplacements']
 ];
 const KW=[
- [/PRLV.*TOTALENERGIES|\bEDF\b|ENGIE|VEOLIA|SAUR|GRDF|EAU DE|EKWATEUR|ENERCOOP|OHM ENERGIE|MINT ENERGIE/,'energie'],
+ [/PRLV.*TOTALENERGIES|\bEDF\b|ENGIE|VEOLIA|SAUR|GRDF|EAU DE|EKWATEUR|ENERCOOP|OHM ENERGIE|MINT ENERGIE/,'logement'],
  [/LOYER|SYNDIC|FONCIA|NEXITY|ASSURANCE HABITATION/,'logement'],
  [/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|TAXE FONCIERE|TAXE HABITATION/,'impotsfoyer'],
  [/IKEA|LEROY MERLIN|CASTORAMA|BRICO|MAISONS DU MONDE|CONFORAMA|DARTY|BUT\b|GIFI|ACTION\b/,'maison'],
- [/JOUE CLUB|KING JOUET|CRECHE|CANTINE|OKAIDI|CYRILLUS|VERTBAUDET|AUBERT|PERISCOLAIRE/,'enfants'],
+ [/JOUE CLUB|KING JOUET/,'cadeaux'],
  [/VETERINAIRE|\bVETO\b|ANIMALERIE|MAXI ZOO|ZOOPLUS|CROQUETTES/,'animaux'],
  [/BOOKING|AIRBNB|HOTEL|EASYJET|RYANAIR|AIR FRANCE|VOLOTEA|TRANSAVIA|CLUB MED|VACANCES/,'voyages'],
  [/CARREFOUR|LECLERC|INTERMARCHE|LIDL|AUCHAN|SUPER U|HYPER U|MONOPRIX|FRANPRIX|BIOCOOP|CASINO|ALDI|NETTO|SPAR|PICARD|GRAND FRAIS|PRIMEUR|BOUCHERIE|FROMAGER|NATURALIA|LA VIE CLAIRE/,'courses'],
  [/RESTAU|BRASSERIE|CAFE|BISTRO|BOULANGERIE|PATISS|MCDO|MC DONALD|BURGER|KFC|SUSHI|PIZZ|CREPERIE|UBER EATS|DELIVEROO|STARBUCKS|TRAITEUR/,'resto'],
  [/TOTAL|ESSO|SHELL|AVIA|STATION|SNCF|OUIGO|RATP|UBER|BOLT|BLABLACAR|AUTOROUTE|VINCI|APRR|SANEF|ASF|PARKING|INDIGO|PEAGE|LIME/,'transport'],
- [/PHARMA|DOCTEUR|MEDECIN|DENTISTE|KINE|OPTIC|LABO|HOPITAL|CLINIQUE|CPAM|MUTUELLE|AMELI|DOCTOLIB/,'sante'],
+ [/PHARMA|DOCTEUR|MEDECIN|DENTISTE|KINE|OPTIC|LABO|HOPITAL|CLINIQUE|CPAM|AMELI|DOCTOLIB/,'sante'],
+ [/MUTUELLE|PREVOYANCE/,'mutuelle'],
  [/FREE MOBILE|FREE|ORANGE|SFR|BOUYGUES|SOSH|NETFLIX|SPOTIFY|DEEZER|DISNEY|CANAL|APPLE|ITUNES|GOOGLE|ADOBE|MICROSOFT|AMAZON PRIME|PRIME VIDEO|ANTHROPIC|CLAUDE|OPENAI|SQUARESPACE|DROPBOX/,'abonnements'],
  [/CINEMA|PATHE|GAUMONT|UGC|THEATRE|MUSEE|CONCERT|LIBRAIRIE|CULTURA|STEAM|PLAYSTATION|BILLET/,'loisirs'],
  [/AMAZON|FNAC|DECATHLON|ZARA|UNIQLO|SEPHORA|ETSY|VINTED|ZALANDO|H&M|KIABI|CELIO|JULES/,'shopping'],
  [/FRAIS TENUE|COTIS(ATION)? (CARTE|CB)|COMMISSION|AGIOS|INTERETS DEB|FRAIS BANCAIRES/,'frais'],
- [/SALAIRE|PAIE|HONORAIRES|CAF|FRANCE TRAVAIL|POLE EMPLOI/,'revenus'],
+ [/SALAIRE|\bPAIE\b|HONORAIRES|\bCAF\b|FRANCE TRAVAIL|POLE EMPLOI/,'revenus'],
  [/RETRAIT ESPECES/,'divers']
 ];
 
@@ -151,9 +163,11 @@ const acctById=id=>S.accounts.find(a=>a.id===id);
 const acctOf=o=>o.acct||'';
 const acctName=id=>(acctById(id)||{}).name||'Compte principal';
 const acctType=o=>(acctById(o.acct)||{}).type||'perso';
-function addAccount(x){const a={id:newId('a_'),name:x.name||'Compte principal',bank:x.bank||'',no:x.no||'',type:x.type||'perso',confirmed:!!x.confirmed,solde:null,soldeDate:''};S.accounts.push(a);stateDirty=true;return a}
-const PRO_HINT=/\b(SASU?|SARL|EURL|SELARL|SELAS|SCP|SCM|ENTREPRISE INDIVIDUELLE|MICRO[- ]?ENTREPRENEUR|MICRO[- ]?ENTREPRISE|AUTO[- ]?ENTREPRENEUR|COMPTE PROFESSIONNEL|COMPTE PRO|CPTE PRO|CONVENTION PRO|OFFRE PRO|ESPACE PRO|EI)\b/;
+function addAccount(x){const a={id:newId('a_'),name:x.name||'Compte principal',bank:x.bank||'',no:x.no||'',type:SAL?'perso':x.type||'perso',confirmed:SAL||!!x.confirmed,solde:null,soldeDate:''};S.accounts.push(a);stateDirty=true;return a}
+/* Seulement des mentions explicites d'un compte professionnel : une forme juridique seule (SARL, SAS…) figure aussi dans le nom des commerçants des premières lignes du relevé */
+const PRO_HINT=/\b(MICRO[- ]?ENTREPRENEUR|MICRO[- ]?ENTREPRISE|AUTO[- ]?ENTREPRENEUR|ENTREPRISE INDIVIDUELLE|COMPTE PROFESSIONNEL|COMPTE PRO|CPTE PRO|CONVENTION PRO|OFFRE PRO|ESPACE PRO)\b/;
 function guessType(bank,headerText,name){
+  if(SAL) return 'perso';
   if(S.settings&&S.settings.compteUnique===true) return 'mixte';
   if(['Qonto','Shine'].includes(bank)) return 'pro';
   if(PRO_HINT.test(norm(headerText||''))) return 'pro';

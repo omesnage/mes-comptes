@@ -74,3 +74,27 @@ test('l’année en revue est proposée en décembre et en janvier',async({page}
   await page.evaluate(()=>{P={lvl:'M',y:2026,m:5};render()});
   await expect(page.locator('.revue')).toHaveCount(0);
 });
+
+test('Accueil : Mois, Trimestre, Année ; les chiffres sont la somme des mois et les flèches avancent d’une période',async({page})=>{
+  await openWith(page,null);
+  await page.click('[data-act="demo"]');
+  const seg=page.locator('.seg [data-alvl]');
+  await expect(seg).toHaveText(['Mois','Trimestre','Année']);
+  const r=await page.evaluate(()=>{
+    const s=x=>{const p={...P,lvl:x};return agg(p,'perso').net};
+    const m=[0,1,2].map(i=>agg(shift({...P,lvl:'M'},-i),'perso').net);
+    return {p:P.m,y:P.y,q:s('Q'),y2:s('Y')}});
+  await page.click('[data-alvl="Q"]');
+  await expect(page.locator('.mois h2')).toContainText('trimestre');
+  const q=await page.evaluate(()=>agg({...P,lvl:'Q'},'perso').net);
+  await expect(page.locator('.carte.argent .phrase')).toContainText(String(Math.round(q)).replace(/\B(?=(\d{3})+(?!\d))/g,' ').slice(0,1));
+  const avant=await page.locator('.mois h2').textContent();
+  await page.click('[data-ashift="-1"]');
+  expect(await page.locator('.mois h2').textContent()).not.toBe(avant);
+  await page.click('[data-alvl="Y"]');
+  await expect(page.locator('.mois h2')).toHaveText(/^\d{4}$/);
+  await expect(page.locator('.balance')).toContainText('Balance de l’année');
+  await page.click('[data-alvl="M"]');
+  await expect(page.locator('.balance')).toContainText('Balance du mois');
+  expect(r.q).toBeGreaterThan(0);
+});

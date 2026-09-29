@@ -33,11 +33,12 @@ const lienRecherche=label=>{const q=motsRecherche(label);return q?`<a class="lie
 /* Suggestion de rubrique d'après le libellé et le type du compte (perso, pro ou mixte) */
 function kwSuggest(m,label,atype,amount){
   const t=norm(m+' '+label);
+  if(amount<0&&CESU_RE.test(t)) return 'maison';
   if(atype==='pro'&&amount<0&&/\b(VIR|VIREMENT)\b/.test(t)&&/\b(PERSO|PERSONNEL|REMUNERATION|PRELEVEMENT EXPLOITANT)\b/.test(t)) return 'remu';
-  if(/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|\bCFE\b/.test(t)&&atype!=='perso') return 'impots';
-  for(const [re,c] of KW_PRO) if(re.test(t)) return c;
-  if(atype==='pro') for(const [re,c] of KW_PROACC) if(re.test(t)) return c;
-  for(const [re,c] of KW) if(re.test(t)) return c==='revenus'&&atype==='perso'&&/HONORAIRES/.test(t)?'revenus':c;
+  if(/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|\bCFE\b|\bTVA\b/.test(t)&&atype!=='perso') return 'impots';
+  if(!SAL){for(const [re,c] of KW_PRO) if(re.test(t)) return c;
+  if(atype==='pro') for(const [re,c] of KW_PROACC) if(re.test(t)) return c}
+  for(const [re,c] of KW) if(re.test(t)){ if(SAL&&c==='revenus') return amount>0?(/SALAIRE|\bPAIE\b/.test(t)?'salaire':'rentrees'):null; if(amount<0&&typeOf(c)==='income') return null; return c }
   if(amount>0&&!REFUND_RE.test(t)) return atype==='perso'?'rentrees':'revenus';
   return null;
 }

@@ -5,7 +5,8 @@ function pendingGroups(){
   for(const o of S.ops){ if(catOf(o)) continue; sens[o.merchant]=(sens[o.merchant]||0)|(o.amount>0?2:1) }
   for(const o of S.ops){ if(catOf(o)) continue;
     const key=S.rules[o.merchant]||sens[o.merchant]===3?o.merchant+(o.amount>0?'|+':'|-'):o.merchant;
-    const e=g[key]||(g[key]={m:key,n:0,total:0,label:o.label,refunds:0,accts:[],credit:o.amount>0});
+    const e=g[key]||(g[key]={m:key,n:0,total:0,label:o.label,refunds:0,accts:[],ops:[],credit:o.amount>0});
+    e.ops.push(o);
     if(o.amount>0&&(LINK[o.id]||REFUND_RE.test(norm(o.label)))) e.refunds++;
     e.accts.push(o.acct); e.n++; e.total+=o.amount; }
   return Object.values(g).sort((a,b)=>b.n-a.n||Math.abs(b.total)-Math.abs(a.total));
@@ -14,6 +15,8 @@ const nbAVerifier=()=>pendingGroups().length+douteuxValides().length;
 function icons(){ if(window.lucide&&lucide.createIcons) lucide.createIcons({icons:lucide.icons,attrs:{'stroke-width':1.5}}) }
 const CAT_GROUPS=[['perso','Rubriques du foyer'],['auto','Rubriques communes'],['pro','Rubriques de l’activité'],['in','Rentrées et virements']];
 const catGroup=c=>c.type==='expense'?(c.univers||'perso'):'in';
+/* Rubriques de dépenses du foyer seulement : pour faire passer une dépense côté perso */
+function optionsPerso(){return S.categories.filter(c=>c.type==='expense'&&c.univers==='perso').map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}
 function catOptions(sel,withAuto,mark,nouvelle){
   return (withAuto?`<option value="">Selon la règle</option>`:'')+CAT_GROUPS.map(([g,l])=>{const cs=S.categories.filter(c=>catGroup(c)===g);return cs.length?`<optgroup label="${l}">${cs.map(c=>`<option value="${c.id}"${c.id===sel?' selected':''}>${esc(c.name)}${mark&&c.id===sel?mark:''}</option>`).join('')}</optgroup>`:''}).join('')+(nouvelle?'<option value="__new">+ Nouvelle rubrique…</option>':'');
 }
@@ -43,7 +46,7 @@ function render(){
 function libBanner(){return window.pdfjsLib&&window.XLSX?'':`<div class="note-box alerte-box" role="alert"><i data-lucide="wifi-off"></i><p>${MSG_RESEAU}</p></div>`}
 function privacyText(){return mode==='db'
   ?'Vos comptes sont privés : personne d’autre ne peut les voir, pas même la personne qui vous a transmis l’application.'
-  :'Vos comptes restent sur cet appareil : rien n’est envoyé ailleurs, et personne d’autre ne peut les voir.'}
+  :'Vos comptes restent sur cet appareil : rien n’est envoyé ailleurs, et personne d’autre ne peut les voir. Ils ne se retrouvent pas tout seuls sur un autre appareil (téléphone, ordinateur) : voir Réglages, « Vos données », pour les emporter avec vous.'}
 function privacyBox(){return `<div class="note-box" role="note"><i data-lucide="lock"></i><p>${privacyText()}</p></div>`}
 function vide(){
   return `<div class="vide"><h2>Ajoutez vos relevés pour commencer</h2><p>Téléchargez vos relevés de compte en PDF sur le site de votre banque, puis ajoutez-les ici.</p>
@@ -66,13 +69,22 @@ function acctAsk(a){
 function choixRubriques(x){
   const s=S.sugg[x.m.replace(/\|[+-]$/,'')]?.c, acc=[...new Set(x.accts.map(id=>(acctById(id)||{}).type||'perso'))];
   let ids;
-  if(x.credit) ids=['revenus','rentrees','retraite','remb','epargne'];
-  else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','soustraitance','pro'];
-  else ids=['courses','resto','transport','shopping','loisirs','voyages','cadeaux','maison','sante','epargne','divers'];
-  if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','loisirs','voyages','logiciels','materiel','pro','divers'];
+  if(x.credit) ids=SAL?['salaire','rentrees','retraite','remb','epargne']:['revenus','rentrees','retraite','remb','epargne'];
+  else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','communication','deplacements','compta','pro','divers'];
+  else ids=['courses','resto','transport','sante','shopping','loisirs','voyages','cadeaux','maison','divers'];
+  if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','maison','logiciels','pro','divers'];
   if(s) ids=[s,...ids.filter(i=>i!==s)];
-  const noms={revenus:'Encaissement de l’activité',rentrees:'Autre rentrée',remb:'Un remboursement'};
+  const noms={revenus:'Encaissement de l’activité',rentrees:'Autre rentrée',remb:'Un remboursement',...(x.credit?{epargne:'Retrait d’épargne'}:{})};
   return ids.filter(catById).map(id=>`<button class="choix-btn${id===s?' suggere':''}" data-qcat="${esc(x.m)}" data-c="${id}">${esc(noms[id]||catById(id).name)}</button>`).join('');
+}
+/* Toutes les lignes regroupées sous un même marchand (prélèvements, chèques…) : chacune peut aller dans sa propre rubrique */
+let LIGNES=new Set();
+function lignesGroupe(x){
+  if(x.n<2) return '';
+  return `<details class="autre lignes-groupe"${LIGNES.has(x.m)?' open':''}><summary>Voir les ${x.n} lignes une par une</summary>
+    <p class="aide">Choisissez une rubrique pour chaque ligne. Le choix ne vaut que pour cette ligne.</p>
+    ${x.ops.slice().sort((a,b)=>a.date<b.date?-1:1).map(o=>`<div class="ligne-grp"><p class="lg-t"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span> ${esc(o.label)} <b class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</b></p>
+      <select class="grand" data-opcat="${o.id}" data-gk="${esc(x.m)}" aria-label="Rubrique de cette ligne"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',false)}</select></div>`).join('')}</details>`;
 }
 function aVerifier(){
   const g=pendingGroups(), dv=douteuxValides(), n=g.length+dv.length; if(!n) return '';
@@ -85,11 +97,14 @@ function aVerifier(){
     <p class="q-s">${x.n>1?`${x.n} rentrées, ${eur(x.total)} au total`:`Rentrée de ${eur(x.total)}`}. ${esc(x.label)}</p>
     ${lienRecherche(x.label)}
     <p class="q-question">Cet argent vient-il d’un client ?</p>
-    <div class="choix gros"><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="revenus">Oui, c’est un client</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="rentrees">Non (CAF, vente, remboursement, virement perso…)</button></div></div>`:`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
+    ${lignesGroupe(x)}
+    <div class="choix gros"><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="revenus">Oui, c’est un client</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="rentrees">Non (CAF, vente, remboursement, virement perso…)</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="epargne">Retrait d’épargne</button></div></div>`:`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
     <p class="q-s">${x.n>1?`${x.n} ${x.credit?'rentrées':'dépenses'}, ${eur(Math.abs(x.total))} au total`:`${x.credit?'Rentrée de':'Dépense de'} ${eur(Math.abs(x.total))}`}. ${esc(x.label)}</p>
     ${lienRecherche(x.label)}
+    ${lignesGroupe(x)}
     <div class="choix">${choixRubriques(x)}</div>
-    <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details></div>`).join('')}
+    <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details>
+    ${!x.credit&&x.accts.some(id=>['pro','mixte'].includes(acctById(id)?.type))?`<details class="autre"><summary>Dépense perso</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique perso pour ${esc(x.m)}"><option value="">Dans quelle rubrique perso ?</option>${optionsPerso()}</select></details>`:''}</div>`).join('')}
   </section>`;
 }
 let HEURES=null;
@@ -113,11 +128,20 @@ function opLine(o,statique){
     <span class="op-l2">${o.date.slice(8,10)}/${o.date.slice(5,7)} · ${esc(nom)}${ACCN>1&&o.src!=='rev'?` · ${esc(acctName(o.acct))}`:''}</span>${x?`<span class="op-x">${esc(x)}</span>`:''}</${tag}>`;
   return hb?`<div class="op-bloc">${ligne}${hb}</div>`:ligne;
 }
+/* Somme de ce qui a été trouvé : dépensé, reçu, et le net si les deux existent. Les virements entre vos comptes ne comptent pas. */
+function totalRecherche(list){
+  const l=list.filter(o=>!(INTERNAL[o.id]&&!o.cat)); if(!l.length) return '';
+  const dep=l.filter(o=>o.amount<0).reduce((s,o)=>s-o.amount,0), rec=l.filter(o=>o.amount>0).reduce((s,o)=>s+o.amount,0), net=rec-dep;
+  return `<div class="total-recherche" id="total-recherche">
+    <div class="ligne"><span>${rec>0.005?'Dépensé':'Total dépensé'}</span><b>${dep>0.005?'−'+eur(dep):eur(0)}</b></div>
+    ${rec>0.005?`<div class="ligne"><span>Reçu ou remboursé</span><b>+${eur(rec)}</b></div>
+    <div class="ligne total"><span>Au final</span><b>${net<0?'−':'+'}${eur(Math.abs(net))}</b></div>`:''}</div>`;
+}
 function vOps(){
   const t=norm(q.trim()), k=P.y+'-'+pad(P.m);
   const list=t?S.ops.filter(o=>norm(o.label+' '+o.merchant).includes(t)):(BYMONTH[k]||[]).slice().sort((a,b)=>a.date<b.date?1:-1);
   return aVerifier()+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand" value="${esc(q)}" aria-label="Rechercher un marchand">
-  ${t?`<p class="aide">${list.length} opération${list.length>1?'s':''} trouvée${list.length>1?'s':''}, tous mois confondus.</p>`:moisBar()}
+  ${t?`<p class="aide">${list.length} opération${list.length>1?'s':''} trouvée${list.length>1?'s':''}, tous mois confondus.</p>${totalRecherche(list)}`:moisBar()}
   <div class="ops">${list.slice(0,300).map(opLine).join('')||'<p class="aide">Aucune opération.</p>'}</div>
   ${list.length>300?'<p class="aide">Seules les 300 plus récentes sont affichées.</p>':''}`;
 }
@@ -195,14 +219,46 @@ function relevesAjoutes(){
   const g=groupesImport(); if(!g.length) return '';
   const d=x=>x.slice(8,10)+'/'+x.slice(5,7)+'/'+x.slice(0,4);
   return `<details class="carte repli" id="mes-releves"><summary>Mes relevés ajoutés (${g.length})</summary>
-    <p class="aide">Un relevé ajouté par erreur ? Supprimez-le : ses opérations disparaissent, les rubriques que vous avez choisies sont gardées.</p>
+    <p class="aide">Un relevé rangé dans le mauvais compte ? Choisissez le bon compte : ses opérations y passent. Un relevé ajouté par erreur ? Supprimez-le : ses opérations disparaissent, les rubriques que vous avez choisies sont gardées.</p>
     ${g.map(e=>{const nom=(S.imports||{})[e.imp]?.nom||SRC_NOM[e.src]||'Relevé';
       return `<div class="releve-ajoute"><p><b>${esc(nom)}</b><br><span class="aide">${[...e.accts].map(a=>esc(acctName(a))).join(', ')} · du ${d(e.min)} au ${d(e.max)} · ${e.n} opération${e.n>1?'s':''}</span></p>
+      <label class="aide deplacer">Mauvais compte ? <select class="grand" data-moveimp="${e.imp}" aria-label="Changer le compte de ce relevé"><option value="">Choisir le bon compte…</option>${S.accounts.filter(a=>!(e.accts.size===1&&e.accts.has(a.id))).map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('')}<option value="__new">Un nouveau compte…</option></select></label>
       <button class="lien danger" data-delimp="${e.imp}">Supprimer</button></div>`}).join('')}</details>`;
+}
+/* Mois sans aucune opération entre le premier et le dernier mois connus d'un compte : un relevé a probablement été sauté */
+function moisManquants(acctId){
+  const vus=new Set(S.ops.filter(o=>o.acct===acctId&&o.src!=='rev').map(o=>o.date.slice(0,7)));
+  if(vus.size<2) return [];
+  const t=[...vus].sort(), [y0,m0]=t[0].split('-').map(Number), [y1,m1]=t[t.length-1].split('-').map(Number), out=[];
+  for(let y=y0,m=m0;y<y1||(y===y1&&m<=m1);m++){ if(m>12){m=1;y++} const k=y+'-'+String(m).padStart(2,'0'); if(!vus.has(k)&&(y<y1||m<=m1)) out.push(k) }
+  return out;
+}
+function phraseMoisManquants(mois){
+  const lab=(k,an)=>MOIS[+k.slice(5,7)-1]+(an?' '+k.slice(0,4):''), suivant=(a,b)=>{const [y,m]=a.split('-').map(Number);return b===(m===12?(y+1)+'-01':y+'-'+String(m+1).padStart(2,'0'))};
+  const runs=[]; for(const k of mois){const r=runs[runs.length-1]; if(r&&suivant(r[r.length-1],k)) r.push(k); else runs.push([k])}
+  const txt=runs.map(r=>{const an=r[0].slice(0,4)!==r[r.length-1].slice(0,4);
+    if(r.length===1) return lab(r[0],true);
+    if(r.length===2) return lab(r[0],an)+' et '+lab(r[1],true);
+    return 'de '+lab(r[0],an)+' à '+lab(r[r.length-1],true)});
+  const liste=txt.join(', puis ');
+  return `${mois.length>1?'Il manque des mois':'Il manque un mois'} : ${liste}.`;
+}
+function blocMoisManquants(){
+  const l=S.accounts.map(a=>({a,m:moisManquants(a.id)})).filter(x=>x.m.length);
+  if(!l.length) return '';
+  return `<section class="carte manque">${l.map(({a,m})=>`<p class="r-alerte"><b>${esc(a.name)}</b> — ${phraseMoisManquants(m)} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`).join('')}</section>`;
+}
+function choixTypeImport(){
+  if(SAL) return '';
+  const t=[['perso','Mon compte perso'],['pro','Mon compte pro'],['mixte','Un compte qui sert à tout']];
+  return `<div class="type-import"><p class="f-lbl">Ces relevés viennent de quel compte ?</p>
+    <div class="choix gros">${t.map(([k,l])=>`<button class="choix-btn${IMPTYPE===k?' suggere':''}" data-imptype="${k}" aria-pressed="${IMPTYPE===k}">${l}</button>`).join('')}</div>
+    <p class="aide">${IMPTYPE?'Ce choix s’applique aux nouveaux comptes ajoutés. Un compte déjà connu garde son type, que vous pouvez changer dans Réglages, « Vos comptes ».':'Choisissez avant d’ajouter vos relevés. Sinon l’application devine, puis vous pose la question.'}</p></div>`;
 }
 function vImport(){
   const nRev=S.ops.filter(o=>o.src==='rev').length;
   return privacyBox()+`<section class="carte">
+  ${choixTypeImport()}
   <label class="gros-bouton" data-drop="bank"><input type="file" id="file" accept=".pdf,.csv,application/pdf,text/csv" multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
   <p class="aide">Des relevés PDF, plusieurs à la fois, même de banques différentes. Ce qui est déjà importé est ignoré.</p>
   <label class="btn secondaire">Tester un relevé<input type="file" id="testfile" accept=".pdf,.csv,application/pdf,text/csv" hidden></label>
@@ -211,13 +267,14 @@ function vImport(){
   <p class="aide">Copiez les opérations sur le site de votre banque et collez-les ici. Celles qui sont déjà là ne sont pas ajoutées deux fois, même si vous importez le relevé PDF ensuite.</p></section>
   ${COLLE?panneauColler():''}
   ${reports.length?`<section class="releves">${reports.map(reportLine).join('')}</section>`:''}
+  ${blocMoisManquants()}
   ${relevesAjoutes()}
-  <details class="carte repli"${revDraft||revMsg||revError?' open':''}><summary>Vous suivez vos revenus dans un tableau ?</summary>
+  ${SAL?'':`<details class="carte repli"${revDraft||revMsg||revError?' open':''}><summary>Vous suivez vos revenus dans un tableau ?</summary>
   <p class="aide">Choisissez le fichier Excel, Numbers ou CSV où vous notez ce que vous encaissez. L’application le lit à la place de vos relevés pour vos encaissements.</p>
   ${revMsg?`<p class="ok-txt">${esc(revMsg)}</p>`:''}${revError?`<p class="ko-txt">${esc(revError)}</p>`:''}
   ${revDraft?revPanel():`<label class="btn secondaire" data-drop="rev"><input type="file" id="revfile" accept=".xlsx,.xls,.numbers,.ods,.csv" hidden>Choisir mon fichier</label>
   <p class="aide">${nRev?`${nRev} ligne${nRev>1?'s':''} déjà importée${nRev>1?'s':''}. Un nouveau fichier les remplace.`:'Réimportez-le quand il change : il remplace le précédent.'}</p>`}
   <div class="radios"><p class="f-lbl">Compter vos encaissements depuis</p>
     <label><input type="radio" name="incsrc" data-inc="bank"${S.incomeSource!=='file'?' checked':''}> mes relevés bancaires</label>
-    <label><input type="radio" name="incsrc" data-inc="file"${S.incomeSource==='file'?' checked':''}> mon tableau</label></div></details>`;
+    <label><input type="radio" name="incsrc" data-inc="file"${S.incomeSource==='file'?' checked':''}> mon tableau</label></div></details>`}`;
 }

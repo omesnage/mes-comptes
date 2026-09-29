@@ -1,8 +1,8 @@
 /* ============ Sauvegarde ============ */
 let backupMsg='';
 async function backup_(){
-  const data=JSON.stringify({app:'mes-comptes',version:1,date:new Date().toISOString(),data:S});
-  const name=`mes-comptes-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
+  const data=JSON.stringify({app:SAL?'mon-compte':'mes-comptes',version:1,date:new Date().toISOString(),data:S});
+  const name=`${SAL?'mon-compte':'mes-comptes'}-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
   try{
     const dl=window.claude&&claude.use?await claude.use('downloads'):null;
     if(dl){await dl.save({filename:name,data});S.lastBackup=Date.now();save();backupMsg='Sauvegarde enregistrée.';render();return}
@@ -13,13 +13,13 @@ async function backup_(){
 async function restore_(file){
   try{
     const j=JSON.parse(await file.text());
-    if(j.app!=='mes-comptes'||!j.data) throw 0;
+    if(j.app!==(SAL?'mon-compte':'mes-comptes')||!j.data) throw 0;
     if(!confirm('Remplacer toutes vos données actuelles par cette sauvegarde ?')) return;
     if(demo) exitDemo();
     S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));
     S=merge(j.data); S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));
     backupMsg=`Sauvegarde du ${new Date(j.date).toLocaleDateString('fr-FR')} restaurée.`; P=null; save(); render();
-  }catch(e){backupMsg='Ce fichier n’est pas une sauvegarde de Mes comptes.';render()}
+  }catch(e){backupMsg='Ce fichier n’est pas une sauvegarde de '+(SAL?'Mon compte':'Mes comptes')+'.';render()}
 }
 
 let readerMsg='', readerErr=false;
