@@ -63,7 +63,7 @@ function demoData(){
   /* Limites réalistes : vacances dépassées (location d'été), sorties proches de la limite, shopping et cadeaux dans les clous */
   const li={shopping:[1200,'Y'],loisirs:[150,'M'],voyages:[2500,'Y'],cadeaux:[500,'Y']}; for(const id in li) st.categories.find(c=>c.id===id).limite={montant:li[id][0],per:li[id][1]};
   const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
-  st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
+  st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);
   /* Défi du mois dernier sur les courses (réussi) ; celui du mois en cours sera proposé */
   st.challenges=[{id:'auto',month:mk(0),cat:'courses',limite:265,habitude:350}].map(c=>({...c,key:newId('d_')}));

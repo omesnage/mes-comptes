@@ -110,6 +110,15 @@ function migrateSchema(st){
     }
     st.schemaVersion=9;
   }
+  if(st.schemaVersion<10){
+    /* v9 → v10 : nouvelles rubriques « Épargne et placements » et « Retraite et pensions » (ajoutées d'office).
+       Un prélèvement de cotisations sociales rangé dans une rubrique du foyer devient une cotisation déjà payée. */
+    const foyer=id=>{const c=st.categories.find(k=>k.id===id);return c&&c.type==='expense'&&c.univers==='perso'};
+    const urs=m=>COTIS_RE.test(norm(m.replace(/\|[+-]$/,'')));
+    for(const m in st.rules) if(urs(m)&&foyer(st.rules[m])) st.rules[m]='cotisations';
+    st.ops.forEach(o=>{if(o.cat&&foyer(o.cat)&&COTIS_RE.test(norm(o.label||''))){o.cat='cotisations';dirtyMonths.add(o.date.slice(0,7))}});
+    st.schemaVersion=10;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }
@@ -144,9 +153,9 @@ function migrate(){
   let ch=false; const old=new Set();
   for(const o of S.ops){ if(o.src==='rev') continue;
     const nm=merchantOf(o.label);
-    if(nm!==o.merchant){ if(S.rules[o.merchant]&&!S.rules[nm]&&!brandOf(o.label)) S.rules[nm]=S.rules[o.merchant];
+    if(nm!==o.merchant){ if(S.rules[o.merchant]&&!S.rules[nm]&&!brandOf(o.label)&&!autoCatOf(o.label,acctType(o),o.amount)) S.rules[nm]=S.rules[o.merchant];
       old.add(o.merchant); o.merchant=nm; dirtyMonths.add(o.date.slice(0,7)); ch=true }
-    const ac=autoCatOf(o.label,acctType(o)); if(ac&&!S.rules[o.merchant]){S.rules[o.merchant]=ac;delete S.sugg[o.merchant];ch=true}
+    if(appliqueAuto(o,acctType(o))) ch=true;
   }
   const live=new Set(S.ops.map(o=>o.merchant));
   old.forEach(m=>{if(!live.has(m)){delete S.rules[m];delete S.sugg[m]}});

@@ -42,3 +42,33 @@ export const BANQUES={
 export const releveInconnu=f=>{const rows=[[[40,'BANQUE DU LITTORAL']],[[40,'Solde initial au 28.02.2026 2 000,00']],[[40,'Jour'],[110,'Objet'],[420,'Retraits'],[500,'Dépôts']]];
   for(const [j,l,a] of OPS) rows.push([[40,j+'.03.2026'],[110,l],a<0?[460,'('+fr(a)+')',1]:[540,fr(a),1]]);
   rows.push([[40,'Solde final au 31.03.2026 2 136,94']]);return pdf(rows,f)};
+
+/* Format BforBank (données fictives) : lignes « Votre ancien solde » / « Votre nouveau solde » au milieu des opérations,
+   libellés sur plusieurs lignes, montant du règlement carte sur la ligne suivante, puis détail des achats carte à débit différé. */
+export async function bforbank(f){
+  const r=(...c)=>c, D=(x,t)=>[x,t], R=(x,t)=>[x,t,1];
+  const eur=(v,signe)=>(signe&&v<0?'-':'')+fr(v);
+  const op=(j,type,v,...suite)=>[r(D(58,j+'/01/2026'),D(128,j+'/01/2026'),D(187,type),v<0?R(450,eur(v,1)):R(545,eur(v)),v<0?D(452,'€'):D(548,'€')),...suite.map(s=>r(D(187,s)))];
+  const rows=[
+    r(D(40,'BforBank')),r(D(40,'Relevé de compte')),r(D(45,'Du 01/01/2026 au 31/01/2026')),r(D(40,'IBAN FR76 1234 5678 9012 3456 7890 123')),
+    r(D(60,'Date de')),r(D(119,'Date de valeur'),D(232,'Libellé de l’opération'),D(401,'Débit'),D(496,'Crédit')),r(D(55,'l’opération')),
+    r(D(55,'01/01/2026'),D(116,'Votre ancien solde'),R(545,'+2 000,00'),D(548,'€')),
+    ...op('05','PRELEVEMENT',-320,'URSSAF PAYS DE LA LOIRE','FR55ZZZ123456','REF-000111'),
+    ...op('08','VIREMENT',1500,'CLIENT ALPHA CONSEIL','FACTURE 2026-01'),
+    ...op('10','VIREMENT',640,'CARSAT PAYS DE LA LOIRE RETRAITE','PENSION JANVIER'),
+    ...op('12','PRELEVEMENT',-94,'EDF CLIENTS PARTICULIERS','FR11ZZZ999999'),
+    r(D(55,'15/01/2026'),D(116,'Solde au 15/01/2026'),R(545,'+3 726,00'),D(548,'€')),
+    ...op('20','VIREMENT',-300,'GENERALI VIE VERSEMENT LIBRE'),
+    r(D(58,'30/01/2026'),D(128,'30/01/2026'),D(187,'REGLEMENT CARTES DEBIT DIFFERE')),r(R(450,'-80,00'),D(452,'€')),r(D(187,'1234-JANVIER 2026')),
+    r(D(55,'31/01/2026'),D(116,'Votre nouveau solde'),R(545,'+3 346,00'),D(548,'€')),
+    r(D(45,'Total des opérations'),R(450,'794,00'),R(545,'2 140,00')),
+    r(D(45,'Détail de vos opérations en euros carte Visa à débit différé')),
+    r(D(60,'Date de')),r(D(197,'Libellé de l’opération'),D(401,'Débit'),D(496,'Crédit')),r(D(55,'l’opération')),
+    r(D(58,'29/12/2025'),D(116,'AVOIR SUR PAIEMENT CARTE WEB'),R(545,'7,10'),D(548,'€')),r(D(116,'BOUTIQUE EN LIGNE')),
+    r(D(58,'02/01/2026'),D(116,'PAIEMENT PAR CARTE'),R(450,'35,00'),D(452,'€')),r(D(116,'CARREFOUR GUERANDE')),r(D(116,'010126 000000 1234 111111')),
+    r(D(58,'09/01/2026'),D(116,'PAIEMENT PAR CARTE WEB'),R(450,'52,10')),r(D(116,'CREPERIE DU PORT')),r(D(116,'52,10 EUR 1EUR=0,000 EUR')),
+    r(D(45,'Total'),R(450,'87,10'),D(452,'€'),R(545,'7,10'),D(548,'€')),
+    r(D(45,'Montant comptabilisé le 30/01/2026'),R(450,'80,00'),D(452,'€'))
+  ];
+  return pdf(rows,f);
+}

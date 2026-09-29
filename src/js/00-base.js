@@ -1,6 +1,6 @@
 /* ============ Données de base ============ */
-const SCHEMA=9;
-const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
+const SCHEMA=10;
+const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
  ['logement','Logement','house','expense','perso',1],
@@ -31,8 +31,10 @@ const CATS0=[
  ['pro','Autres frais de l’activité','briefcase','expense','pro'],
  ['remb','Remboursements','rotate-ccw','expense','auto'],
  ['rentrees','Autres rentrées','hand-coins','income','perso'],
+ ['retraite','Retraite et pensions','armchair','income','perso'],
  ['revenus','Revenus et encaissements','arrow-down-left','income','auto'],
  ['remu','Votre rémunération','arrow-left-right','remu','auto'],
+ ['epargne','Épargne et placements','vault','transfer','auto'],
  ['interne','Virements entre vos comptes','repeat','transfer','auto']
 ].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,limite:null,fixed:!!fixed}));
 /* Anciens noms par défaut, remplacés par les nouveaux lors de la migration (un nom personnalisé est gardé) */
@@ -42,11 +44,34 @@ const PROV_CATS=new Set(['cotisations','impots']);
 const typeOf=id=>(S.categories.find(c=>c.id===id)||{}).type||'expense';
 /* Remboursement d'emprunt : reconnu sans rien demander */
 const LOAN_RE=/\b(ECHEANCES? (DE )?PRETS?|ECH\.? PRETS?|REMBOURSEMENTS? (DE )?PRETS?|REMB PRET|PRETS? IMMO(BILIER)?|CREDITS? IMMO(BILIER)?)\b|\b(COFIDIS|CETELEM|SOFINCO|FRANFINANCE|FLOA|ONEY)\b/;
-function autoCatOf(label,atype){if(LOAN_RE.test(norm(label)))return atype==='pro'?'empruntpro':'pret';const b=brandOf(label);if(b&&b[2])return b[2];return null}
+/* Cotisations sociales : toujours une cotisation déjà payée (jamais une dépense perso).
+   Les caisses de retraite des indépendants prélèvent des cotisations et versent des pensions. */
+const COTIS_RE=/\bURS{2}AF\b|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/;
+const CAISSES_RE=/\b(CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|IRCEC)\b/;
+/* Épargne et placements : ni une dépense ni une rentrée, dans un sens comme dans l'autre */
+const EPARGNE_RE=/\b(GENERALI VIE|ASSURANCES? ?VIE|PLACEMENTS?|LIVRETS?|LDDS?|LEP|PEA|PER|PERP|PERIN|PLAN (D )?EPARGNE|EPARGNE|COMPTE A TERME|LINXEA|YOMONI|NALO|SPIRICA|SURAVENIR)\b/;
+/* Retraite et pensions : une rentrée personnelle, jamais un revenu de l'activité */
+const RETRAITE_RE=/\b(RETRAITES?|CARSAT|CNAV|IRCEC|AGIRC|ARRCO|CAISSE D.?ASSURANCE RETRAITE|PENSIONS?|CIPAV|CARMF|CARPIMKO|CAVEC)\b/;
+function autoCatOf(label,atype,amount){
+  const t=norm(label||'');
+  if(LOAN_RE.test(t))return atype==='pro'?'empruntpro':'pret';
+  if(COTIS_RE.test(t))return 'cotisations';
+  if(CAISSES_RE.test(t)&&amount<0)return 'cotisations';
+  if(EPARGNE_RE.test(t.replace(/CAISSE D.?EPARGNE/g,'')))return 'epargne';
+  if(RETRAITE_RE.test(t)&&amount>0)return 'retraite';
+  const b=brandOf(label);if(b&&b[2])return b[2];return null}
+/* Rubriques reconnues d'office qui dépendent du sens (rentrée ou dépense) */
+const AUTO_SENS=new Set(['retraite','cotisations']);
+/* Pose la règle reconnue d'office, sauf si une règle existe déjà pour ce marchand. Renvoie true si elle a été posée. */
+function appliqueAuto(o,atype){
+  const c=autoCatOf(o.label,atype,o.amount); if(!c) return false;
+  const dk=o.merchant+(o.amount>0?'|+':'|-'); if(S.rules[o.merchant]||S.rules[dk]) return false;
+  S.rules[AUTO_SENS.has(c)?dk:o.merchant]=c; delete S.sugg[o.merchant]; return true;
+}
 
 /* Mots-clés toujours professionnels, quel que soit le compte */
 const KW_PRO=[
- [/\bURS{2}AF\b|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
+ [/\bURS{2}AF\b|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|IRCEC|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
  [/EXPERT.?COMPTA|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE|AVOCAT|NOTAIRE/,'pro']
 ];
 /* Mots-clés professionnels seulement sur un compte pro */

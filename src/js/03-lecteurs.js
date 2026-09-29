@@ -27,7 +27,7 @@ function readWith(c,texts,Y){
       amount=sg==='plus'?(pos?v:-v):sg==='credit-hint'?((neg||!CREDIT_HINT.test(G.libelle))?-v:v):(neg?-v:v);
       if(G.sens){amount=/^(C|CR|CREDIT|\+)/i.test(norm(G.sens))?v:-v}}
     if(!isFinite(amount)||!amount) continue;
-    const label=String(G.libelle||'').replace(/\s+/g,' ').trim(); if(!label||SKIP.test(label)) continue;
+    const label=String(G.libelle||'').replace(/\s+/g,' ').trim(); if(!label||estHorsOp(label)) continue;
     ops.push({date,label,amount:+amount.toFixed(2)});
   }
   return ops;

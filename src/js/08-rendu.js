@@ -65,9 +65,9 @@ function acctAsk(a){
 function choixRubriques(x){
   const s=S.sugg[x.m]?.c, acc=[...new Set(x.accts.map(id=>(acctById(id)||{}).type||'perso'))];
   let ids;
-  if(x.credit) ids=['revenus','rentrees','remb'];
+  if(x.credit) ids=['revenus','rentrees','retraite','remb','epargne'];
   else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','soustraitance','pro'];
-  else ids=['courses','resto','transport','shopping','loisirs','voyages','cadeaux','maison','sante','divers'];
+  else ids=['courses','resto','transport','shopping','loisirs','voyages','cadeaux','maison','sante','epargne','divers'];
   if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','loisirs','voyages','logiciels','materiel','pro','divers'];
   if(s) ids=[s,...ids.filter(i=>i!==s)];
   const noms={revenus:'Encaissement de l’activité',rentrees:'Autre rentrée',remb:'Un remboursement'};
@@ -151,7 +151,7 @@ function reportLine(r){
   if(r.found&&!r.error&&r.controle&&r.controle.ok) txt+=' Relevé vérifié ✓';
   const a=!r.test&&acctById(r.acct);
   return `<div class="releve ${cls}${r.test?' essai':''}"><p class="r-t">${txt}</p>
-    ${r.controle&&!r.controle.ok?`<p class="r-alerte">Attention : il y a un écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes du relevé et les opérations lues. Vérifiez vos opérations.</p>`:''}
+    ${r.controle&&!r.controle.ok?`<p class="r-alerte">Attention : il y a un écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes du relevé et les opérations lues.${phraseSuspects(r.controle)||' Vérifiez vos opérations.'}</p>`:''}
     ${a&&!a.confirmed?acctAsk(a):''}
     ${!r.colle&&r.lignes&&(!r.found||(r.controle&&!r.controle.ok))?(ASSIST&&ASSIST.imp===r.imp?panneauAssistant(r):`<div class="boutons"><button class="btn${r.found?' secondaire':''}" data-assist="${r.imp}">${r.found?'La lecture n’est pas juste ? Apprenez-lui en 3 gestes':'Apprendre à lire ce relevé (3 gestes)'}</button></div>`):''}
     ${r.test&&r.found?`<div class="boutons"><button class="btn" data-realimp="${r.imp}">Importer pour de bon</button><button class="lien" data-dropreport="${r.imp}">Fermer</button></div>`:''}
@@ -162,7 +162,7 @@ function reportCard(r){
   const nd=r.lus.filter(o=>o.dup).length;
   const info=r.acctInfo?`<p class="aide">Banque : ${esc(r.bank||'non reconnue')}. Compte : ${esc(r.acctInfo.name)}${r.acctInfo.isNew?' (nouveau)':''}.${nd?` ${nd} opération${nd>1?'s':''} déjà importée${nd>1?'s':''}.`:''}</p>`:'';
   const ctl=r.controle?(r.controle.ok?`<p class="verif ok">Relevé vérifié ✓ Les soldes du relevé correspondent aux opérations lues.</p>`
-    :`<p class="verif ko">Écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes et les opérations lues : une opération a peut-être été oubliée ou mal lue.</p>`):'';
+    :`<p class="verif ko">Écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes et les opérations lues.${phraseSuspects(r.controle)||' Une opération a peut-être été oubliée ou mal lue.'}</p>`):'';
   const liste=r.lus.length?`<div class="apercu">${r.lus.slice().sort((a,b)=>a.date<b.date?-1:1).slice(0,200).map(o=>`<div class="pv${o.dup?' dup':''}"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span><span>${esc(o.label)}${o.dup?' <em>déjà importée</em>':''}</span><span class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></div>`).join('')}${r.lus.length>200?`<p class="aide">Et ${r.lus.length-200} autres.</p>`:''}</div>`:'';
   const aide=r.raw&&!r.found?`<p>Ce relevé n’a pas pu être lu. Voici le texte trouvé dans le fichier, sans vos numéros de compte ni vos noms. Envoyez-le à la personne qui vous a transmis l’application : elle pourra l’adapter à votre banque.</p>
       <textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="lien" data-copy="${r.imp}">Copier le texte</button>

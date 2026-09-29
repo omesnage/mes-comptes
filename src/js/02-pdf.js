@@ -5,6 +5,14 @@ function toNum(s){let t=String(s).replace(/-$/,'').replace(/EUR/i,'').replace(/[
 const COL_DEB=/^d[ée]bits?(\s+(en\s+)?(€|eur|euros))?\s*(\(€\))?$/i, COL_CRE=/^cr[ée]dits?(\s+(en\s+)?(€|eur|euros))?\s*(\(€\))?$/i;
 const MSG_RESEAU='L’application n’a pas fini de se charger. Vérifiez votre connexion internet, puis rechargez la page.';
 const SKIP=/^(ANCIEN SOLDE|NOUVEAU SOLDE|SOLDE|TOTAL|TOTAUX|REPORT|PAGE|DATE)\b/i;
+/* Lignes de solde ou de total, quelle que soit la formulation (« Votre ancien solde », « Total des débits »,
+   « Montant comptabilisé ») : jamais des opérations, elles servent seulement au contrôle.
+   Exceptions : « solde de tout compte » (un vrai versement), une station TOTAL payée par carte. */
+function estHorsOp(lib){
+  const t=norm(lib||'').replace(/SOLDE DE TOUT COMPTE/g,'');
+  if(SKIP.test(lib)||/\bSOLDE\b|\bMONTANT COMPTABILISE\b/.test(t)) return true;
+  return /\b(TOTAL|TOTAUX|SOUS.?TOTAL)\b/.test(t)&&!/^(CB|CARTE|PAIEMENT|ACHAT|PRLV|PRELEVEMENT|RETRAIT|DAB)\b/.test(t);
+}
 const CREDIT_HINT=/\b(VIR(EMENT)? (SEPA )?RECU|VIREMENT DE|REMB|REMBOURSEMENT|AVOIR|SALAIRE|PAIE|VERSEMENT|REMISE)\b/i;
 
 async function parsePDF(file){
@@ -34,11 +42,11 @@ async function parsePDF(file){
   const Y=+(Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||new Date().getFullYear());
   const header=[]; for(const l of lines){if(dateEnTete(l.tokens,Y)&&l.tokens.some(t=>estMontant(t.s)))break;header.push(l.text)}
   const r=lireReleve(lines,full,Y);
-  return {ops:r.ops,raw:lines.map(l=>l.text).slice(0,80).join('\n'),full,header:header.join('\n'),reader:r.reader,methode:r.methode,verifie:r.verifie,
+  return {ops:r.ops,raw:lines.map(l=>l.text).slice(0,80).join('\n'),full,header:header.join('\n'),reader:r.reader,methode:r.methode,verifie:r.verifie,carte:r.carte,
     lignes:lines.map(l=>({text:l.text,tokens:l.tokens.map(t=>({x:t.x,w:t.w,s:t.s}))})),Y};
 }
 
-const BANKS=[['Crédit Agricole',/CREDIT AGRICOLE/],['LCL',/\bLCL\b|CREDIT LYONNAIS/],['BNP Paribas',/BNP PARIBAS/],['Hello bank',/HELLO BANK/],['Société Générale',/SOCIETE GENERALE/],['Crédit Mutuel',/CREDIT MUTUEL/],['CIC',/\bCIC\b/],['Banque Populaire',/BANQUE POPULAIRE/],['Caisse d’Épargne',/CAISSE D.?EPARGNE/],['La Banque Postale',/BANQUE POSTALE/],['BoursoBank',/BOURSORAMA|BOURSOBANK/],['Fortuneo',/FORTUNEO/],['Qonto',/QONTO/],['Shine',/\bSHINE\b/],['N26',/\bN26\b/],['Revolut',/REVOLUT/],['Monabanq',/MONABANQ/],['Crédit du Nord',/CREDIT DU NORD/],['CCF',/\bCCF\b/],['Nickel',/COMPTE-NICKEL|\bNICKEL\b/],['Crédit Coopératif',/CREDIT COOPERATIF/]];
+const BANKS=[['Crédit Agricole',/CREDIT AGRICOLE/],['LCL',/\bLCL\b|CREDIT LYONNAIS/],['BNP Paribas',/BNP PARIBAS/],['Hello bank',/HELLO BANK/],['Société Générale',/SOCIETE GENERALE/],['Crédit Mutuel',/CREDIT MUTUEL/],['CIC',/\bCIC\b/],['Banque Populaire',/BANQUE POPULAIRE/],['Caisse d’Épargne',/CAISSE D.?EPARGNE/],['La Banque Postale',/BANQUE POSTALE/],['BoursoBank',/BOURSORAMA|BOURSOBANK/],['Fortuneo',/FORTUNEO/],['Qonto',/QONTO/],['Shine',/\bSHINE\b/],['BforBank',/BFORBANK/],['N26',/\bN26\b/],['Revolut',/REVOLUT/],['Monabanq',/MONABANQ/],['Crédit du Nord',/CREDIT DU NORD/],['CCF',/\bCCF\b/],['Nickel',/COMPTE-NICKEL|\bNICKEL\b/],['Crédit Coopératif',/CREDIT COOPERATIF/]];
 function detectBank(text){const t=norm((text||'').slice(0,6000));const b=BANKS.find(([,re])=>re.test(t));return b?b[0]:null}
 /* Numéro de compte : tiré de l'IBAN (11 caractères du numéro de compte), sinon d'une mention « compte n° » */
 function detectAccountNo(text){
@@ -73,7 +81,21 @@ function controleSoldes(res){
   const a=d&&soldeDeLigne(d,''), b=f&&soldeDeLigne(f,'');
   if(!a||!b) return null;
   const ecart=+(a.solde+res.ops.reduce((s,o)=>s+o.amount,0)-b.solde).toFixed(2);
-  return {ok:Math.abs(ecart)<0.01,ancien:a.solde,nouveau:b.solde,ecart};
+  const ok=Math.abs(ecart)<0.01;
+  return {ok,ancien:a.solde,nouveau:b.solde,ecart,suspects:ok?[]:suspects(res.ops,ecart)};
+}
+/* L'écart correspond exactement à une ligne lue, ou à deux : ces lignes n'étaient sans doute pas des opérations */
+function suspects(ops,ecart){
+  const pres=(x)=>Math.abs(x-ecart)<0.005;
+  const un=ops.find(o=>pres(o.amount)); if(un) return [un.label];
+  if(ops.length<=600) for(let i=0;i<ops.length;i++) for(let j=i+1;j<ops.length;j++) if(pres(ops[i].amount+ops[j].amount)) return [ops[i].label,ops[j].label];
+  return [];
+}
+function phraseSuspects(ctl){
+  const s=(ctl&&ctl.suspects)||[], c=l=>'« '+esc(l.length>60?l.slice(0,58)+'…':l)+' »';
+  if(s.length===1) return ` La ligne ${c(s[0])} a peut-être été lue à tort comme une opération.`;
+  if(s.length===2) return ` Les lignes ${c(s[0])} et ${c(s[1])} ont peut-être été lues à tort comme des opérations.`;
+  return '';
 }
 function anonymize(t){return (t||'').replace(/\bFR\d{2}[\d A-Z]{10,34}/g,'FR•• (IBAN masqué)').replace(/\b[A-Z]{4}FR[A-Z0-9]{2,5}\b/g,'(BIC masqué)').replace(/\d{6,}/g,m=>'#'.repeat(m.length)).replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,'(e-mail masqué)').replace(/\b(M\.|MR|MME|MLLE|MONSIEUR|MADAME)\s+[A-ZÀ-Üa-zà-ü' -]{1,40}/gi,'$1 (nom masqué)')}
 

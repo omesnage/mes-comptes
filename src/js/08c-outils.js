@@ -18,7 +18,7 @@ const RE_DEBUT_DATE=/^((?:(?:lun|mar|mer|jeu|ven|sam|dim)[a-zé]*\.?\s+)?\d{1,2}
 function parseCollage(txt,signeDefaut){
   const t=String(txt||'').replace(/−/g,'-').replace(/\r/g,''), lignes=t.split('\n').map(l=>l.trim()).filter(Boolean);
   const out=[], def=signeDefaut==='ren'?1:-1;
-  const ajoute=(date,label,m,forceSigne)=>{const x=lireMontant(m);if(!x||!x.v||!date)return;const s=forceSigne||x.signe;label=label.replace(/\s+/g,' ').trim();if(!label||SKIP.test(label))return;
+  const ajoute=(date,label,m,forceSigne)=>{const x=lireMontant(m);if(!x||!x.v||!date)return;const s=forceSigne||x.signe;label=label.replace(/\s+/g,' ').trim();if(!label||estHorsOp(label))return;
     out.push({date,label,amount:+((s||def)*x.v).toFixed(2),signe:!!s})};
   if(lignes.filter(l=>l.includes('\t')).length>=Math.max(1,lignes.length/2)){
     const rows=lignes.map(l=>l.split('\t').map(c=>c.trim()));
@@ -87,7 +87,7 @@ function ajouterColle(){
     const op={id:Math.random().toString(36).slice(2,10),date:o.date,label:o.label,amount:o.amount,merchant:merchantOf(o.label),acct,imp,src:'paste'};
     S.ops.push(op); added++; dirtyMonths.add(op.date.slice(0,7));
     if(o.etat==='doute') S.douteux.push({a:o.twin,b:op.id});
-    const ac=autoCatOf(op.label,atype); if(ac&&!S.rules[op.merchant]){S.rules[op.merchant]=ac;delete S.sugg[op.merchant]}
+    appliqueAuto(op,atype);
     if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const k=kwSuggest(op.merchant,op.label,atype,op.amount);if(k)S.sugg[op.merchant]={c:k,src:'kw'}}
   }
   const a=acctById(acct);

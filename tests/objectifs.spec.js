@@ -5,11 +5,11 @@ const txt=async l=>nb(await l.textContent());
 test('démarrage : prix à facturer en direct, valeurs par défaut pour ce qui n’est pas saisi',async({page})=>{
   await openWith(page,'vierge');
   await page.click('[data-onb="1"]');
-  // Défaut : 2 000 €, 40 h, 0 % gardé de côté → 2 000 × 12 ÷ 0,9 ÷ (45 × 40 × 0,7) = 21,16 €
-  expect(await txt(page.locator('#prixLive'))).toBe('Pour avoir 2 000 € par mois, vous devez vous faire payer au minimum 21 € de l’heure.');
+  // Défaut : 2 500 €, 40 h, 0 % gardé de côté → 2 500 × 12 ÷ 0,9 ÷ (45 × 40 × 0,7) = 26,46 €
+  expect(await txt(page.locator('#prixLive'))).toBe('Pour avoir 2 500 € par mois, vous devez vous faire payer au minimum 26 € de l’heure.');
   await page.fill('[data-set="taux"]','25');
-  // 26 666,67 ÷ 0,75 ÷ 1 260 = 28,22 €
-  expect(await txt(page.locator('#prixLive'))).toBe('Pour avoir 2 000 € par mois, vous devez vous faire payer au minimum 28 € de l’heure.');
+  // 33 333,33 ÷ 0,75 ÷ 1 260 = 35,27 €
+  expect(await txt(page.locator('#prixLive'))).toBe('Pour avoir 2 500 € par mois, vous devez vous faire payer au minimum 35 € de l’heure.');
   await page.fill('[data-set="netVise"]','3000');
   expect(await txt(page.locator('#prixLive'))).toContain('Pour avoir 3 000 € par mois');
   await page.fill('[data-set="heuresSemaine"]','30');
@@ -36,7 +36,7 @@ test('Mes objectifs : objectif, affiner replié, limites avec shopping, sorties,
 });
 
 /* Encaissements : 3 000 € sur le compte pro. Prix minimum (sans frais, 0 %) : 21,16 € de l'heure */
-const pro=extra=>({schemaVersion:8,onboarded:true,accounts:[{id:'pr',name:'Pro',type:'pro',confirmed:true}],
+const pro=extra=>({schemaVersion:8,onboarded:true,settings:{netVise:2000},accounts:[{id:'pr',name:'Pro',type:'pro',confirmed:true}],
   ops:[{id:'c1',date:'2026-06-05',label:'VIR CLIENT',amount:3000,merchant:'CLIENT',acct:'pr'},{id:'c2',date:'2026-06-15',label:'VIR CLIENT',amount:1000,merchant:'CLIENT',acct:'pr'},{id:'f1',date:'2026-06-20',label:'CB CARTOUCHES',amount:-0.01,merchant:'CARTOUCHES',acct:'pr'}],rules:{CLIENT:'revenus',CARTOUCHES:'materiel'},...extra});
 test('encaissement : équivalent en heures au prix minimum, puis taux réel après saisie du temps passé',async({page})=>{
   await openWith(page,pro());

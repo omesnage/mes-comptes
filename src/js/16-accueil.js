@@ -110,6 +110,18 @@ function conseils(){
 }
 
 /* ---------- Page d'accueil ---------- */
+/* Balance du mois : ce qui est entré (gagné par l'activité et autres rentrées) moins ce qui est parti côté perso.
+   L'épargne et les virements entre comptes ne comptent ni d'un côté ni de l'autre. */
+function balanceBloc(n,Pe){
+  const R=aggRaw(P), autres=R.perso.income, dep=Pe.net, b=n+autres-dep;
+  const [a,z]=bounds(P); let ep=0; for(const k of monthKeys(a,z)) for(const o of (BYMONTH[k]||[])) if(catOf(o)==='epargne') ep-=o.amount;
+  return `<div class="balance" id="balance">
+    <div class="ligne"><span>Gagné par votre activité</span><b>${signed(n)}</b></div>
+    ${autres>0.005?`<div class="ligne"><span>Autres rentrées</span><b>+${eur0(autres)}</b></div>`:''}
+    <div class="ligne"><span>Ce que vous avez dépensé</span><b>${dep>0.005?'−'+eur0(dep):eur0(0)}</b></div>
+    <div class="ligne total ${b>=0?'ok':'ko'}"><span>Balance du mois</span><b>${signed(b)}</b></div>
+    <p class="aide">${b>=0?`Vous avez dépensé moins que ce qui est entré : ${eur0(b)} de côté.`:`Vous avez dépensé ${eur0(-b)} de plus que ce qui est entré.`}${ep>0.005?` À part, ${eur0(ep)} versés sur votre épargne.`:ep<-0.005?` À part, ${eur0(-ep)} repris sur votre épargne.`:''}</p></div>`;
+}
 function vAccueil(){
   const X=agg(P,'pro'), Pe=agg(P,'perso'), part=moisPartiel(P), V=netVise(), H=heures();
   const lignes=Object.entries(Pe.by).filter(([,e])=>e.net>0.005||e.surplus>0.005).sort((a,b)=>b[1].net-a[1].net), max=Math.max(1,...lignes.map(([,e])=>e.net));
@@ -119,6 +131,7 @@ function vAccueil(){
     gagne=`<section class="carte gagne"><h3>Ce que vous avez gagné ${P.m===new Date().getMonth()+1&&P.y===new Date().getFullYear()?'ce mois-ci':'en '+MOIS[P.m-1]}</h3>
       <p class="grand-chiffre">${signed(n)}</p>
       <p class="etiquette ${d>=0?'ok':'ko'}">${d>=0?`${eur0(d)} de plus que votre objectif de ${eur0(V)}`:`Il manque ${eur0(-d)} pour atteindre votre objectif de ${eur0(V)}`}</p>
+      ${balanceBloc(n,Pe)}
       ${salaireBloc(P,'accueil')}
       ${part?`<p class="aide">Votre dernier relevé s’arrête au ${part} ${MOIS[P.m-1]}.</p>`:''}</section>
     <section class="carte" id="activite"><h3>Mon activité</h3>
@@ -128,7 +141,7 @@ function vAccueil(){
       <p class="aide sous-ligne">Cet argent n’est pas à vous : il servira à payer vos cotisations sociales et vos impôts.</p>
       ${+S.settings.taux?'':`<p class="aide">Indiquez ce pourcentage dans <button class="lien" data-tab="objectifs" data-ancre="taux-champ">Mes objectifs</button>.</p>`}
       <div class="ligne total"><span>Il vous reste</span><b>${signed(X.revenuNet)}</b></div></section>`}
-  else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ce mois-ci.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p></section>`;
+  else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ce mois-ci.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p>${balanceBloc(0,Pe)}</section>`;
   const q=S.accounts.filter(a=>!a.confirmed);
   return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+moisBar()+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ce mois-ci.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>

@@ -27,7 +27,7 @@ const V1={
   champFutur:{garde:true}
 };
 function checkMigrated(s){
-  expect(s.schemaVersion).toBe(9);
+  expect(s.schemaVersion).toBe(10);
   expect(s.ops).toHaveLength(6);
   expect(s.accounts.map(a=>[a.name,a.type,a.confirmed]).sort()).toEqual([['Compte principal','perso',false],['Crédit Agricole','perso',false],['Qonto pro','pro',false]]);
   const ids=new Set(s.accounts.map(a=>a.id));
@@ -45,7 +45,7 @@ function checkMigrated(s){
   expect(c.logiciels).toMatchObject({type:'expense',univers:'pro'});
   // Aucun champ perdu
   expect(s.rules).toEqual(V1.rules); expect(s.sugg).toEqual(V1.sugg); expect(s.readers).toEqual(V1.readers);
-  expect(s.challenges.map(({key,...c})=>c)).toEqual(V1.challenges); expect(s.challenges.every(c=>c.key)).toBe(true); expect(s.settings).toMatchObject({epargne:5000,taux:22,objectif:6,netVise:2000,heuresSemaine:35}); expect(s.settings.heures).toBeUndefined(); expect(s.champFutur).toEqual({garde:true});
+  expect(s.challenges.map(({key,...c})=>c)).toEqual(V1.challenges); expect(s.challenges.every(c=>c.key)).toBe(true); expect(s.settings).toMatchObject({epargne:5000,taux:22,objectif:6,netVise:2500,heuresSemaine:35}); expect(s.settings.heures).toBeUndefined(); expect(s.champFutur).toEqual({garde:true});
   expect(s.ops.find(o=>o.id==='o5').awaiting).toBe(true);
   expect(s.ops.find(o=>o.id==='o4').cat).toBe('c_form');
 }
@@ -98,9 +98,9 @@ test('vraies données produites par l’ancienne version de l’application',asy
   // 2. La nouvelle version ouvre les mêmes données
   await page.goto(APP); await page.waitForSelector('nav.tabs button');
   const s=await page.evaluate(()=>S);
-  expect(s.schemaVersion).toBe(9);
+  expect(s.schemaVersion).toBe(10);
   expect(s.ops.length).toBe(v1.ops.length);
-  expect(s.rules).toEqual(v1.rules);
+  expect(s.rules).toEqual({...v1.rules,'URSSAF|-':'cotisations'});
   expect(s.settings).toMatchObject({taux:25,heuresSemaine:35});
   expect(s.accounts.map(a=>[a.name,a.type]).sort()).toEqual([['Crédit Agricole','perso'],['Qonto','pro']]);
   const r=await page.evaluate(()=>({pro:agg({lvl:'M',y:2026,m:3},'pro'),perso:agg({lvl:'M',y:2026,m:3},'perso')}));
@@ -110,11 +110,11 @@ test('vraies données produites par l’ancienne version de l’application',asy
 
 test('heures : l’ancien réglage par défaut (140 h puis 160 h par mois) devient 40 h par semaine',async({page})=>{
   await openWith(page,{...V1,settings:{...V1.settings,heures:140}});
-  expect(await page.evaluate(()=>[S.settings.heuresSemaine,S.settings.netVise,+tauxCible().toFixed(2)])).toEqual([40,2000,11.54]);
+  expect(await page.evaluate(()=>[S.settings.heuresSemaine,S.settings.netVise,+tauxCible().toFixed(2)])).toEqual([40,2500,14.42]);
 });
 
 test('v3 → v4 : un nom de rubrique personnalisé est gardé, les noms par défaut sont simplifiés',async({page})=>{
   await openWith(page,{schemaVersion:3,ops:[{id:'1',date:'2026-06-01',label:'CB X',amount:-5,merchant:'X',acct:'a'}],accounts:[{id:'a',name:'A',type:'perso',confirmed:true}],
     categories:[{id:'resto',name:'Mes restos',icon:'utensils',type:'expense',univers:'perso'},{id:'frais',name:'Frais bancaires',icon:'landmark',type:'expense',univers:'auto'}]});
-  expect(await page.evaluate(()=>[catById('resto').name,catById('frais').name,S.schemaVersion,S.onboarded])).toEqual(['Mes restos','Banque',9,true]);
+  expect(await page.evaluate(()=>[catById('resto').name,catById('frais').name,S.schemaVersion,S.onboarded])).toEqual(['Mes restos','Banque',10,true]);
 });

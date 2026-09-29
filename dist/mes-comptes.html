@@ -125,6 +125,10 @@ details[open]>summary::before{transform:rotate(90deg)}
 .ligne b{font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ligne.total{border-bottom:0;border-top:2px solid var(--ink);margin-top:4px;font-weight:500}
 .ligne.total b{font-weight:500;font-size:22px}
+.balance{margin:14px 0 4px}
+.balance .ligne.ok b{color:var(--ok)}
+.balance .ligne.ko b{color:var(--alert)}
+.balance .aide{margin-top:8px}
 .rubriques{margin-top:10px}
 .rub{display:grid;grid-template-columns:30px 1fr auto;gap:4px 14px;align-items:center;width:100%;padding:14px 0 12px;border-bottom:1px solid var(--line);min-height:56px}
 .rub>svg{width:24px;height:24px;color:var(--gold)}
@@ -481,8 +485,8 @@ select.grand.inline{display:inline-block;width:auto;min-height:44px;font-size:17
 
 <script>
 /* ============ Données de base ============ */
-const SCHEMA=9;
-const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
+const SCHEMA=10;
+const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
  ['logement','Logement','house','expense','perso',1],
@@ -513,8 +517,10 @@ const CATS0=[
  ['pro','Autres frais de l’activité','briefcase','expense','pro'],
  ['remb','Remboursements','rotate-ccw','expense','auto'],
  ['rentrees','Autres rentrées','hand-coins','income','perso'],
+ ['retraite','Retraite et pensions','armchair','income','perso'],
  ['revenus','Revenus et encaissements','arrow-down-left','income','auto'],
  ['remu','Votre rémunération','arrow-left-right','remu','auto'],
+ ['epargne','Épargne et placements','vault','transfer','auto'],
  ['interne','Virements entre vos comptes','repeat','transfer','auto']
 ].map(([id,name,icon,type,univers,fixed])=>({id,name,icon,type,univers,limite:null,fixed:!!fixed}));
 /* Anciens noms par défaut, remplacés par les nouveaux lors de la migration (un nom personnalisé est gardé) */
@@ -524,11 +530,34 @@ const PROV_CATS=new Set(['cotisations','impots']);
 const typeOf=id=>(S.categories.find(c=>c.id===id)||{}).type||'expense';
 /* Remboursement d'emprunt : reconnu sans rien demander */
 const LOAN_RE=/\b(ECHEANCES? (DE )?PRETS?|ECH\.? PRETS?|REMBOURSEMENTS? (DE )?PRETS?|REMB PRET|PRETS? IMMO(BILIER)?|CREDITS? IMMO(BILIER)?)\b|\b(COFIDIS|CETELEM|SOFINCO|FRANFINANCE|FLOA|ONEY)\b/;
-function autoCatOf(label,atype){if(LOAN_RE.test(norm(label)))return atype==='pro'?'empruntpro':'pret';const b=brandOf(label);if(b&&b[2])return b[2];return null}
+/* Cotisations sociales : toujours une cotisation déjà payée (jamais une dépense perso).
+   Les caisses de retraite des indépendants prélèvent des cotisations et versent des pensions. */
+const COTIS_RE=/\bURS{2}AF\b|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/;
+const CAISSES_RE=/\b(CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|IRCEC)\b/;
+/* Épargne et placements : ni une dépense ni une rentrée, dans un sens comme dans l'autre */
+const EPARGNE_RE=/\b(GENERALI VIE|ASSURANCES? ?VIE|PLACEMENTS?|LIVRETS?|LDDS?|LEP|PEA|PER|PERP|PERIN|PLAN (D )?EPARGNE|EPARGNE|COMPTE A TERME|LINXEA|YOMONI|NALO|SPIRICA|SURAVENIR)\b/;
+/* Retraite et pensions : une rentrée personnelle, jamais un revenu de l'activité */
+const RETRAITE_RE=/\b(RETRAITES?|CARSAT|CNAV|IRCEC|AGIRC|ARRCO|CAISSE D.?ASSURANCE RETRAITE|PENSIONS?|CIPAV|CARMF|CARPIMKO|CAVEC)\b/;
+function autoCatOf(label,atype,amount){
+  const t=norm(label||'');
+  if(LOAN_RE.test(t))return atype==='pro'?'empruntpro':'pret';
+  if(COTIS_RE.test(t))return 'cotisations';
+  if(CAISSES_RE.test(t)&&amount<0)return 'cotisations';
+  if(EPARGNE_RE.test(t.replace(/CAISSE D.?EPARGNE/g,'')))return 'epargne';
+  if(RETRAITE_RE.test(t)&&amount>0)return 'retraite';
+  const b=brandOf(label);if(b&&b[2])return b[2];return null}
+/* Rubriques reconnues d'office qui dépendent du sens (rentrée ou dépense) */
+const AUTO_SENS=new Set(['retraite','cotisations']);
+/* Pose la règle reconnue d'office, sauf si une règle existe déjà pour ce marchand. Renvoie true si elle a été posée. */
+function appliqueAuto(o,atype){
+  const c=autoCatOf(o.label,atype,o.amount); if(!c) return false;
+  const dk=o.merchant+(o.amount>0?'|+':'|-'); if(S.rules[o.merchant]||S.rules[dk]) return false;
+  S.rules[AUTO_SENS.has(c)?dk:o.merchant]=c; delete S.sugg[o.merchant]; return true;
+}
 
 /* Mots-clés toujours professionnels, quel que soit le compte */
 const KW_PRO=[
- [/\bURS{2}AF\b|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
+ [/\bURS{2}AF\b|CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|IRCEC|\bSSI\b|SECURITE SOCIALE DES INDEPENDANTS/,'cotisations'],
  [/EXPERT.?COMPTA|COMPTABILITE|PENNYLANE|\bINDY\b|TIIME|LEGALSTART|LEGALPLACE|INFOGREFFE|GREFFE|AVOCAT|NOTAIRE/,'pro']
 ];
 /* Mots-clés professionnels seulement sur un compte pro */
@@ -703,7 +732,7 @@ function opExtra(o){
 function norm(s){return s.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
 function merchantOf(label){
   let s=norm(label);
-  if(/RETRAIT|\bDAB\b|\bGAB\b/.test(s)) return 'RETRAIT ESPECES';
+  if(/\bRETRAITS?\b|\bDAB\b|\bGAB\b/.test(s)) return 'RETRAIT ESPECES';
   const br=BRANDS.find(b=>b[0].test(s)); if(br) return br[1];
   if(/\b(ECH(EANCE)?|REMB(OURSEMENT)?)\s+(DE\s+)?PRET\b/.test(s)){const ln=s.match(/PRET\D*(\d{4,})/);return 'ECHEANCE PRET'+(ln?' '+ln[1].slice(-4):'')}
   s=s.replace(/\b(PAIEMENT PAR CARTE|PAIEMENT CB|PAIEMENT|ACHAT CB|ACHAT|FACTURE CARTE|CARTE X?\d*|CB\*?\d*|PRLV SEPA|PRELEVEMENT SEPA|PRELEVEMENT|PRLV|VIREMENT SEPA|VIREMENT INSTANTANE|VIREMENT|VIR SEPA|VIR INST|VIR|RECU|EMIS|ECHEANCE PRET|ECH PRET|DE|DU|A|VERS|POUR|LE|LA|LES|MR|MME|M)\b/g,' ');
@@ -735,6 +764,14 @@ function toNum(s){let t=String(s).replace(/-$/,'').replace(/EUR/i,'').replace(/[
 const COL_DEB=/^d[ée]bits?(\s+(en\s+)?(€|eur|euros))?\s*(\(€\))?$/i, COL_CRE=/^cr[ée]dits?(\s+(en\s+)?(€|eur|euros))?\s*(\(€\))?$/i;
 const MSG_RESEAU='L’application n’a pas fini de se charger. Vérifiez votre connexion internet, puis rechargez la page.';
 const SKIP=/^(ANCIEN SOLDE|NOUVEAU SOLDE|SOLDE|TOTAL|TOTAUX|REPORT|PAGE|DATE)\b/i;
+/* Lignes de solde ou de total, quelle que soit la formulation (« Votre ancien solde », « Total des débits »,
+   « Montant comptabilisé ») : jamais des opérations, elles servent seulement au contrôle.
+   Exceptions : « solde de tout compte » (un vrai versement), une station TOTAL payée par carte. */
+function estHorsOp(lib){
+  const t=norm(lib||'').replace(/SOLDE DE TOUT COMPTE/g,'');
+  if(SKIP.test(lib)||/\bSOLDE\b|\bMONTANT COMPTABILISE\b/.test(t)) return true;
+  return /\b(TOTAL|TOTAUX|SOUS.?TOTAL)\b/.test(t)&&!/^(CB|CARTE|PAIEMENT|ACHAT|PRLV|PRELEVEMENT|RETRAIT|DAB)\b/.test(t);
+}
 const CREDIT_HINT=/\b(VIR(EMENT)? (SEPA )?RECU|VIREMENT DE|REMB|REMBOURSEMENT|AVOIR|SALAIRE|PAIE|VERSEMENT|REMISE)\b/i;
 
 async function parsePDF(file){
@@ -764,11 +801,11 @@ async function parsePDF(file){
   const Y=+(Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||new Date().getFullYear());
   const header=[]; for(const l of lines){if(dateEnTete(l.tokens,Y)&&l.tokens.some(t=>estMontant(t.s)))break;header.push(l.text)}
   const r=lireReleve(lines,full,Y);
-  return {ops:r.ops,raw:lines.map(l=>l.text).slice(0,80).join('\n'),full,header:header.join('\n'),reader:r.reader,methode:r.methode,verifie:r.verifie,
+  return {ops:r.ops,raw:lines.map(l=>l.text).slice(0,80).join('\n'),full,header:header.join('\n'),reader:r.reader,methode:r.methode,verifie:r.verifie,carte:r.carte,
     lignes:lines.map(l=>({text:l.text,tokens:l.tokens.map(t=>({x:t.x,w:t.w,s:t.s}))})),Y};
 }
 
-const BANKS=[['Crédit Agricole',/CREDIT AGRICOLE/],['LCL',/\bLCL\b|CREDIT LYONNAIS/],['BNP Paribas',/BNP PARIBAS/],['Hello bank',/HELLO BANK/],['Société Générale',/SOCIETE GENERALE/],['Crédit Mutuel',/CREDIT MUTUEL/],['CIC',/\bCIC\b/],['Banque Populaire',/BANQUE POPULAIRE/],['Caisse d’Épargne',/CAISSE D.?EPARGNE/],['La Banque Postale',/BANQUE POSTALE/],['BoursoBank',/BOURSORAMA|BOURSOBANK/],['Fortuneo',/FORTUNEO/],['Qonto',/QONTO/],['Shine',/\bSHINE\b/],['N26',/\bN26\b/],['Revolut',/REVOLUT/],['Monabanq',/MONABANQ/],['Crédit du Nord',/CREDIT DU NORD/],['CCF',/\bCCF\b/],['Nickel',/COMPTE-NICKEL|\bNICKEL\b/],['Crédit Coopératif',/CREDIT COOPERATIF/]];
+const BANKS=[['Crédit Agricole',/CREDIT AGRICOLE/],['LCL',/\bLCL\b|CREDIT LYONNAIS/],['BNP Paribas',/BNP PARIBAS/],['Hello bank',/HELLO BANK/],['Société Générale',/SOCIETE GENERALE/],['Crédit Mutuel',/CREDIT MUTUEL/],['CIC',/\bCIC\b/],['Banque Populaire',/BANQUE POPULAIRE/],['Caisse d’Épargne',/CAISSE D.?EPARGNE/],['La Banque Postale',/BANQUE POSTALE/],['BoursoBank',/BOURSORAMA|BOURSOBANK/],['Fortuneo',/FORTUNEO/],['Qonto',/QONTO/],['Shine',/\bSHINE\b/],['BforBank',/BFORBANK/],['N26',/\bN26\b/],['Revolut',/REVOLUT/],['Monabanq',/MONABANQ/],['Crédit du Nord',/CREDIT DU NORD/],['CCF',/\bCCF\b/],['Nickel',/COMPTE-NICKEL|\bNICKEL\b/],['Crédit Coopératif',/CREDIT COOPERATIF/]];
 function detectBank(text){const t=norm((text||'').slice(0,6000));const b=BANKS.find(([,re])=>re.test(t));return b?b[0]:null}
 /* Numéro de compte : tiré de l'IBAN (11 caractères du numéro de compte), sinon d'une mention « compte n° » */
 function detectAccountNo(text){
@@ -803,7 +840,21 @@ function controleSoldes(res){
   const a=d&&soldeDeLigne(d,''), b=f&&soldeDeLigne(f,'');
   if(!a||!b) return null;
   const ecart=+(a.solde+res.ops.reduce((s,o)=>s+o.amount,0)-b.solde).toFixed(2);
-  return {ok:Math.abs(ecart)<0.01,ancien:a.solde,nouveau:b.solde,ecart};
+  const ok=Math.abs(ecart)<0.01;
+  return {ok,ancien:a.solde,nouveau:b.solde,ecart,suspects:ok?[]:suspects(res.ops,ecart)};
+}
+/* L'écart correspond exactement à une ligne lue, ou à deux : ces lignes n'étaient sans doute pas des opérations */
+function suspects(ops,ecart){
+  const pres=(x)=>Math.abs(x-ecart)<0.005;
+  const un=ops.find(o=>pres(o.amount)); if(un) return [un.label];
+  if(ops.length<=600) for(let i=0;i<ops.length;i++) for(let j=i+1;j<ops.length;j++) if(pres(ops[i].amount+ops[j].amount)) return [ops[i].label,ops[j].label];
+  return [];
+}
+function phraseSuspects(ctl){
+  const s=(ctl&&ctl.suspects)||[], c=l=>'« '+esc(l.length>60?l.slice(0,58)+'…':l)+' »';
+  if(s.length===1) return ` La ligne ${c(s[0])} a peut-être été lue à tort comme une opération.`;
+  if(s.length===2) return ` Les lignes ${c(s[0])} et ${c(s[1])} ont peut-être été lues à tort comme des opérations.`;
+  return '';
 }
 function anonymize(t){return (t||'').replace(/\bFR\d{2}[\d A-Z]{10,34}/g,'FR•• (IBAN masqué)').replace(/\b[A-Z]{4}FR[A-Z0-9]{2,5}\b/g,'(BIC masqué)').replace(/\d{6,}/g,m=>'#'.repeat(m.length)).replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,'(e-mail masqué)').replace(/\b(M\.|MR|MME|MLLE|MONSIEUR|MADAME)\s+[A-ZÀ-Üa-zà-ü' -]{1,40}/gi,'$1 (nom masqué)')}
 
@@ -826,25 +877,37 @@ function dateEnTete(toks,Y){
 const centre=t=>t.x+t.w/2, droite=t=>t.x+t.w;
 /* Méthode « colonnes » : chaque montant est rangé selon la colonne dont il est le plus proche (débit, crédit, montant signé, solde ignoré) */
 function lireColonnes(lines,cols,Y,opts){
-  opts=opts||{}; const ops=[]; let last=null; const tol=opts.tol||40;
+  opts=opts||{}; const ops=[]; let last=null, pend=null, pend0=null; const tol=opts.tol||40;
   const libre=opts.libre; /* montants écrits autrement (assistant) : lecture souple */
   const montantTok=t=>libre?/\d[\d . ]*[,.]\d{2}/.test(t.s)&&!DATE_TOK.test(t.s):estMontant(t.s);
   const colDe=t=>{let best=null,bd=1e9;for(const k of ['deb','cre','mont','solde']){if(cols[k]==null)continue;const d=Math.min(Math.abs(droite(t)-cols[k]),Math.abs(centre(t)-cols[k]));if(d<bd){bd=d;best=k}}return bd<=tol?best:null};
   for(const l of lines){
     const toks=l.tokens; if(!toks.length) continue;
+    /* Nouveau tableau dans le relevé (détail des achats carte…) : ses colonnes remplacent les précédentes */
+    if(opts.suivre){const c=colsEntete([l]);if(c){cols={...cols,...c};if(c.date==null)delete cols.date;last=null;pend=null;continue}}
     const dt=cols.date!=null?(()=>{const i=toks.findIndex(t=>Math.abs(t.x-cols.date)<tol||Math.abs(centre(t)-cols.date)<tol);if(i<0)return null;const r=dateEnTete(toks.slice(i),Y);return r?{...r,i}:null})():dateEnTete(toks,Y);
     const amts=toks.filter(montantTok).map(t=>({t,k:colDe(t)})).filter(x=>x.k&&x.k!=='solde');
+    /* Montant écrit sur la ligne suivante, seul (« RÈGLEMENT CARTES DÉBIT DIFFÉRÉ » puis « -3 752,30 € ») */
+    if(pend&&!dt&&amts.length===1&&toks.every(t=>montantTok(t)||/^(€|EUR)$/i.test(t.s))){
+      const a=amts[0], m=lireMontant(a.t.s); pend=null;
+      if(m&&m.v){const s=a.k==='deb'?-1:a.k==='cre'?1:(m.signe||(opts.nonSigne??-1));last={date:pend0.date,label:pend0.label,amount:+(s*m.v).toFixed(2)};ops.push(last);continue}
+    }
+    pend=null;
+    if(dt&&!amts.length&&!libre){
+      const lib=toks.slice(dt.i!=null?dt.i+dt.n:dt.n).filter((t,i)=>!(i===0&&DATE_TOK.test(t.s))).map(t=>t.s).join(' ').replace(/\s+/g,' ').trim();
+      if(lib&&!estHorsOp(lib)&&!toks.some(t=>montantTok(t))){pend={date:dt.date,label:lib};pend0=pend;last=null;continue}
+    }
     if(dt&&amts.length){
-      const rest=toks.slice(dt.i!=null?dt.i+dt.n:dt.n).filter(t=>!amts.some(a=>a.t===t)&&!montantTok(t));
+      const rest=toks.slice(dt.i!=null?dt.i+dt.n:dt.n).filter(t=>!amts.some(a=>a.t===t)&&!montantTok(t)&&!/^(€|EUR)$/i.test(t.s));
       const lib=rest.filter(t=>!(DATE_TOK.test(t.s)&&t===rest[0])).filter(t=>cols.lib==null||t.x>=cols.lib-tol-60).map(t=>t.s).join(' ').replace(/\s+/g,' ').trim();
-      if(!lib||SKIP.test(lib)){last=null;continue}
+      if(!lib||estHorsOp(lib)){last=null;pend=null;continue}
       const a=amts[0], m=libre?{v:Math.abs(toNum((a.t.s.match(/[-+−]?\d[\d . ]*[,.]\d{2}-?/)||[''])[0].replace(/−/g,'-').replace(/-$/,''))),signe:/^-|-$|−|^\(/.test(a.t.s.trim())?-1:/^\+/.test(a.t.s.trim())?1:0}:lireMontant(a.t.s);
       if(!m||!m.v){last=null;continue}
       let s=a.k==='deb'?-1:a.k==='cre'?1:(m.signe||(opts.nonSigne??-1));
       last={date:dt.date,label:lib,amount:+(s*m.v).toFixed(2)}; ops.push(last);
     } else if(last&&!dt&&!amts.length&&!toks.some(t=>montantTok(t))){
       const txt=toks.map(t=>t.s).join(' ').trim();
-      if(txt&&!SKIP.test(txt)&&txt.length<70&&last.label.length<110&&!/^(SOLDE|TOTAL|PAGE)/i.test(norm(txt))) last.label+=' '+txt; else last=null;
+      if(txt&&!estHorsOp(txt)&&txt.length<70&&last.label.length<110&&!/^(SOLDE|TOTAL|PAGE)/i.test(norm(txt))) last.label+=' '+txt; else last=null;
     } else last=null;
   }
   return ops;
@@ -883,7 +946,7 @@ function lireLignes(lines,Y){
   for(const l of L){
     const m=l.text.match(LINE);
     if(m){
-      let label=m[3].replace(/\s+/g,' ').trim(); if(SKIP.test(label)){last=null;continue}
+      let label=m[3].replace(/\s+/g,' ').trim(); if(estHorsOp(label)){last=null;continue}
       const dm=m[1].match(/(\d{2})[\/.](\d{2})(?:[\/.](\d{2,4}))?/);
       let y=dm[3]?(dm[3].length===2?2000+ +dm[3]:+dm[3]):Y; if(!dm[3]&&dm[2]==='12'&&hasJan) y=Y-1;
       const amtStr=m[4], val=Math.abs(toNum(amtStr)); if(!isFinite(val)||val===0){last=null;continue}
@@ -891,7 +954,7 @@ function lireLignes(lines,Y){
       const amtTok=[...l.tokens].reverse().find(t=>AMT.test(t.s)||t.s.endsWith(amtStr.trim()));
       if(l.deb!=null&&l.cre!=null&&amtTok){const cx=centre(amtTok); col=Math.abs(cx-l.cre)<Math.abs(cx-l.deb)?1:-1}
       last={date:`${y}-${dm[2]}-${dm[1]}`,label,val,explicit,col}; ops.push(last);
-    } else if(last && !AMT.test(l.text) && !DATE_RE.test(l.tokens[0]?.s||'') && !SKIP.test(l.text) && l.text.length<70 && last.label.length<110){ last.label+=' '+l.text.trim() }
+    } else if(last && !AMT.test(l.text) && !DATE_RE.test(l.tokens[0]?.s||'') && !estHorsOp(l.text) && l.text.length<70 && last.label.length<110){ last.label+=' '+l.text.trim() }
     else last=null;
   }
   const hasMinus=ops.some(o=>o.explicit<0), hasPlus=ops.some(o=>o.explicit>0);
@@ -900,6 +963,19 @@ function lireLignes(lines,Y){
 /* Lecteurs intégrés : banques reconnues, méthode préférée. Ils passent aussi par la vérification des soldes. */
 const INTEGRES=[['Crédit Agricole','colonnes'],['BNP Paribas','colonnes'],['Société Générale','colonnes'],['LCL','colonnes'],['Crédit Mutuel','colonnes'],['CIC','colonnes'],
   ['Banque Populaire','colonnes'],['Caisse d’Épargne','colonnes'],['La Banque Postale','colonnes'],['BoursoBank','lignes'],['Qonto','lignes'],['Shine','colonnes']];
+/* Carte à débit différé : le relevé détaille les achats carte puis les reprend en une seule ligne
+   (« RÈGLEMENT CARTES DÉBIT DIFFÉRÉ »). Si une suite d'achats lus tombe exactement sur ce montant,
+   le détail est gardé (plus parlant) et la ligne groupée est écartée, pour ne rien compter deux fois. */
+const DIFFERE=/DEBIT DIFFERE|CARTES? (A )?DIFFERE|FACTURE CARTE|RELEVE (DE )?CARTE|REGLEMENT CARTE|ARRETE CARTE|TOTAL CARTE/;
+function sansDoubleCarte(ops){
+  let out=ops, retire=[];
+  for(const g of ops.filter(o=>o.amount<0&&DIFFERE.test(norm(o.label)))){
+    const reste=out.filter(o=>o!==g), cible=g.amount; let trouve=false;
+    for(let i=0;i<reste.length&&!trouve;i++){let s=0;for(let j=i;j<reste.length;j++){s+=reste[j].amount;if(j>i&&Math.abs(s-cible)<0.005){trouve=true;break}}}
+    if(trouve){out=reste;retire.push(g)}
+  }
+  return {ops:out,retire};
+}
 /* Toutes les méthodes sont essayées ; la première dont les soldes tombent juste l'emporte. Sinon, la plus plausible. */
 function lireReleve(lines,full,Y){
   const texts=lines.map(l=>l.text), cand=[];
@@ -909,15 +985,16 @@ function lireReleve(lines,full,Y){
     if(ops.length) cand.push({ops,methode:'lecteur',reader:r.nom,prio:0})}catch(e){}}
   const bank=detectBank(full), integ=INTEGRES.find(b=>b[0]===bank);
   const ent=colsEntete(lines);
-  if(ent) for(const ns of [-1,1]) cand.push({ops:lireColonnes(lines,ent,Y,{nonSigne:ns}),methode:'colonnes',prio:integ&&integ[1]==='colonnes'?1:2});
+  if(ent) for(const ns of [-1,1]) cand.push({ops:lireColonnes(lines,ent,Y,{nonSigne:ns,suivre:1}),methode:'colonnes',prio:integ&&integ[1]==='colonnes'?1:2});
   cand.push({ops:lireLignes(lines,Y),methode:'lignes',prio:integ&&integ[1]==='lignes'?1:2});
   for(const g of colsGrappes(lines,Y)) cand.push({ops:lireColonnes(lines,g,Y,{nonSigne:g._nonSigne?1:-1}),methode:'grappes',prio:3});
+  for(const c of cand){const d=sansDoubleCarte(c.ops);c.ops=d.ops;c.carte=d.retire}
   const valides=cand.filter(c=>c.ops.length);
   for(const c of valides) c.ctl=controleSoldes({full,ops:c.ops});
   const ok=valides.filter(c=>c.ctl&&c.ctl.ok).sort((a,b)=>a.prio-b.prio)[0];
   const best=ok||valides.sort((a,b)=>a.prio-b.prio||b.ops.length-a.ops.length)[0];
   if(!best) return {ops:[],methode:null,verifie:false};
-  return {ops:best.ops,methode:best.methode,reader:best.reader||(ok&&integ?integ[0]:''),verifie:!!ok,ctl:best.ctl};
+  return {ops:best.ops,methode:best.methode,reader:best.reader||(ok&&integ?integ[0]:''),verifie:!!ok,ctl:best.ctl,carte:best.carte||[]};
 }
 /* ============ Lecteurs personnalisés ============ */
 const MOIS_N={JANV:1,JAN:1,FEVR:2,FEV:2,MARS:3,MAR:3,AVR:4,MAI:5,JUIN:6,JUIL:7,AOUT:8,SEPT:9,SEP:9,OCT:10,NOV:11,DEC:12};
@@ -948,7 +1025,7 @@ function readWith(c,texts,Y){
       amount=sg==='plus'?(pos?v:-v):sg==='credit-hint'?((neg||!CREDIT_HINT.test(G.libelle))?-v:v):(neg?-v:v);
       if(G.sens){amount=/^(C|CR|CREDIT|\+)/i.test(norm(G.sens))?v:-v}}
     if(!isFinite(amount)||!amount) continue;
-    const label=String(G.libelle||'').replace(/\s+/g,' ').trim(); if(!label||SKIP.test(label)) continue;
+    const label=String(G.libelle||'').replace(/\s+/g,' ').trim(); if(!label||estHorsOp(label)) continue;
     ops.push({date,label,amount:+amount.toFixed(2)});
   }
   return ops;
@@ -1085,7 +1162,7 @@ async function importFiles(files){
         const op={id:Math.random().toString(36).slice(2,10),date:o.date,label:o.label,amount:o.amount,merchant:merchantOf(o.label),acct:rep.acct,imp:rep.imp,src};
         if(j){pris.add(j.o.id);S.douteux.push({a:j.o.id,b:op.id});rep.douteux++}
         S.ops.push(op); rep.added++; rep.sample.push(op); dirtyMonths.add(o.date.slice(0,7));
-        const ac=autoCatOf(op.label,atype); if(ac&&!S.rules[op.merchant]){S.rules[op.merchant]=ac;delete S.sugg[op.merchant];stateDirty=true}
+        if(appliqueAuto(op,atype)) stateDirty=true;
         if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const c=kwSuggest(op.merchant,op.label,atype,op.amount); if(c){S.sugg[op.merchant]={c,src:'kw'};stateDirty=true}}
       }
     }catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
@@ -1324,6 +1401,15 @@ function migrateSchema(st){
     }
     st.schemaVersion=9;
   }
+  if(st.schemaVersion<10){
+    /* v9 → v10 : nouvelles rubriques « Épargne et placements » et « Retraite et pensions » (ajoutées d'office).
+       Un prélèvement de cotisations sociales rangé dans une rubrique du foyer devient une cotisation déjà payée. */
+    const foyer=id=>{const c=st.categories.find(k=>k.id===id);return c&&c.type==='expense'&&c.univers==='perso'};
+    const urs=m=>COTIS_RE.test(norm(m.replace(/\|[+-]$/,'')));
+    for(const m in st.rules) if(urs(m)&&foyer(st.rules[m])) st.rules[m]='cotisations';
+    st.ops.forEach(o=>{if(o.cat&&foyer(o.cat)&&COTIS_RE.test(norm(o.label||''))){o.cat='cotisations';dirtyMonths.add(o.date.slice(0,7))}});
+    st.schemaVersion=10;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }
@@ -1358,9 +1444,9 @@ function migrate(){
   let ch=false; const old=new Set();
   for(const o of S.ops){ if(o.src==='rev') continue;
     const nm=merchantOf(o.label);
-    if(nm!==o.merchant){ if(S.rules[o.merchant]&&!S.rules[nm]&&!brandOf(o.label)) S.rules[nm]=S.rules[o.merchant];
+    if(nm!==o.merchant){ if(S.rules[o.merchant]&&!S.rules[nm]&&!brandOf(o.label)&&!autoCatOf(o.label,acctType(o),o.amount)) S.rules[nm]=S.rules[o.merchant];
       old.add(o.merchant); o.merchant=nm; dirtyMonths.add(o.date.slice(0,7)); ch=true }
-    const ac=autoCatOf(o.label,acctType(o)); if(ac&&!S.rules[o.merchant]){S.rules[o.merchant]=ac;delete S.sugg[o.merchant];ch=true}
+    if(appliqueAuto(o,acctType(o))) ch=true;
   }
   const live=new Set(S.ops.map(o=>o.merchant));
   old.forEach(m=>{if(!live.has(m)){delete S.rules[m];delete S.sugg[m]}});
@@ -1461,9 +1547,9 @@ function acctAsk(a){
 function choixRubriques(x){
   const s=S.sugg[x.m]?.c, acc=[...new Set(x.accts.map(id=>(acctById(id)||{}).type||'perso'))];
   let ids;
-  if(x.credit) ids=['revenus','rentrees','remb'];
+  if(x.credit) ids=['revenus','rentrees','retraite','remb','epargne'];
   else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','soustraitance','pro'];
-  else ids=['courses','resto','transport','shopping','loisirs','voyages','cadeaux','maison','sante','divers'];
+  else ids=['courses','resto','transport','shopping','loisirs','voyages','cadeaux','maison','sante','epargne','divers'];
   if(acc.includes('mixte')&&!x.credit) ids=['courses','resto','transport','shopping','loisirs','voyages','logiciels','materiel','pro','divers'];
   if(s) ids=[s,...ids.filter(i=>i!==s)];
   const noms={revenus:'Encaissement de l’activité',rentrees:'Autre rentrée',remb:'Un remboursement'};
@@ -1547,7 +1633,7 @@ function reportLine(r){
   if(r.found&&!r.error&&r.controle&&r.controle.ok) txt+=' Relevé vérifié ✓';
   const a=!r.test&&acctById(r.acct);
   return `<div class="releve ${cls}${r.test?' essai':''}"><p class="r-t">${txt}</p>
-    ${r.controle&&!r.controle.ok?`<p class="r-alerte">Attention : il y a un écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes du relevé et les opérations lues. Vérifiez vos opérations.</p>`:''}
+    ${r.controle&&!r.controle.ok?`<p class="r-alerte">Attention : il y a un écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes du relevé et les opérations lues.${phraseSuspects(r.controle)||' Vérifiez vos opérations.'}</p>`:''}
     ${a&&!a.confirmed?acctAsk(a):''}
     ${!r.colle&&r.lignes&&(!r.found||(r.controle&&!r.controle.ok))?(ASSIST&&ASSIST.imp===r.imp?panneauAssistant(r):`<div class="boutons"><button class="btn${r.found?' secondaire':''}" data-assist="${r.imp}">${r.found?'La lecture n’est pas juste ? Apprenez-lui en 3 gestes':'Apprendre à lire ce relevé (3 gestes)'}</button></div>`):''}
     ${r.test&&r.found?`<div class="boutons"><button class="btn" data-realimp="${r.imp}">Importer pour de bon</button><button class="lien" data-dropreport="${r.imp}">Fermer</button></div>`:''}
@@ -1558,7 +1644,7 @@ function reportCard(r){
   const nd=r.lus.filter(o=>o.dup).length;
   const info=r.acctInfo?`<p class="aide">Banque : ${esc(r.bank||'non reconnue')}. Compte : ${esc(r.acctInfo.name)}${r.acctInfo.isNew?' (nouveau)':''}.${nd?` ${nd} opération${nd>1?'s':''} déjà importée${nd>1?'s':''}.`:''}</p>`:'';
   const ctl=r.controle?(r.controle.ok?`<p class="verif ok">Relevé vérifié ✓ Les soldes du relevé correspondent aux opérations lues.</p>`
-    :`<p class="verif ko">Écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes et les opérations lues : une opération a peut-être été oubliée ou mal lue.</p>`):'';
+    :`<p class="verif ko">Écart de ${eur(Math.abs(r.controle.ecart))} entre les soldes et les opérations lues.${phraseSuspects(r.controle)||' Une opération a peut-être été oubliée ou mal lue.'}</p>`):'';
   const liste=r.lus.length?`<div class="apercu">${r.lus.slice().sort((a,b)=>a.date<b.date?-1:1).slice(0,200).map(o=>`<div class="pv${o.dup?' dup':''}"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span><span>${esc(o.label)}${o.dup?' <em>déjà importée</em>':''}</span><span class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></div>`).join('')}${r.lus.length>200?`<p class="aide">Et ${r.lus.length-200} autres.</p>`:''}</div>`:'';
   const aide=r.raw&&!r.found?`<p>Ce relevé n’a pas pu être lu. Voici le texte trouvé dans le fichier, sans vos numéros de compte ni vos noms. Envoyez-le à la personne qui vous a transmis l’application : elle pourra l’adapter à votre banque.</p>
       <textarea class="anon" readonly>${esc(anonymize(r.raw))}</textarea><button class="lien" data-copy="${r.imp}">Copier le texte</button>
@@ -1644,7 +1730,7 @@ const RE_DEBUT_DATE=/^((?:(?:lun|mar|mer|jeu|ven|sam|dim)[a-zé]*\.?\s+)?\d{1,2}
 function parseCollage(txt,signeDefaut){
   const t=String(txt||'').replace(/−/g,'-').replace(/\r/g,''), lignes=t.split('\n').map(l=>l.trim()).filter(Boolean);
   const out=[], def=signeDefaut==='ren'?1:-1;
-  const ajoute=(date,label,m,forceSigne)=>{const x=lireMontant(m);if(!x||!x.v||!date)return;const s=forceSigne||x.signe;label=label.replace(/\s+/g,' ').trim();if(!label||SKIP.test(label))return;
+  const ajoute=(date,label,m,forceSigne)=>{const x=lireMontant(m);if(!x||!x.v||!date)return;const s=forceSigne||x.signe;label=label.replace(/\s+/g,' ').trim();if(!label||estHorsOp(label))return;
     out.push({date,label,amount:+((s||def)*x.v).toFixed(2),signe:!!s})};
   if(lignes.filter(l=>l.includes('\t')).length>=Math.max(1,lignes.length/2)){
     const rows=lignes.map(l=>l.split('\t').map(c=>c.trim()));
@@ -1713,7 +1799,7 @@ function ajouterColle(){
     const op={id:Math.random().toString(36).slice(2,10),date:o.date,label:o.label,amount:o.amount,merchant:merchantOf(o.label),acct,imp,src:'paste'};
     S.ops.push(op); added++; dirtyMonths.add(op.date.slice(0,7));
     if(o.etat==='doute') S.douteux.push({a:o.twin,b:op.id});
-    const ac=autoCatOf(op.label,atype); if(ac&&!S.rules[op.merchant]){S.rules[op.merchant]=ac;delete S.sugg[op.merchant]}
+    appliqueAuto(op,atype);
     if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const k=kwSuggest(op.merchant,op.label,atype,op.amount);if(k)S.sugg[op.merchant]={c:k,src:'kw'}}
   }
   const a=acctById(acct);
@@ -2140,7 +2226,7 @@ document.addEventListener('click',async e=>{
   if(d.defiok){S.challenges=S.challenges.filter(c=>!(c.id==='auto'&&c.month===d.month));S.challenges.push({id:'auto',key:newId('d_'),month:d.month,cat:d.defiok,limite:+d.limite,habitude:+d.hab});save();render();return}
   if(d.undefi){S.challenges=S.challenges.filter(c=>c.key!==d.undefi);save();render();return}
   if(d.act==='savefiche'){const o=BYID[d.id], v=$('#ficheCat').value, tout=document.querySelector('input[name="portee"]:checked')?.value!=='une';
-    if(o&&v){if(tout){delete o.cat;const k=S.rules[o.merchant]&&typeOf(v)!==typeOf(S.rules[o.merchant])?o.merchant+(o.amount>0?'|+':'|-'):o.merchant;setRule(k,v);S.ops.forEach(x=>{if(x.merchant===o.merchant&&x.cat){delete x.cat;dirtyMonths.add(x.date.slice(0,7))}})}else{o.cat=v;dirtyMonths.add(o.date.slice(0,7))}save()}
+    if(o&&v){if(tout){delete o.cat;const dk=o.merchant+(o.amount>0?'|+':'|-'), k=S.rules[dk]||(S.rules[o.merchant]&&typeOf(v)!==typeOf(S.rules[o.merchant]))?dk:o.merchant;setRule(k,v);S.ops.forEach(x=>{if(x.merchant===o.merchant&&x.cat){delete x.cat;dirtyMonths.add(x.date.slice(0,7))}})}else{o.cat=v;dirtyMonths.add(o.date.slice(0,7))}save()}
     FICHE=null;FICHESEL=null;render();return}
   if(d.settype){const [id,ty]=d.settype.split(':');const a=acctById(id);if(a){a.type=ty;a.confirmed=true;stateDirty=true;save();render()}return}
   if(d.renacct){const a=acctById(d.renacct);if(!a)return;const n=(prompt('Nouveau nom du compte',a.name)||'').trim();if(!n||n===a.name)return;a.name=n.slice(0,40);stateDirty=true;save();render();return}
@@ -2282,7 +2368,7 @@ function demoData(){
   /* Limites réalistes : vacances dépassées (location d'été), sorties proches de la limite, shopping et cadeaux dans les clous */
   const li={shopping:[1200,'Y'],loisirs:[150,'M'],voyages:[2500,'Y'],cadeaux:[500,'Y']}; for(const id in li) st.categories.find(c=>c.id===id).limite={montant:li[id][0],per:li[id][1]};
   const pa=st.accounts.find(a=>a.id===pr.id); pa.solde=3200; pa.soldeDate=date(11,1).slice(0,8)+'01';
-  st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2000,objectif:6,assiette:'ca'};
+  st.settings={...SET0,epargne:7000,taux:22,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca'};
   const mk=k=>date(k,1).slice(0,7);
   /* Défi du mois dernier sur les courses (réussi) ; celui du mois en cours sera proposé */
   st.challenges=[{id:'auto',month:mk(0),cat:'courses',limite:265,habitude:350}].map(c=>({...c,key:newId('d_')}));
@@ -2405,6 +2491,18 @@ function conseils(){
 }
 
 /* ---------- Page d'accueil ---------- */
+/* Balance du mois : ce qui est entré (gagné par l'activité et autres rentrées) moins ce qui est parti côté perso.
+   L'épargne et les virements entre comptes ne comptent ni d'un côté ni de l'autre. */
+function balanceBloc(n,Pe){
+  const R=aggRaw(P), autres=R.perso.income, dep=Pe.net, b=n+autres-dep;
+  const [a,z]=bounds(P); let ep=0; for(const k of monthKeys(a,z)) for(const o of (BYMONTH[k]||[])) if(catOf(o)==='epargne') ep-=o.amount;
+  return `<div class="balance" id="balance">
+    <div class="ligne"><span>Gagné par votre activité</span><b>${signed(n)}</b></div>
+    ${autres>0.005?`<div class="ligne"><span>Autres rentrées</span><b>+${eur0(autres)}</b></div>`:''}
+    <div class="ligne"><span>Ce que vous avez dépensé</span><b>${dep>0.005?'−'+eur0(dep):eur0(0)}</b></div>
+    <div class="ligne total ${b>=0?'ok':'ko'}"><span>Balance du mois</span><b>${signed(b)}</b></div>
+    <p class="aide">${b>=0?`Vous avez dépensé moins que ce qui est entré : ${eur0(b)} de côté.`:`Vous avez dépensé ${eur0(-b)} de plus que ce qui est entré.`}${ep>0.005?` À part, ${eur0(ep)} versés sur votre épargne.`:ep<-0.005?` À part, ${eur0(-ep)} repris sur votre épargne.`:''}</p></div>`;
+}
 function vAccueil(){
   const X=agg(P,'pro'), Pe=agg(P,'perso'), part=moisPartiel(P), V=netVise(), H=heures();
   const lignes=Object.entries(Pe.by).filter(([,e])=>e.net>0.005||e.surplus>0.005).sort((a,b)=>b[1].net-a[1].net), max=Math.max(1,...lignes.map(([,e])=>e.net));
@@ -2414,6 +2512,7 @@ function vAccueil(){
     gagne=`<section class="carte gagne"><h3>Ce que vous avez gagné ${P.m===new Date().getMonth()+1&&P.y===new Date().getFullYear()?'ce mois-ci':'en '+MOIS[P.m-1]}</h3>
       <p class="grand-chiffre">${signed(n)}</p>
       <p class="etiquette ${d>=0?'ok':'ko'}">${d>=0?`${eur0(d)} de plus que votre objectif de ${eur0(V)}`:`Il manque ${eur0(-d)} pour atteindre votre objectif de ${eur0(V)}`}</p>
+      ${balanceBloc(n,Pe)}
       ${salaireBloc(P,'accueil')}
       ${part?`<p class="aide">Votre dernier relevé s’arrête au ${part} ${MOIS[P.m-1]}.</p>`:''}</section>
     <section class="carte" id="activite"><h3>Mon activité</h3>
@@ -2423,7 +2522,7 @@ function vAccueil(){
       <p class="aide sous-ligne">Cet argent n’est pas à vous : il servira à payer vos cotisations sociales et vos impôts.</p>
       ${+S.settings.taux?'':`<p class="aide">Indiquez ce pourcentage dans <button class="lien" data-tab="objectifs" data-ancre="taux-champ">Mes objectifs</button>.</p>`}
       <div class="ligne total"><span>Il vous reste</span><b>${signed(X.revenuNet)}</b></div></section>`}
-  else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ce mois-ci.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p></section>`;
+  else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ce mois-ci.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p>${balanceBloc(0,Pe)}</section>`;
   const q=S.accounts.filter(a=>!a.confirmed);
   return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+moisBar()+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ce mois-ci.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
@@ -2496,7 +2595,7 @@ function vDemarrage(){
     <div class="boutons"><button class="btn" data-onb="1">Commencer</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div>
     <button class="lien" data-act="onbfin">Passer</button></section>`;
   if(ONB===1) return `<section class="demarrage">${pas}<h2>Votre objectif</h2>
-    <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
+    <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2500"></label>
     <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
     <label class="champ">Part à garder de côté pour vos cotisations et impôts (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
     <p class="aide">${CONSEIL_TAUX}</p>

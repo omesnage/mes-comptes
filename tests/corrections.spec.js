@@ -29,9 +29,9 @@ test('migration : une règle « prêt » dont toutes les opérations sont sur le
   expect(await page.evaluate(()=>[S.rules['CREDIT MARITIME'],S.rules['CAISSE LOCALE'],catById('pret').name,catById('pret').univers,S.settings.heuresSemaine])).toEqual(['empruntpro','pret','Remboursement d’emprunt','perso',42]);
 });
 
-test('heures par semaine : 40 h ≈ 173,3 h par mois, taux visé 11,54 €',async({page})=>{
+test('heures par semaine : 40 h ≈ 173,3 h par mois, taux visé 14,42 €',async({page})=>{
   await openWith(page,null);
-  expect(await page.evaluate(()=>[+heures().toFixed(2),+tauxCible().toFixed(4)])).toEqual([173.33,11.5385]);
+  expect(await page.evaluate(()=>[+heures().toFixed(2),+tauxCible().toFixed(4)])).toEqual([173.33,14.4231]);
 });
 test('ajouter une rubrique depuis l’Accueil : nom, Perso ou Activité, icône ; renommable et supprimable dans Réglages',async({page})=>{
   await openWith(page,null); await page.click('[data-act="demo"]');

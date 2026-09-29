@@ -111,6 +111,10 @@ details[open]>summary::before{transform:rotate(90deg)}
 .ligne b{font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ligne.total{border-bottom:0;border-top:2px solid var(--ink);margin-top:4px;font-weight:500}
 .ligne.total b{font-weight:500;font-size:22px}
+.balance{margin:14px 0 4px}
+.balance .ligne.ok b{color:var(--ok)}
+.balance .ligne.ko b{color:var(--alert)}
+.balance .aide{margin-top:8px}
 .rubriques{margin-top:10px}
 .rub{display:grid;grid-template-columns:30px 1fr auto;gap:4px 14px;align-items:center;width:100%;padding:14px 0 12px;border-bottom:1px solid var(--line);min-height:56px}
 .rub>svg{width:24px;height:24px;color:var(--gold)}

@@ -5,7 +5,7 @@ function etat(mois,extra={}){
   const ops=[]; let i=0;
   for(const [ym,ca,fr] of mois){ops.push({id:'c'+i++,date:ym+'-05',label:'VIR CLIENT',amount:ca,merchant:'CLIENT',acct:'pr'});
     if(fr)ops.push({id:'f'+i++,date:ym+'-28',label:'CB LOGICIEL',amount:-fr,merchant:'LOGICIEL',acct:'pr'})}
-  return {schemaVersion:5,onboarded:true,accounts:[{id:'pr',name:'Pro',type:'pro',confirmed:true}],ops,rules:{CLIENT:'revenus',LOGICIEL:'logiciels'},settings:{taux:22,...extra}};
+  return {schemaVersion:5,onboarded:true,accounts:[{id:'pr',name:'Pro',type:'pro',confirmed:true}],ops,rules:{CLIENT:'revenus',LOGICIEL:'logiciels'},settings:{taux:22,netVise:2000,...extra}};
 }
 
 test('cascade de l’exemple : 17,66 → 15,28 → 13,75',async({page})=>{

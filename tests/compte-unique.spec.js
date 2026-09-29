@@ -42,7 +42,7 @@ test('plus de comptable : ni rubrique, ni ligne dans la démo ; ancienne rubriqu
   await openWith(page,{schemaVersion:8,onboarded:true,accounts:[{id:'pr',name:'Pro',type:'pro',confirmed:true}],
     categories:[{id:'conseils',name:'Conseils et services',icon:'messages-square',type:'expense',univers:'pro'}],rules:{'CABINET DUPONT':'conseils'},
     ops:[{id:'1',date:'2026-06-10',label:'PRLV CABINET DUPONT',amount:-80,merchant:'CABINET DUPONT',acct:'pr'}]});
-  expect(await page.evaluate(()=>[!!catById('conseils'),S.rules['CABINET DUPONT'],S.schemaVersion])).toEqual([false,'pro',9]);
+  expect(await page.evaluate(()=>[!!catById('conseils'),S.rules['CABINET DUPONT'],S.schemaVersion])).toEqual([false,'pro',10]);
   const d=await page.evaluate(()=>demoData().ops.some(o=>/COMPTAB|INDY/.test(o.label)));
   expect(d).toBe(false);
   const h=(await import('fs')).readFileSync(new URL('../dist/mes-comptes.html',import.meta.url),'utf8');

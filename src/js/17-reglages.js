@@ -55,7 +55,7 @@ function vDemarrage(){
     <div class="boutons"><button class="btn" data-onb="1">Commencer</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div>
     <button class="lien" data-act="onbfin">Passer</button></section>`;
   if(ONB===1) return `<section class="demarrage">${pas}<h2>Votre objectif</h2>
-    <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2000"></label>
+    <label class="champ">Ce que vous voulez gagner par mois (€)<input type="number" inputmode="numeric" min="0" step="50" data-set="netVise" value="${s.netVise||''}" placeholder="2500"></label>
     <label class="champ">Heures travaillées par semaine<input type="number" inputmode="numeric" min="1" max="100" step="1" data-set="heuresSemaine" value="${s.heuresSemaine||''}" placeholder="40"></label>
     <label class="champ">Part à garder de côté pour vos cotisations et impôts (%)<input type="number" inputmode="decimal" min="0" max="80" step="1" data-set="taux" value="${s.taux||''}" placeholder="par exemple 22"></label>
     <p class="aide">${CONSEIL_TAUX}</p>
