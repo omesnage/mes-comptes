@@ -25,7 +25,7 @@ test('Mes objectifs : objectif, affiner replié, limites avec shopping, sorties,
   await expect(page.locator('.affiner')).not.toHaveAttribute('open','');
   await expect(page.locator('#prixLive')).toContainText('vous devez vous faire payer au minimum');
   const tete=await page.locator('#limites > .limite-reg .lr-nom').allTextContents();
-  expect(tete.map(t=>t.trim())).toEqual(['Vêtements et shopping','Sorties et loisirs','Vacances','Cadeaux']);
+  expect(tete.map(t=>t.trim())).toEqual(['Vêtements et shopping','Sorties et loisirs','Vacances et séjours','Cadeaux']);
   await expect(page.locator('#limites details summary')).toHaveText('Autres rubriques');
   await page.locator('#limites details summary').click();
   const r=page.locator('.limite-reg',{hasText:'Restaurants et cafés'});

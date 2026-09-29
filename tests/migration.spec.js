@@ -27,7 +27,7 @@ const V1={
   champFutur:{garde:true}
 };
 function checkMigrated(s){
-  expect(s.schemaVersion).toBe(10);
+  expect(s.schemaVersion).toBe(11);
   expect(s.ops).toHaveLength(6);
   expect(s.accounts.map(a=>[a.name,a.type,a.confirmed]).sort()).toEqual([['Compte principal','perso',false],['Crédit Agricole','perso',false],['Qonto pro','pro',false]]);
   const ids=new Set(s.accounts.map(a=>a.id));
@@ -64,7 +64,7 @@ test('restauration d’une ancienne sauvegarde JSON',async({page},ti)=>{
   await openWith(page,null);
   const f=ti.outputPath('sauvegarde-v1.json');
   fs.writeFileSync(f,JSON.stringify({app:'mes-comptes',version:1,date:'2026-07-01T10:00:00.000Z',data:V1}));
-  await page.click('#gear');
+  await page.click('nav.tabs [data-tab="reglages"]');
   await page.setInputFiles('#restorefile',f);
   await expect(page.locator('#view')).toContainText('restaurée');
   checkMigrated(await page.evaluate(()=>S));
@@ -78,7 +78,7 @@ test('une sauvegarde faite après migration se restaure à l’identique',async(
   const json=await page.evaluate(()=>JSON.stringify({app:'mes-comptes',version:1,date:new Date().toISOString(),data:S}));
   const f=ti.outputPath('sauvegarde-v2.json'); fs.writeFileSync(f,json);
   await page.evaluate(()=>{S=blank();S.onboarded=true;render()});
-  await page.click('#gear');
+  await page.click('nav.tabs [data-tab="reglages"]');
   await page.setInputFiles('#restorefile',f);
   await expect(page.locator('#view')).toContainText('restaurée');
   expect(await page.evaluate(()=>JSON.parse(JSON.stringify(S)))).toEqual(before);
@@ -98,7 +98,7 @@ test('vraies données produites par l’ancienne version de l’application',asy
   // 2. La nouvelle version ouvre les mêmes données
   await page.goto(APP); await page.waitForSelector('nav.tabs button');
   const s=await page.evaluate(()=>S);
-  expect(s.schemaVersion).toBe(10);
+  expect(s.schemaVersion).toBe(11);
   expect(s.ops.length).toBe(v1.ops.length);
   expect(s.rules).toEqual({...v1.rules,'URSSAF|-':'cotisations'});
   expect(s.settings).toMatchObject({taux:25,heuresSemaine:35});
@@ -116,5 +116,5 @@ test('heures : l’ancien réglage par défaut (140 h puis 160 h par mois) devie
 test('v3 → v4 : un nom de rubrique personnalisé est gardé, les noms par défaut sont simplifiés',async({page})=>{
   await openWith(page,{schemaVersion:3,ops:[{id:'1',date:'2026-06-01',label:'CB X',amount:-5,merchant:'X',acct:'a'}],accounts:[{id:'a',name:'A',type:'perso',confirmed:true}],
     categories:[{id:'resto',name:'Mes restos',icon:'utensils',type:'expense',univers:'perso'},{id:'frais',name:'Frais bancaires',icon:'landmark',type:'expense',univers:'auto'}]});
-  expect(await page.evaluate(()=>[catById('resto').name,catById('frais').name,S.schemaVersion,S.onboarded])).toEqual(['Mes restos','Banque',10,true]);
+  expect(await page.evaluate(()=>[catById('resto').name,catById('frais').name,S.schemaVersion,S.onboarded])).toEqual(['Mes restos','Banque',11,true]);
 });

@@ -1,5 +1,5 @@
 /* ============ Actions ============ */
-function setRule(m,c){S.rules[m]=c;delete S.sugg[m];const mm=m.replace(/\|[+-]$/,'');S.ops.forEach(o=>{if(o.merchant===mm)dirtyMonths.add(o.date.slice(0,7))});save()}
+function setRule(m,c){const mm=m.replace(/\|[+-]$/,'');S.rules[m]=c;delete S.sugg[mm];S.ops.forEach(o=>{if(o.merchant===mm)dirtyMonths.add(o.date.slice(0,7))});save()}
 function aller(tab,ancre){
   view=tab;openCat=null;FICHE=null;MODAL=null;BCAT=null;render();
   const el=ancre&&document.getElementById(ancre);

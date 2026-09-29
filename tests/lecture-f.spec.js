@@ -32,7 +32,7 @@ test('assistant en trois gestes, sans quitter l’application : lecteur appris, 
 
 test('un lecteur se partage : exporter puis importer sur un autre appareil',async({page},ti)=>{
   await openWith(page,{schemaVersion:9,onboarded:true,readers:[{nom:'Banque du Littoral',detection:'LITTORAL',type:'colonnes',cols:{date:40,lib:110,deb:460,cre:540},nonSigne:-1,tol:40}]});
-  await page.click('#gear'); await page.locator('#avances summary').click();
+  await page.click('nav.tabs [data-tab="reglages"]'); await page.locator('#avances summary').click();
   const [dl]=await Promise.all([page.waitForEvent('download'),page.click('[data-lexport="0"]')]);
   const fichier=ti.outputPath('lecteur.json'); await dl.saveAs(fichier);
   expect(JSON.parse(fs.readFileSync(fichier,'utf8'))).toMatchObject({app:'mes-comptes-lecteur',lecteur:{nom:'Banque du Littoral'}});

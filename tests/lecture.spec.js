@@ -18,7 +18,7 @@ test('relevé non reconnu : aide de lecture dépliée, puis lecteur personnalis�
   await expect(r.locator('textarea.anon').first()).toContainText('CARTE BOULANGERIE');
   await expect(r.locator('[data-prompt]')).toHaveCount(1);
   // Lecteur personnalisé, collé dans Réglages avancés
-  await page.click('#gear'); await page.locator('#avances summary').click();
+  await page.click('nav.tabs [data-tab="reglages"]'); await page.locator('#avances summary').click();
   const lecteur={nom:'Banque exotique',detection:'BANQUE EXOTIQUE',ligne:'^(?<date>\\d{4}\\.\\d{2}\\.\\d{2}) \\| (?<libelle>.+?) \\| (?<montant>[\\d.]+) EUR (?<sens>[DC])$',signe:'moins'};
   await page.fill('#readerIn','Voici le lecteur : '+JSON.stringify(lecteur));
   await page.click('[data-act="addreader"]');
@@ -39,7 +39,7 @@ test('compte non confirmé : question en haut de l’Accueil jusqu’à la répo
   await expect(q.locator('.choix-btn.suggere')).toHaveText('Professionnel');
   await q.locator('.choix-btn',{hasText:'Je n’ai pas de compte pro : ce compte sert à tout'}).click();
   await expect(page.locator('.compte-q')).toHaveCount(0);
-  await page.click('#gear');
+  await page.click('nav.tabs [data-tab="reglages"]');
   await expect(page.locator('#comptes .choix-btn.suggere')).toHaveText('Je n’ai pas de compte pro : ce compte sert à tout');
   await page.locator('#comptes .choix-btn',{hasText:'Personnel'}).click();
   expect(await page.evaluate(()=>[S.accounts[0].type,S.accounts[0].confirmed])).toEqual(['perso',true]);

@@ -45,7 +45,7 @@ test('ajouter une rubrique depuis l’Accueil : nom, Perso ou Activité, icône 
   await expect(page.locator('.fenetre')).toHaveCount(0);
   const c=await page.evaluate(()=>S.categories.find(c=>c.name==='Sport'));
   expect(c).toMatchObject({univers:'pro',icon:'dumbbell',custom:true,type:'expense'});
-  await page.click('#gear'); await page.locator('#rubriques details summary').click();
+  await page.click('nav.tabs [data-tab="reglages"]'); await page.locator('#rubriques details summary').click();
   await expect(page.locator(`[data-rencat="${c.id}"]`)).toBeVisible();
   await page.click(`[data-delcat="${c.id}"]`);
   expect(await page.evaluate(()=>S.categories.some(c=>c.name==='Sport'))).toBe(false);

@@ -25,10 +25,10 @@ test('démo, mois affiché : gagné au-dessus de l’objectif, mon activité, o�
   await expect(page.locator('.conseil')).toHaveCount(2);
   // Limite vacances dépassée (location d'été) : elle passe avant les autres conseils
   await expect(page.locator('.conseil.ko')).toHaveCount(1);
-  await expect(page.locator('.conseil').first()).toContainText('Limite dépassée pour Vacances');
+  await expect(page.locator('.conseil').first()).toContainText('Limite dépassée pour Vacances et séjours');
   // Limites réalistes : vacances en rouge, sorties en orange, shopping et cadeaux en doré
   const etats=await page.locator('.budgets .budget-an').evaluateAll(l=>l.map(e=>e.querySelector('.phrase').textContent.split(' :')[0]+':'+['or','orange','rouge'].find(c=>e.classList.contains(c))));
-  expect(etats.sort()).toEqual(['Cadeaux:or','Sorties et loisirs:orange','Vacances:rouge','Vêtements et shopping:or']);
+  expect(etats.sort()).toEqual(['Cadeaux:or','Sorties et loisirs:orange','Vacances et séjours:rouge','Vêtements et shopping:or']);
 });
 
 test('démo, mois précédent : sous l’objectif, en rouge',async({page})=>{

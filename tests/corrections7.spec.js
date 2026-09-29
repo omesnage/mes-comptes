@@ -24,12 +24,12 @@ test('défi raté : « Pas tout à fait », avec le trop dépensé',async({page}
   await expect(b.locator('.d-res.presque')).toHaveText('Pas tout à fait');
   await expect(b.locator('.phrase')).toHaveText(nb('Restaurants et cafés : vous vous étiez fixé 150 € maximum, vous avez dépensé 175 €, soit 25 € de trop.').replace(/ €/g,' €'));
 });
-test('défi du mois en cours : limite = habitude × 0,75 arrondie à la dizaine, mois correct, barre après acceptation',async({page})=>{
+test('défi du mois en cours : limite = dépense du mois dernier × 0,75 arrondie à la dizaine, mois correct, barre après acceptation',async({page})=>{
   await openWith(page,etatDefi(200,false));
   const b=page.locator('.defi');
   await expect(b).toHaveCount(1);
   await expect(b.locator('h3')).toHaveText(`Défi pour ${mois(0).nom}`);
-  await expect(b.locator('.phrase')).toHaveText(nb('Restaurants et cafés : ne pas dépasser 150 € ce mois-ci. D’habitude, vous dépensez environ 200 €.').replace(/ €/g,' €'));
+  await expect(b.locator('.phrase')).toHaveText(nb('Restaurants et cafés : ne pas dépasser 150 € ce mois-ci. En '+mois(1).nom+', vous avez dépensé 200 €.').replace(/ €/g,' €'));
   await page.click('[data-defiok]');
   await expect(b.locator('.d-prog')).toHaveText('0 € dépensés sur 150 €');
   await expect(b.locator('.barre-defi')).toHaveCount(1);
@@ -70,9 +70,9 @@ test('migration : plus aucune trace des frais remboursés ni de la voiture',asyn
       {id:'3',date:'2026-05-20',label:'VIR SEPA EMIS INDEMNITES KM',amount:-140,merchant:'INDEMNITES KM',acct:'pr'},{id:'4',date:'2026-05-21',label:'VIR SEPA RECU DE QONTO',amount:140,merchant:'QONTO',acct:'pe'}]});
   const s=await page.evaluate(()=>({v:S.schemaVersion,cat:S.categories.some(c=>c.id==='fraisrembourses'),rules:S.rules,sugg:S.sugg,vir:S.virements,op2:S.ops.find(o=>o.id==='2').cat,
     t:catById('transport'),l:catById('loisirs').name,vo:catById('voyages').name,remu:agg({lvl:'M',y:2026,m:5},'pro').remu}));
-  expect(s.v).toBe(10); expect(s.cat).toBe(false); expect(s.rules).toEqual({CARREFOUR:'courses'}); expect(s.sugg).toEqual({});
+  expect(s.v).toBe(11); expect(s.cat).toBe(false); expect(s.rules).toEqual({CARREFOUR:'courses'}); expect(s.sugg).toEqual({});
   expect(s.vir).toBeUndefined(); expect(s.op2).toBeUndefined();
-  expect(s.t).toMatchObject({name:'Transports',univers:'perso'}); expect(s.l).toBe('Sorties et loisirs'); expect(s.vo).toBe('Vacances');
+  expect(s.t).toMatchObject({name:'Transports',univers:'perso'}); expect(s.l).toBe('Sorties et loisirs'); expect(s.vo).toBe('Vacances et séjours');
   expect(s.remu).toBe(140);
   const h=(await import('fs')).readFileSync(new URL('../dist/mes-comptes.html',import.meta.url),'utf8');
   expect(h.match(/INDEMNITES|NOTE DE FRAIS|virKind|Voiture et transports(?![’'])/g)?.filter(x=>x!=='Voiture et transports')||[]).toEqual([]);

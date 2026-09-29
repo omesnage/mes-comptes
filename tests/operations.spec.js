@@ -47,5 +47,5 @@ test('fiche : changer la rubrique pour une opération ou pour tout le marchand, 
 test('« À vérifier » : Vacances et Cadeaux font partie des boutons proposés',async({page})=>{
   await demo(page);
   const b=await page.locator('.verifier .question').first().locator('.choix-btn').allTextContents();
-  expect(b).toEqual(expect.arrayContaining(['Vacances','Cadeaux']));
+  expect(b).toEqual(expect.arrayContaining(['Vacances et séjours','Cadeaux']));
 });

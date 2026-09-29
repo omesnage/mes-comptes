@@ -50,7 +50,7 @@ async function parcours(page,f){
   await page.click('nav.tabs [data-tab="importer"]'); await f('importer');
   await page.click('[data-act="coller"]'); await page.fill('#colleTxt','03/03/2026 CARREFOUR MARKET -45,20 €\n04/03/2026 CLIENT +300,00 €'); await page.click('[data-act="collelire"]'); await f('coller'); await page.click('[data-act="collefin"]');
   await page.click('nav.tabs [data-tab="objectifs"]'); await page.evaluate(()=>document.querySelectorAll('details').forEach(d=>d.open=true)); await f('objectifs');
-  await page.click('#gear'); await page.evaluate(()=>document.querySelectorAll('details').forEach(d=>d.open=true)); await f('reglages');
+  await page.click('nav.tabs [data-tab="reglages"]'); await page.evaluate(()=>document.querySelectorAll('details').forEach(d=>d.open=true)); await f('reglages');
   await page.evaluate(()=>{S.onboarded=false;demo=false;ONB=1;render()}); await f('demarrage');
 }
 
@@ -100,12 +100,13 @@ test('aucun défilement horizontal en largeur mobile',async({page})=>{
   await parcours(page,async nom=>{expect(await page.evaluate(()=>document.documentElement.scrollWidth),nom).toBeLessThanOrEqual(360)});
 });
 
-test('trois onglets, en bas de l’écran sur mobile ; réglages derrière l’engrenage',async({page})=>{
+test('six onglets en bas de l’écran sur mobile, dont Réglages ; plus d’engrenage',async({page})=>{
   await page.setViewportSize({width:390,height:800});
   await openWith(page,null); await page.click('[data-act="demo"]');
-  await expect(page.locator('nav.tabs button')).toHaveText([/Accueil/,/Bilan/,/Mes opérations/,/Importer/,/Mes objectifs/]);
+  await expect(page.locator('nav.tabs button')).toHaveText([/Accueil/,/Bilan/,/Mes opérations/,/Importer/,/Mes objectifs/,/Réglages/]);
+  await expect(page.locator('#gear')).toHaveCount(0);
   const b=await page.locator('nav.tabs').boundingBox(); expect(b.y+b.height).toBeGreaterThan(790);
-  await page.click('#gear'); await expect(page.locator('.titre-page')).toHaveText('Réglages');
+  await page.click('nav.tabs [data-tab="reglages"]'); await expect(page.locator('.titre-page')).toHaveText('Réglages');
 });
 
 test('la démo ne touche pas aux données enregistrées',async({page})=>{

@@ -119,6 +119,11 @@ function migrateSchema(st){
     st.ops.forEach(o=>{if(o.cat&&foyer(o.cat)&&COTIS_RE.test(norm(o.label||''))){o.cat='cotisations';dirtyMonths.add(o.date.slice(0,7))}});
     st.schemaVersion=10;
   }
+  if(st.schemaVersion<11){
+    /* v10 → v11 : « Vacances » devient « Vacances et séjours » (un nom personnalisé est gardé) */
+    const c=st.categories.find(k=>k.id==='voyages'); if(c&&['Vacances','Voyages'].includes(c.name)) c.name='Vacances et séjours';
+    st.schemaVersion=11;
+  }
   return st.schemaVersion!==v0;
 }
 function save(){ if(demo) return; stateDirty=true; clearTimeout(timer); timer=setTimeout(flush,700); }

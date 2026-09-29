@@ -36,22 +36,48 @@ function evalDefi(c){
   const status=!fini?'en cours':v<=limite+0.005?'réussi':'manqué';
   return {name:k?k.name:'',month:c.month,status,v,limite,marge:Math.max(0,limite-v),trop:Math.max(0,v-limite),economie:Math.max(0,(c.habitude||c.base||limite)-v)};
 }
-/* Proposition pour un mois : la rubrique variable la plus lourde d'habitude ; limite = habitude × 0,75, arrondie à la dizaine */
-function propositionDefi(ym){
-  const p={lvl:'M',y:+ym.slice(0,4),m:+ym.slice(5,7)};
-  const cs=S.categories.filter(c=>variable(c.id)).map(c=>({cid:c.id,h:habitude(c.id,p)})).filter(x=>x.h&&x.h>=40).sort((a,b)=>b.h-a.h);
-  if(!cs.length) return null;
-  const x=cs[0]; return {cat:x.cid,hab:x.h,limite:dizaine(x.h*.75),month:ym};
+/* Propositions pour un mois : les plus grosses dépenses variables du mois dernier (jusqu'à 3, au moins 40 €).
+   Vacances et cadeaux, trop occasionnels, sont laissés de côté. Limite = dépense du mois dernier × 0,75, arrondie à la dizaine.
+   Sans relevé du mois dernier : la rubrique la plus lourde d'habitude. */
+const OCCASIONNEL=new Set(['voyages','cadeaux']);
+function propositionsDefi(ym){
+  const p={lvl:'M',y:+ym.slice(0,4),m:+ym.slice(5,7)}, q=shift(p,-1), qym=ymOf(q);
+  const ok=c=>variable(c.id)&&!OCCASIONNEL.has(c.id);
+  if(aDesDonnees(qym)){
+    const by=agg(q,'perso').by;
+    return S.categories.filter(ok).map(c=>({cat:c.id,dernier:by[c.id]?.net||0})).filter(x=>x.dernier>=40).sort((a,b)=>b.dernier-a.dernier).slice(0,3)
+      .map(x=>({...x,hab:x.dernier,limite:dizaine(x.dernier*.75),month:ym}));
+  }
+  const cs=S.categories.filter(ok).map(c=>({cid:c.id,h:habitude(c.id,p)})).filter(x=>x.h&&x.h>=40).sort((a,b)=>b.h-a.h);
+  return cs.length?[{cat:cs[0].cid,hab:cs[0].h,limite:dizaine(cs[0].h*.75),month:ym}]:[];
 }
+const propositionDefi=ym=>propositionsDefi(ym)[0]||null;
+
+/* ---------- Trophées : un par défi réussi ; paliers bronze, argent, or, platine ---------- */
+const PALIERS=[[1,'bronze'],[3,'argent'],[6,'or'],[12,'platine']];
+function trophees(){return S.challenges.filter(c=>c.id==='auto').map(c=>({c,e:evalDefi(c)})).filter(x=>x.e&&x.e.status==='réussi').sort((a,b)=>a.c.month<b.c.month?1:-1)}
+function palier(n){let p=null;for(const [k,nom] of PALIERS) if(n>=k) p=nom;return p}
+function prochainPalier(n){const x=PALIERS.find(([k])=>k>n);return x?{reste:x[0]-n,nom:x[1]}:null}
+const deTrophee=nom=>'trophée '+(/^[aeiou]/.test(nom)?'d’':'de ')+nom;
+function blocTrophees(){
+  const t=trophees(), n=t.length, pal=palier(n), pro=prochainPalier(n), eco=t.reduce((s,x)=>s+x.e.economie,0);
+  return `<section class="carte" id="trophees"><h3><i data-lucide="trophy"></i>Mes trophées</h3>
+    ${n?`<p class="phrase">${n} défi${n>1?'s':''} réussi${n>1?'s':''}${pal?` : ${deTrophee(pal)}`:''}.${eco>=1?` ${eur0(eco)} dépensés en moins au total.`:''}</p>
+      ${pro?`<p class="aide">Encore ${pro.reste} défi${pro.reste>1?'s':''} réussi${pro.reste>1?'s':''} pour le ${deTrophee(pro.nom)}.</p>`:''}
+      <ul class="trophees">${t.map(({c,e})=>`<li><i data-lucide="trophy"></i><span><b>${esc(e.name)}</b> en ${moisDe(c.month)} ${c.month.slice(0,4)} : ${eur0(e.v)} dépensés sur ${eur0(e.limite)} maximum</span></li>`).join('')}</ul>`
+     :`<p class="aide">Relevez un défi sur l’Accueil : chaque défi réussi vous rapporte un trophée. Bronze au premier, puis argent, or et platine.</p>`}</section>`;
+}
+
 function blocsDefi(){
   if(ymOf(P)<lastOpDate().slice(0,7)) return '';
   const cur=moisCourant(), prev=shift(cur,-1), cym=ymOf(cur), pym=ymOf(prev), nomC=MOIS[cur.m-1], nomP=MOIS[prev.m-1];
   let h='';
   const r=evalDefi(defiDe(pym));
   if(r){
-    const phrase=`${esc(r.name)} : vous vous étiez fixé ${eur0(r.limite)} maximum, vous avez dépensé ${eur0(r.v)}`;
+    const phrase=`${esc(r.name)} : vous vous étiez fixé ${eur0(r.limite)} maximum, vous avez dépensé ${eur0(r.v)}`, n=trophees().length;
     h+=`<section class="carte defi"><h3><i data-lucide="flag"></i>Défi ${/^[aeiou]/.test(nomP)?'d’':'de '}${nomP}</h3>
-      ${r.status==='réussi'?`<p class="d-res ok">Réussi ✓</p><p class="phrase">${phrase}.${r.marge>=1?` ${eur0(r.marge)} de marge.`:''}</p>`
+      ${r.status==='réussi'?`<p class="d-res ok">Réussi ✓</p><p class="phrase">${phrase}.${r.marge>=1?` ${eur0(r.marge)} de marge.`:''}</p>
+        <button class="trophee-gagne" data-tab="objectifs" data-ancre="trophees"><i data-lucide="trophy"></i><span>Trophée gagné ! Vous en avez ${n}.</span><i data-lucide="chevron-right"></i></button>`
        :r.status==='manqué'?`<p class="d-res presque">Pas tout à fait</p><p class="phrase">${phrase}, soit ${eur0(r.trop)} de trop.</p>`
        :`<p class="phrase">${esc(r.name)} : ${eur0(r.v)} dépensés pour l’instant, sur ${eur0(r.limite)} maximum.</p><p class="aide">Le résultat s’affichera avec votre relevé complet de ${nomP}.</p>`}</section>`;
   }
@@ -62,10 +88,11 @@ function blocsDefi(){
       <p class="d-prog">${eur0(e.v)} dépensés sur ${eur0(e.limite)}</p><div class="barre-defi${e.v>e.limite?' trop':''}"><span style="width:${pc}%"></span></div>
       ${aDesDonnees(cym)?'':`<p class="aide">Vos dépenses de ${nomC} apparaîtront quand vous ajouterez ce relevé.</p>`}
       <button class="lien" data-undefi="${c.key}">Annuler le défi</button></section>`}
-  else{const pr=propositionDefi(cym);
-    if(pr){const k=catById(pr.cat);h+=`<section class="carte defi"><h3><i data-lucide="target"></i>Défi pour ${nomC}</h3>
-      <p class="phrase">${esc(k.name)} : ne pas dépasser ${eur0(pr.limite)} ce mois-ci. D’habitude, vous dépensez environ ${eur0(dizaine(pr.hab))}.</p>
-      <button class="btn" data-defiok="${pr.cat}" data-limite="${pr.limite}" data-hab="${pr.hab.toFixed(2)}" data-month="${cym}">Je relève le défi</button></section>`}}
+  else{const prs=propositionsDefi(cym), dernier=aDesDonnees(pym);
+    if(prs.length){h+=`<section class="carte defi"><h3><i data-lucide="target"></i>Défi pour ${nomC}</h3>
+      ${prs.length>1?`<p class="aide">Vos plus grosses dépenses ${/^[aeiou]/.test(nomP)?'d’':'de '}${nomP}. Choisissez celle que vous voulez réduire :</p>`:''}
+      ${prs.map(pr=>{const k=catById(pr.cat);return `<div class="defi-choix"><p class="phrase">${esc(k.name)} : ne pas dépasser ${eur0(pr.limite)} ce mois-ci. ${dernier?`En ${nomP}, vous avez dépensé ${eur0(pr.dernier)}.`:`D’habitude, vous dépensez environ ${eur0(dizaine(pr.hab))}.`}</p>
+      <button class="btn${prs.length>1?' secondaire':''}" data-defiok="${pr.cat}" data-limite="${pr.limite}" data-hab="${pr.hab.toFixed(2)}" data-month="${cym}">${prs.length>1?'Je choisis ce défi':'Je relève le défi'}</button></div>`}).join('')}</section>`}}
   return h;
 }
 

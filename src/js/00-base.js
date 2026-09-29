@@ -1,5 +1,5 @@
 /* ============ Données de base ============ */
-const SCHEMA=10;
+const SCHEMA=11;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
 const CATS0=[
@@ -16,7 +16,7 @@ const CATS0=[
  ['enfants','Enfants','baby','expense','perso'],
  ['animaux','Animaux','paw-print','expense','perso'],
  ['cadeaux','Cadeaux','gift','expense','perso'],
- ['voyages','Vacances','luggage','expense','perso'],
+ ['voyages','Vacances et séjours','luggage','expense','perso'],
  ['frais','Banque','landmark','expense','auto',1],
  ['impotsfoyer','Impôts et taxes du foyer','receipt','expense','perso',1],
  ['pret','Remboursement d’emprunt','banknote','expense','perso',1],

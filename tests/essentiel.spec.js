@@ -16,8 +16,8 @@ test('Bilan : « L’essentiel » en tête, lignes colorées avec graphique',asy
   await expect(e.locator('.ess.attention',{hasText:'Plus forte hausse'})).toContainText('par rapport au mois précédent');
   // Mois précédent : la location d'été fait dépasser la limite vacances
   await page.click('[data-bshift="-1"]');
-  await expect(page.locator('.essentiel .ess.ko',{hasText:'limite dépassée'})).toContainText('Vacances');
-  await expect(page.locator('.essentiel .ess-lim.rouge')).toContainText('Vacances');
+  await expect(page.locator('.essentiel .ess.ko',{hasText:'limite dépassée'})).toContainText('Vacances et séjours');
+  await expect(page.locator('.essentiel .ess-lim.rouge')).toContainText('Vacances et séjours');
   // Activité
   await page.click('[data-bu="pro"]');
   await expect(page.locator('.essentiel')).toContainText('encaissés');

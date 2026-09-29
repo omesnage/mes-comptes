@@ -31,5 +31,6 @@ function vObjectifs(){
   <section class="carte" id="limites"><h3>Mes limites de dépenses</h3>
     <p class="aide">Indiquez un montant pour les rubriques que vous voulez surveiller, par mois, par trimestre ou par an. Laissez vide pour ne pas fixer de limite.</p>
     ${tete.map(ligneLimite).join('')}
-    <details class="autre"><summary>Autres rubriques</summary>${autres.map(ligneLimite).join('')}</details></section>`;
+    <details class="autre"><summary>Autres rubriques</summary>${autres.map(ligneLimite).join('')}</details></section>
+  ${blocTrophees()}`;
 }

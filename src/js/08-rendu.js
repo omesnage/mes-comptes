@@ -1,8 +1,10 @@
 /* ============ Rendu : structure commune ============ */
 function pendingGroups(){
-  const g={};
+  const g={}, sens={};
+  /* Un marchand qui a à la fois des dépenses et des rentrées (achats et remboursements, ventes…) : deux questions séparées */
+  for(const o of S.ops){ if(catOf(o)) continue; sens[o.merchant]=(sens[o.merchant]||0)|(o.amount>0?2:1) }
   for(const o of S.ops){ if(catOf(o)) continue;
-    const key=S.rules[o.merchant]?o.merchant+(o.amount>0?'|+':'|-'):o.merchant;
+    const key=S.rules[o.merchant]||sens[o.merchant]===3?o.merchant+(o.amount>0?'|+':'|-'):o.merchant;
     const e=g[key]||(g[key]={m:key,n:0,total:0,label:o.label,refunds:0,accts:[],credit:o.amount>0});
     if(o.amount>0&&(LINK[o.id]||REFUND_RE.test(norm(o.label)))) e.refunds++;
     e.accts.push(o.acct); e.n++; e.total+=o.amount; }
@@ -20,7 +22,7 @@ const inUniv=o=>UNIV==='all'||opUniv(o)===UNIV;
 const moisNom=p=>{const s=MOIS[p.m-1]+' '+p.y;return s[0].toUpperCase()+s.slice(1)};
 
 let ACCN=0;
-const TABS=[['accueil','Accueil','house'],['bilan','Bilan','chart-bar'],['operations','Mes opérations','list'],['importer','Importer','upload'],['objectifs','Mes objectifs','target']];
+const TABS=[['accueil','Accueil','house'],['bilan','Bilan','chart-bar'],['operations','Mes opérations','list'],['importer','Importer','upload'],['objectifs','Mes objectifs','target'],['reglages','Réglages','settings']];
 function render(){
   AGG={}; RAW={}; relink(); ACCN=S.accounts.length;
   if(!P||P.lvl!=='M') P=defaultPeriod(); P.lvl='M';
@@ -28,7 +30,6 @@ function render(){
   document.body.classList.toggle('onb',onb);
   const nv=onb?0:nbAVerifier();
   $('#tabs').innerHTML=onb?'':TABS.map(([k,l,ic])=>`<button data-tab="${k}" aria-current="${view===k}"><i data-lucide="${ic}"></i><span>${l}${k==='operations'&&nv?`<span class="badge" aria-label="${nv} à vérifier">${nv}</span>`:''}</span></button>`).join('');
-  $('#gear').hidden=onb; $('#gear').setAttribute('aria-current',view==='reglages');
   $('#demoBar').innerHTML=demo?`<div class="demo-bar"><span>Vous regardez un exemple.</span><button data-act="exitdemo">Quitter l’exemple</button></div>`:'';
   const v=$('#view');
   if(onb) v.innerHTML=vDemarrage();
@@ -63,7 +64,7 @@ function acctAsk(a){
 
 /* ============ Mes opérations ============ */
 function choixRubriques(x){
-  const s=S.sugg[x.m]?.c, acc=[...new Set(x.accts.map(id=>(acctById(id)||{}).type||'perso'))];
+  const s=S.sugg[x.m.replace(/\|[+-]$/,'')]?.c, acc=[...new Set(x.accts.map(id=>(acctById(id)||{}).type||'perso'))];
   let ids;
   if(x.credit) ids=['revenus','rentrees','retraite','remb','epargne'];
   else if(acc.length===1&&acc[0]==='pro') ids=['logiciels','materiel','deplacements','soustraitance','pro'];
@@ -81,10 +82,10 @@ function aVerifier(){
     return `<div class="question"><p class="q-question">Ces 2 opérations sont-elles les mêmes ?</p><div class="apercu">${L(a)}${L(b)}</div>
     <div class="choix gros"><button class="choix-btn" data-dout="${i}:1">Oui, c’est la même : n’en garder qu’une</button><button class="choix-btn" data-dout="${i}:0">Non, ce sont deux opérations</button></div></div>`}).join('')}
   ${g.map(x=>x.credit&&x.accts.some(id=>acctById(id)?.type==='mixte')?`<div class="question client-q"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
-    <p class="q-s">${x.n>1?`${x.n} rentrées, `:''}+${eur(x.total)}. ${esc(x.label)}</p>
+    <p class="q-s">${x.n>1?`${x.n} rentrées, ${eur(x.total)} au total`:`Rentrée de ${eur(x.total)}`}. ${esc(x.label)}</p>
     <p class="q-question">Cet argent vient-il d’un client ?</p>
     <div class="choix gros"><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="revenus">Oui, c’est un client</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="rentrees">Non (CAF, vente, remboursement, virement perso…)</button></div></div>`:`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
-    <p class="q-s">${x.n>1?`${x.n} opérations, `:''}${x.total<0?'−':'+'}${eur(Math.abs(x.total))}. ${esc(x.label)}</p>
+    <p class="q-s">${x.n>1?`${x.n} ${x.credit?'rentrées':'dépenses'}, ${eur(Math.abs(x.total))} au total`:`${x.credit?'Rentrée de':'Dépense de'} ${eur(Math.abs(x.total))}`}. ${esc(x.label)}</p>
     <div class="choix">${choixRubriques(x)}</div>
     <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details></div>`).join('')}
   </section>`;
