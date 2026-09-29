@@ -83,9 +83,11 @@ function aVerifier(){
     <div class="choix gros"><button class="choix-btn" data-dout="${i}:1">Oui, c’est la même : n’en garder qu’une</button><button class="choix-btn" data-dout="${i}:0">Non, ce sont deux opérations</button></div></div>`}).join('')}
   ${g.map(x=>x.credit&&x.accts.some(id=>acctById(id)?.type==='mixte')?`<div class="question client-q"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
     <p class="q-s">${x.n>1?`${x.n} rentrées, ${eur(x.total)} au total`:`Rentrée de ${eur(x.total)}`}. ${esc(x.label)}</p>
+    ${lienRecherche(x.label)}
     <p class="q-question">Cet argent vient-il d’un client ?</p>
     <div class="choix gros"><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="revenus">Oui, c’est un client</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="rentrees">Non (CAF, vente, remboursement, virement perso…)</button></div></div>`:`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
     <p class="q-s">${x.n>1?`${x.n} ${x.credit?'rentrées':'dépenses'}, ${eur(Math.abs(x.total))} au total`:`${x.credit?'Rentrée de':'Dépense de'} ${eur(Math.abs(x.total))}`}. ${esc(x.label)}</p>
+    ${lienRecherche(x.label)}
     <div class="choix">${choixRubriques(x)}</div>
     <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details></div>`).join('')}
   </section>`;
@@ -127,6 +129,7 @@ function fiche(id){
     <button class="fermer" data-act="closefiche" aria-label="Fermer"><i data-lucide="x"></i></button>
     <p class="f-m">${esc(o.merchant)}</p><p class="f-amt${o.amount>0?' cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</p>
     <p class="aide">${esc(o.label)}<br>${dfmt(o.date).replace(/(\d\d)\/(\d\d)\/(\d\d)/,'$1/$2/20$3')}${o.src!=='rev'&&ACCN>1?`, ${esc(acctName(o.acct))}`:''}</p>
+    ${o.src==='rev'?'':lienRecherche(o.label)}
     ${opExtra(o)?`<p class="f-x">${esc(opExtra(o))}</p>`:''}
     ${o.src==='rev'||x?'':`<label class="f-lbl" for="ficheCat">Rubrique</label>
     <select class="grand" id="ficheCat">${c||FICHESEL?'':'<option value="">À vérifier</option>'}${catOptions(FICHESEL||c,false,'',true)}</select>
@@ -180,6 +183,23 @@ function reportCard(r){
         <button class="btn secondaire" data-lclaude="${r.imp}">Ajouter ce lecteur et relire le relevé</button></details>`:'';
   return info+ctl+liste+aide;
 }
+/* Relevés déjà ajoutés, regroupés par import : chacun peut être supprimé (ajouté par erreur) */
+const SRC_NOM={pdf:'Relevé PDF',csv:'Fichier CSV',paste:'Copier-coller'};
+function groupesImport(){
+  const g={}; for(const o of S.ops){ if(o.src==='rev'||!o.imp) continue;
+    const e=g[o.imp]||(g[o.imp]={imp:o.imp,n:0,min:o.date,max:o.date,accts:new Set(),src:o.src});
+    e.n++; if(o.date<e.min)e.min=o.date; if(o.date>e.max)e.max=o.date; e.accts.add(o.acct) }
+  return Object.values(g).sort((a,b)=>a.max<b.max?1:a.max>b.max?-1:0);
+}
+function relevesAjoutes(){
+  const g=groupesImport(); if(!g.length) return '';
+  const d=x=>x.slice(8,10)+'/'+x.slice(5,7)+'/'+x.slice(0,4);
+  return `<details class="carte repli" id="mes-releves"><summary>Mes relevés ajoutés (${g.length})</summary>
+    <p class="aide">Un relevé ajouté par erreur ? Supprimez-le : ses opérations disparaissent, les rubriques que vous avez choisies sont gardées.</p>
+    ${g.map(e=>{const nom=(S.imports||{})[e.imp]?.nom||SRC_NOM[e.src]||'Relevé';
+      return `<div class="releve-ajoute"><p><b>${esc(nom)}</b><br><span class="aide">${[...e.accts].map(a=>esc(acctName(a))).join(', ')} · du ${d(e.min)} au ${d(e.max)} · ${e.n} opération${e.n>1?'s':''}</span></p>
+      <button class="lien danger" data-delimp="${e.imp}">Supprimer</button></div>`}).join('')}</details>`;
+}
 function vImport(){
   const nRev=S.ops.filter(o=>o.src==='rev').length;
   return privacyBox()+`<section class="carte">
@@ -191,6 +211,7 @@ function vImport(){
   <p class="aide">Copiez les opérations sur le site de votre banque et collez-les ici. Celles qui sont déjà là ne sont pas ajoutées deux fois, même si vous importez le relevé PDF ensuite.</p></section>
   ${COLLE?panneauColler():''}
   ${reports.length?`<section class="releves">${reports.map(reportLine).join('')}</section>`:''}
+  ${relevesAjoutes()}
   <details class="carte repli"${revDraft||revMsg||revError?' open':''}><summary>Vous suivez vos revenus dans un tableau ?</summary>
   <p class="aide">Choisissez le fichier Excel, Numbers ou CSV où vous notez ce que vous encaissez. L’application le lit à la place de vos relevés pour vos encaissements.</p>
   ${revMsg?`<p class="ok-txt">${esc(revMsg)}</p>`:''}${revError?`<p class="ko-txt">${esc(revError)}</p>`:''}

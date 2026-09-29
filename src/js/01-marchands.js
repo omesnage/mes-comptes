@@ -15,6 +15,21 @@ function merchantOf(label){
   const w=s.split(/\s+/).map(x=>x.replace(/^[.'-]+|[.'-]+$/g,'')).filter(x=>x.length>1&&!/\d/.test(x)&&!stop.has(x)&&!/^([A-Z]\.)+[A-Z]?$/.test(x));
   return w.slice(0,3).join(' ')||(/PAYPAL/.test(norm(label))?'PAYPAL':norm(label).trim().slice(0,24))||'INCONNU';
 }
+/* Mots à chercher sur le web pour un libellé inconnu : le type d'opération, les numéros, les formes de société
+   et le code pays collé à la ville sont retirés ; après un intermédiaire de paiement (SumUp, PayPal…), on garde le vrai vendeur. */
+const INTERMEDIAIRES=/^(SUMUP|SUM UP|PAYPAL|STRIPE|ZETTLE|IZETTLE|PAYPLUG|LYDIA|SQUARE|SQ|MOLLIE|ADYEN|PAYGREEN|LYF)$/;
+const MOTS_TYPE=new Set(['PAIEMENT','PAR','CARTE','CB','WEB','PRLV','PRELEVEMENT','SEPA','VIR','VIREMENT','RECU','EMIS','INST','INSTANTANE','ACHAT','FACTURE','AVOIR','SUR','DE','DU','VERS','EUR','EUROS','SA','SAS','SASU','SARL','EURL','SNC','SCA','LTD','GMBH','BV','SE','SRL','SL','ETS','ET','CIE','DEBIT','DIFFERE','EUROPEEN','COMMERCE','ELECTRONIQUE','MOTIF','REF','RUM','ICS']);
+const DEBUT_FR=/^FR(ANC|AIS|EE|ESH|IT|OMAG|UIT|ERE|IGO|ICHE|ONT|AGRA|ED|OID|ANP|ENCH)/;
+function motsRecherche(label){
+  let s=norm(label||'').replace(/\b\d+[.,]\d+\s*EUR\b.*$/,' ').replace(/\s+/g,' ').trim();
+  /* Intermédiaire de paiement : « SUMUP *BOULANGERIE » → « BOULANGERIE » */
+  const et=s.split('*'); if(et.length>1){const g=et[0].trim().split(' ');if(INTERMEDIAIRES.test(g[g.length-1]||'')||INTERMEDIAIRES.test(g.slice(-2).join(' ')))s=et.slice(1).join(' ')}
+  let w=s.replace(/[*]/g,' ').split(/\s+/).map(x=>x.replace(/^[.,:;'"()-]+|[.,:;'"()-]+$/g,''))
+    .filter(x=>x&&!MOTS_TYPE.has(x)&&!INTERMEDIAIRES.test(x)&&x.length>1&&(x.match(/\d/g)||[]).length<2&&!(x.length>=8&&/\d/.test(x))&&!/^\d+$/.test(x));
+  if(w.length>1){const d=w[w.length-1],m=d.match(/^(FR|IE|LU|NL|GB)([A-Z]{3,})$/);if(m&&!DEBUT_FR.test(d))w[w.length-1]=m[2]}
+  return w.slice(0,6).join(' ');
+}
+const lienRecherche=label=>{const q=motsRecherche(label);return q?`<a class="lien chercher" href="https://www.google.com/search?q=${encodeURIComponent(q)}" target="_blank" rel="noopener noreferrer"><i data-lucide="search"></i>À quoi correspond ce libellé ?</a>`:''};
 /* Suggestion de rubrique d'après le libellé et le type du compte (perso, pro ou mixte) */
 function kwSuggest(m,label,atype,amount){
   const t=norm(m+' '+label);

@@ -91,6 +91,7 @@ function ajouterColle(){
     if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const k=kwSuggest(op.merchant,op.label,atype,op.amount);if(k)S.sugg[op.merchant]={c:k,src:'kw'}}
   }
   const a=acctById(acct);
+  if(added){S.imports=S.imports||{};S.imports[imp]={nom:'Copier-coller du '+new Date().toLocaleDateString('fr-FR'),quand:Date.now()}}
   reports.unshift({name:'Copier-coller',colle:true,bank:a?a.name:'',acct,found:L.length,added,dups:L.filter(o=>o.etat==='deja').length,completees:0,douteux:L.filter(o=>o.etat==='doute').length,sample:[],lus:L.map(o=>({...o,dup:o.etat==='deja'})),raw:'',imp,test:false});
   if(!S.since) S.since=Date.now();
   S.ops.sort((x,y)=>x.date<y.date?1:-1); stateDirty=true; COLLE=null; P=null; save(); render();
@@ -179,4 +180,19 @@ async function importerLecteur(file){
     readerErr=false; readerMsg=`Lecteur « ${r.nom} » ajouté : les relevés de cette banque seront lus automatiquement.`;
   }catch(e){readerMsg=e&&e.message&&!/JSON/.test(e.message)?e.message:'Ce fichier n’est pas un lecteur de relevés.'}
   render();
+}
+
+/* Supprimer un relevé ajouté par erreur : ses opérations, ses questions en attente, et le compte s'il n'a été créé que pour lui */
+function supprimerReleve(imp){
+  const ops=S.ops.filter(o=>o.imp===imp); if(!ops.length) return;
+  const nom=(S.imports||{})[imp]?.nom||'ce relevé';
+  if(!confirm(`Supprimer « ${nom} » et ses ${ops.length} opération${ops.length>1?'s':''} ? Les rubriques que vous avez choisies sont gardées : si vous le réimportez, tout se rangera de nouveau.`)) return;
+  const ids=new Set(ops.map(o=>o.id)), accts=new Set(ops.map(o=>o.acct));
+  ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));
+  S.ops=S.ops.filter(o=>o.imp!==imp);
+  S.douteux=(S.douteux||[]).filter(d=>!ids.has(d.a)&&!ids.has(d.b));
+  if(S.imports) delete S.imports[imp];
+  S.accounts=S.accounts.filter(a=>!(accts.has(a.id)&&!a.confirmed&&!S.ops.some(o=>o.acct===a.id)));
+  for(let i=reports.length-1;i>=0;i--) if(reports[i].imp===imp) reports.splice(i,1);
+  stateDirty=true; P=null; save(); render();
 }

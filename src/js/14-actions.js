@@ -73,6 +73,7 @@ document.addEventListener('click',async e=>{
     S.categories=S.categories.filter(x=>x!==c);for(const m in S.rules)if(S.rules[m]===c.id)delete S.rules[m];for(const m in S.sugg)if(S.sugg[m].c===c.id)delete S.sugg[m];
     S.ops.forEach(o=>{if(o.cat===c.id){delete o.cat;dirtyMonths.add(o.date.slice(0,7))}});save();render();return}
   if(d.delrule){delete S.rules[d.delrule];save();render();return}
+  if(d.delimp){supprimerReleve(d.delimp);return}
   if(d.delop){const o=S.ops.find(x=>x.id===d.delop);if(o&&confirm('Supprimer cette opération ?')){S.ops=S.ops.filter(x=>x!==o);dirtyMonths.add(o.date.slice(0,7));FICHE=null;save();render()}return}
   if(d.act==='demo'){startDemo();return}
   if(d.act==='revok'){revImport();return}
