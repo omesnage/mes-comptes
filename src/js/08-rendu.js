@@ -171,16 +171,59 @@ function totalRecherche(list){
     ${rec>0.005?`<div class="ligne"><span>Reçu ou remboursé</span><b>+${eur(rec)}</b></div>
     <div class="ligne total"><span>Au final</span><b>${net<0?'−':'+'}${eur(Math.abs(net))}</b></div>`:''}</div>`;
 }
+/* Filtre de Mes opérations : période (mois, trimestre, année, dates précises) et rubrique */
+let FIL={lvl:'M',cat:'',du:'',au:''};
+const filActif=()=>FIL.cat!==''||FIL.lvl!=='M';
+function filBornes(){
+  if(FIL.lvl==='D'){
+    const ds=S.ops.map(o=>o.date).sort(), min=ds[0]||'', max=ds[ds.length-1]||'';
+    let du=FIL.du||min, au=FIL.au||max;
+    if(du>au) [du,au]=[au,du];
+    return [du,au];
+  }
+  const [a,b]=bounds({...P,lvl:FIL.lvl}); return [a+'-01',b+'-31'];
+}
+function opsFiltrees(){
+  let l;
+  if(FIL.lvl==='M') l=(BYMONTH[P.y+'-'+pad(P.m)]||[]).slice();
+  else{
+    const [du,au]=filBornes();
+    l=du?monthKeys(du.slice(0,7),au.slice(0,7)).flatMap(k=>BYMONTH[k]||[]).filter(o=>o.date>=du&&o.date<=au):[];
+  }
+  return filtreRubrique(l);
+}
+function filtreRubrique(l){
+  if(!FIL.cat) return l;
+  if(FIL.cat==='_aver') return l.filter(o=>!catOf(o)&&!(INTERNAL[o.id]&&!o.cat));
+  return l.filter(o=>catOf(o)===FIL.cat);
+}
+function periodeTexte(){
+  if(FIL.lvl==='D'){const [du,au]=filBornes();return du?`Du ${dfmt(du).replace(/(\d\d)$/,'20$1')} au ${dfmt(au).replace(/(\d\d)$/,'20$1')}`:''}
+  const t=plabel({...P,lvl:FIL.lvl});return t[0].toUpperCase()+t.slice(1);
+}
+function filtreBar(t){
+  const lv=[['M','Mois'],['Q','Trimestre'],['Y','Année'],['D','Dates']];
+  const nav=t?'':FIL.lvl==='M'?moisBar()
+    :FIL.lvl==='D'?`<div class="dates"><label class="champ">Du<input id="filtreDu" type="date" value="${esc(FIL.du)}"></label><label class="champ">Au<input id="filtreAu" type="date" value="${esc(FIL.au)}"></label></div>`
+    :`<div class="mois"><button class="fleche" data-oshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${esc(periodeTexte())}</h2><button class="fleche" data-oshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>`;
+  return `<details class="carte repli filtre"${filActif()?' open':''}><summary>Filtrer par période et par rubrique${filActif()?' <span class="compte">(actif)</span>':''}</summary>
+    ${t?'<p class="aide">La recherche porte sur toutes les périodes ; seule la rubrique choisie s’applique.</p>':`<div class="seg" role="group" aria-label="Période">${lv.map(([k,l])=>`<button data-flvl="${k}" aria-pressed="${FIL.lvl===k}">${l}</button>`).join('')}</div>`}
+    <label class="champ">Rubrique<select class="grand" id="filtreCat"><option value="">Toutes les rubriques</option><option value="_aver"${FIL.cat==='_aver'?' selected':''}>À vérifier (sans rubrique)</option>${catOptions(FIL.cat,false,'',false)}</select></label>
+    ${filActif()?'<button class="lien" data-act="filreset">Tout afficher</button>':''}</details>${nav}`;
+}
 function vOps(){
-  const t=norm(q.trim()), k=P.y+'-'+pad(P.m);
+  const t=norm(q.trim());
   /* Recherche : marchand, libellé, rubrique, ou somme (« 45,80 », « 45.8 », « 45 ») */
   const som=/^[+\-−]?\d+([.,]\d{1,2})?\s*(€|eur|euros?)?$/i.test(q.trim())?q.trim().replace(/^[+\-−]/,'').replace(/\s*(€|eur|euros?)$/i,'').replace('.',','):'';
   const okSom=o=>{if(!som) return false; const a=Math.abs(o.amount).toFixed(2).replace('.',','); return som.includes(',')?a.startsWith(som):a.split(',')[0]===som};
-  const list=t?S.ops.filter(o=>norm(o.label+' '+o.merchant+' '+((catById(catOf(o))||{}).name||'')).includes(t)||okSom(o)):(BYMONTH[k]||[]).slice().sort((a,b)=>a.date<b.date?1:-1);
+  const list=(t?filtreRubrique(S.ops.filter(o=>norm(o.label+' '+o.merchant+' '+((catById(catOf(o))||{}).name||'')).includes(t)||okSom(o))):opsFiltrees()).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+  const resume=t?`${list.length} opération${list.length>1?'s':''} trouvée${list.length>1?'s':''}, tous mois confondus.`
+    :filActif()?`${list.length} opération${list.length>1?'s':''}${FIL.cat?' dans '+(FIL.cat==='_aver'?'« À vérifier »':'« '+esc(catById(FIL.cat)?.name||'')+' »'):''}${FIL.lvl!=='M'?', '+esc(periodeTexte()):''}.`:'';
   return aVerifier()+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand ou une somme" value="${esc(q)}" aria-label="Rechercher un marchand ou une somme">
-  ${t?`<p class="aide">${list.length} opération${list.length>1?'s':''} trouvée${list.length>1?'s':''}, tous mois confondus.</p>${totalRecherche(list)}`:moisBar()}
+  ${filtreBar(t)}
+  ${resume?`<p class="aide">${resume}</p>`:''}${t||filActif()?totalRecherche(list):''}
   <div class="ops">${list.slice(0,300).map(opLine).join('')||'<p class="aide">Aucune opération.</p>'}</div>
-  ${list.length>300?'<p class="aide">Seules les 300 plus récentes sont affichées.</p>':''}`;
+  ${list.length>300?'<p class="aide">Seules les 300 plus récentes sont affichées. Réduisez la période pour voir le reste.</p>':''}`;
 }
 /* Fiche d'une opération : rubrique, retour d'achat, suppression */
 function fiche(id){

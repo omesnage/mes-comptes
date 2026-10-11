@@ -172,6 +172,14 @@ details[open]>summary::before{transform:rotate(90deg)}
 .f-actions{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
 body.fige{overflow:hidden}
 
+.filtre{margin:0 0 16px}
+.filtre .seg{margin:12px 0}
+.filtre .champ{margin:12px 0}
+.filtre .grand{width:100%}
+.dates{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 20px}
+.dates .champ{flex:1;min-width:150px}
+.dates input{display:block;width:100%;min-height:52px;font-size:18px;padding:8px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+
 /* Importer */
 .gros-bouton{display:flex;align-items:center;justify-content:center;gap:14px;min-height:88px;padding:18px;background:var(--ink);color:var(--bg);font-size:21px;font-weight:500;cursor:pointer;text-align:center}
 .gros-bouton svg{width:28px;height:28px}
