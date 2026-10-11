@@ -52,6 +52,15 @@ function extraitsReleve(res){
   for(const o of res.ops) if(o.lg!=null) for(let j=o.lg-3;j<=o.lg+3;j++) if(L[j]&&!m[j]) m[j]=L[j].slice(0,110);
   return m;
 }
+/* Relevé déjà importé avant que le détail soit gardé : on le complète sans rien ajouter ni supprimer */
+function ajouterDetail(o,res,f,rep){
+  if(o.lg==null) return;
+  const k=cleOp(o), x=S.ops.find(y=>y.src==='pdf'&&y.lg==null&&cleOp(y)===k); if(!x) return;
+  x.lg=o.lg; S.imports=S.imports||{};
+  const im=S.imports[x.imp]||(S.imports[x.imp]={nom:f.name,quand:Date.now()});
+  im.lg=Object.assign(im.lg||{},extraitsReleve({lignes:res.lignes,ops:[o]}));
+  dirtyMonths.add(x.date.slice(0,7)); stateDirty=true; rep.detail=(rep.detail||0)+1;
+}
 async function lireFichier(f){return /\.csv$/i.test(f.name)?parseCSV(await f.text()):await parsePDF(f)}
 const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;
 /* Doublons exacts : comptés un par un face aux opérations déjà enregistrées (deux cafés identiques le même jour restent deux) */
@@ -87,7 +96,7 @@ async function importFiles(files){
       const atype=(acctById(rep.acct)||{}).type||'perso';
       S.douteux=S.douteux||[];
       for(const o of res.ops){
-        if(deja.pris(cleOp(o))){rep.dups++;continue}
+        if(deja.pris(cleOp(o))){rep.dups++;ajouterDetail(o,res,f,rep);continue}
         /* Déjà là grâce au copier-coller : la version du relevé remplace, la rubrique et le reste sont gardés */
         const j=jumeau(o,rep.acct,pris,x=>x.src==='paste');
         if(j&&j.sur){const x=j.o,c0=catOf(x);pris.add(x.id);dirtyMonths.add(x.date.slice(0,7));x.date=o.date;x.label=o.label;x.merchant=merchantOf(o.label);x.src=src;x.imp=rep.imp;if(o.lg!=null)x.lg=o.lg;dirtyMonths.add(o.date.slice(0,7));

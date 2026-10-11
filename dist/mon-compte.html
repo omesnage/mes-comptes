@@ -1295,6 +1295,15 @@ function extraitsReleve(res){
   for(const o of res.ops) if(o.lg!=null) for(let j=o.lg-3;j<=o.lg+3;j++) if(L[j]&&!m[j]) m[j]=L[j].slice(0,110);
   return m;
 }
+/* Relevé déjà importé avant que le détail soit gardé : on le complète sans rien ajouter ni supprimer */
+function ajouterDetail(o,res,f,rep){
+  if(o.lg==null) return;
+  const k=cleOp(o), x=S.ops.find(y=>y.src==='pdf'&&y.lg==null&&cleOp(y)===k); if(!x) return;
+  x.lg=o.lg; S.imports=S.imports||{};
+  const im=S.imports[x.imp]||(S.imports[x.imp]={nom:f.name,quand:Date.now()});
+  im.lg=Object.assign(im.lg||{},extraitsReleve({lignes:res.lignes,ops:[o]}));
+  dirtyMonths.add(x.date.slice(0,7)); stateDirty=true; rep.detail=(rep.detail||0)+1;
+}
 async function lireFichier(f){return /\.csv$/i.test(f.name)?parseCSV(await f.text()):await parsePDF(f)}
 const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;
 /* Doublons exacts : comptés un par un face aux opérations déjà enregistrées (deux cafés identiques le même jour restent deux) */
@@ -1330,7 +1339,7 @@ async function importFiles(files){
       const atype=(acctById(rep.acct)||{}).type||'perso';
       S.douteux=S.douteux||[];
       for(const o of res.ops){
-        if(deja.pris(cleOp(o))){rep.dups++;continue}
+        if(deja.pris(cleOp(o))){rep.dups++;ajouterDetail(o,res,f,rep);continue}
         /* Déjà là grâce au copier-coller : la version du relevé remplace, la rubrique et le reste sont gardés */
         const j=jumeau(o,rep.acct,pris,x=>x.src==='paste');
         if(j&&j.sur){const x=j.o,c0=catOf(x);pris.add(x.id);dirtyMonths.add(x.date.slice(0,7));x.date=o.date;x.label=o.label;x.merchant=merchantOf(o.label);x.src=src;x.imp=rep.imp;if(o.lg!=null)x.lg=o.lg;dirtyMonths.add(o.date.slice(0,7));
@@ -1968,7 +1977,7 @@ let HEURES=null, RELEVE=false;
 function blocReleve(o){
   if(o.src!=='pdf'&&o.src!=='csv') return '';
   const im=(S.imports||{})[o.imp], lg=im&&im.lg;
-  if(!lg) return o.src==='pdf'?`<p class="aide">Ce détail n’est pas gardé pour ce relevé. Pour le voir, supprimez le relevé dans Importer puis ajoutez-le de nouveau.</p>`:'';
+  if(!lg) return o.src==='pdf'?`<p class="aide">Ce détail n’est pas gardé pour ce relevé. Pour le voir, ajoutez de nouveau ce relevé dans Importer : rien ne sera en double.</p>`:'';
   if(o.lg==null) return `<p class="aide">Cette ligne n’a pas pu être retrouvée sur le relevé.</p>`;
   if(!RELEVE) return `<button class="lien" data-act="releve"><i data-lucide="file-search"></i>Voir ce qui est écrit sur le relevé</button>`;
   const l=[];for(let j=o.lg-3;j<=o.lg+3;j++) if(lg[j]!=null) l.push(`<p class="ex-l${j===o.lg?' cible':''}">${esc(lg[j])}</p>`);
@@ -2087,7 +2096,7 @@ function reportLine(r){
   else if(r.test) txt=`${qui}, ${mois} : ${r.found} opération${r.found>1?'s':''} lue${r.found>1?'s':''}. C’est un essai, rien n’a été enregistré.`;
   else if(r.colle) {txt=`Copier-coller${r.bank?', '+esc(r.bank):''} : ${r.added} opération${r.added>1?'s':''} ajoutée${r.added>1?'s':''} ✓${r.dups?`, ${r.dups} déjà présente${r.dups>1?'s':''}`:''}${r.douteux?`, ${r.douteux} à confirmer dans Mes opérations`:''}.`;cls='ok'}
   else if(r.completees) {txt=`${qui}, ${mois} : ${r.found} opérations. ${r.completees} étaient déjà là grâce à votre copier-coller et ont été complétées, ${r.added} ajoutée${r.added>1?'s':''} ✓${r.douteux?` (${r.douteux} à confirmer dans Mes opérations)`:''}`;cls='ok'}
-  else if(!r.added) txt=`${qui}, ${mois} : déjà importé, rien n’a été ajouté.`;
+  else if(!r.added) txt=r.detail?`${qui}, ${mois} : déjà importé, rien n’a été ajouté. Le détail du relevé est maintenant disponible pour ${r.detail} opération${r.detail>1?'s':''} ✓`:`${qui}, ${mois} : déjà importé, rien n’a été ajouté.`;
   else {txt=`${qui}, ${mois} : ${r.added} opération${r.added>1?'s':''} ajoutée${r.added>1?'s':''} ✓`;cls='ok'}
   if(r.found&&!r.error&&r.controle&&r.controle.ok) txt+=' Relevé vérifié ✓';
   const a=!r.test&&acctById(r.acct);

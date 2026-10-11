@@ -19,3 +19,14 @@ test('fiche, lignes du releve sur demande',async({page},ti)=>{
   const lg=await page.evaluate(()=>Object.values(S.imports).some(i=>i.lg&&Object.keys(i.lg).length>3));
   expect(lg).toBe(true);
 });
+
+test('reimport sans detail, complete sans doublon',async({page},ti)=>{
+  await openWith(page,null);
+  const f=await releveColonnes(ti.outputPath('ca.pdf'));
+  await importer(page,f);
+  await page.waitForFunction(()=>S.ops.length>=5);
+  await page.evaluate(()=>{S.ops.forEach(o=>delete o.lg);Object.values(S.imports).forEach(i=>delete i.lg);save();render()});
+  await importer(page,f);
+  await page.waitForFunction(()=>S.ops.every(o=>o.lg!=null));
+  expect(await page.evaluate(()=>S.ops.length)).toBe(5);
+});

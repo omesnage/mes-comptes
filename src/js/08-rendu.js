@@ -146,7 +146,7 @@ let HEURES=null, RELEVE=false;
 function blocReleve(o){
   if(o.src!=='pdf'&&o.src!=='csv') return '';
   const im=(S.imports||{})[o.imp], lg=im&&im.lg;
-  if(!lg) return o.src==='pdf'?`<p class="aide">Ce détail n’est pas gardé pour ce relevé. Pour le voir, supprimez le relevé dans Importer puis ajoutez-le de nouveau.</p>`:'';
+  if(!lg) return o.src==='pdf'?`<p class="aide">Ce détail n’est pas gardé pour ce relevé. Pour le voir, ajoutez de nouveau ce relevé dans Importer : rien ne sera en double.</p>`:'';
   if(o.lg==null) return `<p class="aide">Cette ligne n’a pas pu être retrouvée sur le relevé.</p>`;
   if(!RELEVE) return `<button class="lien" data-act="releve"><i data-lucide="file-search"></i>Voir ce qui est écrit sur le relevé</button>`;
   const l=[];for(let j=o.lg-3;j<=o.lg+3;j++) if(lg[j]!=null) l.push(`<p class="ex-l${j===o.lg?' cible':''}">${esc(lg[j])}</p>`);
@@ -265,7 +265,7 @@ function reportLine(r){
   else if(r.test) txt=`${qui}, ${mois} : ${r.found} opération${r.found>1?'s':''} lue${r.found>1?'s':''}. C’est un essai, rien n’a été enregistré.`;
   else if(r.colle) {txt=`Copier-coller${r.bank?', '+esc(r.bank):''} : ${r.added} opération${r.added>1?'s':''} ajoutée${r.added>1?'s':''} ✓${r.dups?`, ${r.dups} déjà présente${r.dups>1?'s':''}`:''}${r.douteux?`, ${r.douteux} à confirmer dans Mes opérations`:''}.`;cls='ok'}
   else if(r.completees) {txt=`${qui}, ${mois} : ${r.found} opérations. ${r.completees} étaient déjà là grâce à votre copier-coller et ont été complétées, ${r.added} ajoutée${r.added>1?'s':''} ✓${r.douteux?` (${r.douteux} à confirmer dans Mes opérations)`:''}`;cls='ok'}
-  else if(!r.added) txt=`${qui}, ${mois} : déjà importé, rien n’a été ajouté.`;
+  else if(!r.added) txt=r.detail?`${qui}, ${mois} : déjà importé, rien n’a été ajouté. Le détail du relevé est maintenant disponible pour ${r.detail} opération${r.detail>1?'s':''} ✓`:`${qui}, ${mois} : déjà importé, rien n’a été ajouté.`;
   else {txt=`${qui}, ${mois} : ${r.added} opération${r.added>1?'s':''} ajoutée${r.added>1?'s':''} ✓`;cls='ok'}
   if(r.found&&!r.error&&r.controle&&r.controle.ok) txt+=' Relevé vérifié ✓';
   const a=!r.test&&acctById(r.acct);
