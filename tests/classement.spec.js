@@ -168,7 +168,8 @@ test('mode d’emploi dans l’application : icône dans l’en-tête, dans Impo
   for(const mot of ['Ouvrir Mes comptes','Ajouter vos relevés','premier mois est un peu long','90 %','Sauvegarder dans mon dossier Cloud','Restaurer une sauvegarde','de préférence dans un Cloud','Refaites la même chose quand vous changez de nouveau d’appareil','garder le même appareil','badge « Netlify »','touchez-le : il disparaît','adresse du lien']) expect(t).toContain(mot);
   await page.click('.aide-page [data-tab="accueil"]');
   await page.click('nav.tabs [data-tab="importer"]');
-  await page.click('button:has-text("Voir le mode d’emploi")');
+  await page.click('.mode-court summary');
+  await page.click('button:has-text("Voir le mode d’emploi complet")');
   await expect(page.locator('.aide-page')).toBeVisible();
   await page.click('nav.tabs [data-tab="reglages"]');
   await page.click('.lien-aide-carte');

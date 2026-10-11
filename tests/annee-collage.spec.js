@@ -20,11 +20,10 @@ test('collage reussi : message clair en haut, et releve visible',async({page},ti
   await openWith(page,null);
   const b64=fs.readFileSync(await releveColonnes(ti.outputPath('ca.pdf'))).toString('base64');
   await page.click('nav.tabs [data-tab="importer"]');
-  await page.evaluate(b=>{const u=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const dt=new DataTransfer();dt.items.add(new File([u],'Releve de compte',{type:''}));document.getElementById('zoneColle').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))},b64);
+  await page.evaluate(b=>{const u=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const dt=new DataTransfer();dt.items.add(new File([u],'Releve de compte',{type:''}));document.body.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))},b64);
   await expect(page.locator('#toast')).toContainText('Collage réussi');
   await expect(page.locator('#toast')).toContainText('5 opérations ajoutées');
-  await expect(page.locator('#toast')).toContainText('Coller ici');
   expect(await page.evaluate(()=>S.ops.length)).toBe(5);
-  await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('text/plain','bonjour');document.getElementById('zoneColle').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))});
-  await expect(page.locator('.releve').first()).toContainText('Enregistrer dans Fichiers');
+  await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('text/plain','https://exemple.fr/releve.pdf');document.body.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))});
+  await expect(page.locator('.releve').first()).toContainText('Ce fichier n’est pas un relevé PDF ou CSV');
 });

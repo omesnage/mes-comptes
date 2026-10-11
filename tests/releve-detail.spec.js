@@ -37,11 +37,8 @@ test('coller un fichier copie : accepte meme sans extension, et explique si rien
   const f=await releveColonnes(ti.outputPath('ca.pdf'));
   const b64=fs.readFileSync(f).toString('base64');
   await page.click('nav.tabs [data-tab="importer"]');
-  // 1. rien de lisible dans le presse-papiers : message clair
-  await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('text/plain','bonjour');document.getElementById('zoneColle').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))});
-  await expect(page.locator('.releve').first()).toContainText('Enregistrer dans Fichiers');
   // 2. un PDF collé, sans extension ni type : lu d'après son contenu
-  await page.evaluate(b=>{const u=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const dt=new DataTransfer();dt.items.add(new File([u],'Releve de compte',{type:''}));document.getElementById('zoneColle').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))},b64);
+  await page.evaluate(b=>{const u=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const dt=new DataTransfer();dt.items.add(new File([u],'Releve de compte',{type:''}));document.body.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))},b64);
   await page.waitForFunction(()=>S.ops.length>=5);
   expect(await page.evaluate(()=>S.ops.length)).toBe(5);
 });
