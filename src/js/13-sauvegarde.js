@@ -3,7 +3,7 @@ let backupMsg='';
 /* Sous l'état de l'enregistrement : quand la dernière sauvegarde a eu lieu, et le bouton pour la mettre dans un dossier Cloud */
 function majSauvegardeEntete(){
   const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
-  b.hidden=!!demo; l.hidden=!!demo;
+  b.hidden=!!demo; l.hidden=!!demo; if($('#importBtn')) $('#importBtn').hidden=!!demo;
   const t=typeof S!=='undefined'&&S&&S.lastBackup;
   l.textContent=t?'Dernière sauvegarde : '+new Date(t).toLocaleDateString('fr-FR'):'Jamais sauvegardé';
 }

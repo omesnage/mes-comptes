@@ -21,3 +21,13 @@ test('restaurer une sauvegarde sans fenêtre du navigateur : directe si vide, av
   await expect(page.locator('#view')).toContainText('restaurée');
   expect(await page.evaluate(()=>S.ops.length)).toBe(5);
 });
+
+test('bouton du haut Importer depuis mon dossier, amene aux reglages avec le message',async({page},ti)=>{
+  await openWith(page,null);
+  const f=ti.outputPath('haut.json'); fs.writeFileSync(f,JSON.stringify(sauv(2)));
+  await expect(page.locator('#importBtn')).toContainText('Importer depuis mon dossier');
+  await expect(page.locator('#cloudBtn')).toContainText('Sauvegarder dans mon dossier Cloud');
+  await page.setInputFiles('#restorefile2',f);
+  await expect(page.locator('#donnees')).toContainText('restaurée');
+  expect(await page.evaluate(()=>S.ops.length)).toBe(2);
+});

@@ -118,6 +118,7 @@ document.addEventListener('change',e=>{
   if(d.inc){S.incomeSource=d.inc;save();render();return}
   if(d.set){S.settings[d.set]=t.value===''?'':Math.max(0,+t.value||0);save();if(MODAL)render();return}
   if(t.id==='restorefile'&&t.files.length){restore_(t.files[0]);t.value='';return}
+  if(t.id==='restorefile2'&&t.files.length){const f=t.files[0];t.value='';restore_(f).then(()=>aller('reglages','donnees'));return}
   if(t.id==='lecteurfile'&&t.files.length){importerLecteur(t.files[0]);t.value='';return}
   if(d.cs){COLLE.signe=d.cs;lireColle();render();return}
   if(t.id==='colleAcct'&&COLLE){COLLE.texte=$('#colleTxt')?.value??COLLE.texte;COLLE.acct=t.value;if(COLLE.apercu)lireColle();render();return}

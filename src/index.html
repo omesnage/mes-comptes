@@ -20,7 +20,10 @@
   <header class="top">
     <div class="brand">Mes comptes</div>
     <div class="top-droite"><span class="status" id="status"></span>
-      <button class="lien btn-cloud" id="cloudBtn" data-act="cloud"><i data-lucide="cloud-upload"></i>Sauvegarder dans mon dossier Cloud</button>
+      <div class="actions-top">
+        <button class="act-top ciel" id="cloudBtn" data-act="cloud"><i data-lucide="cloud-upload"></i>Sauvegarder dans mon dossier Cloud</button>
+        <label class="act-top menthe" id="importBtn"><i data-lucide="folder-down"></i>Importer depuis mon dossier<input type="file" id="restorefile2" accept=".json,application/json" hidden></label>
+      </div>
       <span class="dern-sauv" id="lastbk"></span>
       <button class="lien" data-tab="aide">Mode d’emploi</button></div>
   </header>
