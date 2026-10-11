@@ -55,9 +55,38 @@ for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]]){
     await expect(page.locator('#camPage')).toHaveCount(0);
     await page.click('nav.tabs [data-tab="bilan"]');
     await page.click('.repartition [data-act="camembert"]');                              // la petite icône du Bilan ouvre la même page
-    await expect(page.locator('#camPage .camembert svg')).toBeVisible();
+    await expect(page.locator('#camPage .camembert > svg')).toBeVisible();
   });
 }
+
+for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]])
+test(`${nom} camembert : toucher une rubrique montre ses operations, pour la periode seulement`,async({page})=>{
+  await openWith(page,{onboarded:true},url);
+  const CATS=['courses','resto','transport','sante','logement','loisirs','shopping','cadeaux','voyages','dons'];
+  await page.evaluate(C=>{
+    S.accounts=[{id:'a',name:'Banque',type:'perso',confirmed:true}]; let id=0; const ops=[];
+    for(const [m,k] of [['2026-09',1],['2026-08',2]]) C.forEach((c,i)=>ops.push({id:'o'+(id++),date:m+'-1'+(i%9),label:'ACHAT '+c.toUpperCase()+' '+m,amount:-(500-i*40)*k,merchant:'ACHAT '+c.toUpperCase()+' '+m,acct:'a',cat:c}));
+    S.ops=ops;save();P={lvl:'M',y:2026,m:9};render();
+  },CATS);
+  await page.click('#camBtn');
+  const p=page.locator('#camPage');
+  await p.locator('.cam-l[data-camcat="courses"]').click();
+  await expect(p.locator('.cam-ops')).toContainText('ACHAT COURSES 2026-09');       // le mois montré
+  await expect(p.locator('.cam-ops')).not.toContainText('2026-08');                   // pas les autres mois
+  await p.locator('[data-clvl="Q"]').click();                                         // la période change : la liste se referme ou s'élargit
+  await expect(p.locator('.cam-ops')).toContainText('2026-08');
+  await expect(p.locator('.cam-ops')).toContainText('2026-09');
+  await p.locator('.cam-l[data-camautres]').click();                                  // « Autres rubriques » : la liste des rubriques regroupées
+  await expect(p.locator('.cam-l2').first()).toBeVisible();
+  await p.locator('[data-clvl="M"]').click();                                        // la rubrique reste ouverte, avec le mois seulement
+  await expect(p.locator('.cam-ops')).not.toContainText('2026-08');
+  await p.locator('[data-camvoir="courses"]').click();                                 // vers Mes opérations, filtré sur la rubrique et le mois
+  await expect(page.locator('#camPage')).toHaveCount(0);
+  await expect(page.locator('nav.tabs [data-tab="operations"]')).toHaveAttribute('aria-current','true');
+  await expect(page.locator('#filtreCat')).toHaveValue('courses');
+  const n=await page.evaluate(()=>[...document.querySelectorAll('#view [data-op]')].map(b=>b.textContent));
+  expect(n.length).toBe(1); expect(n[0]).toContain('ACHAT COURSES');
+});
 
 test('icone camembert toujours visible : sans operation, la page explique et renvoie vers Importer',async({page})=>{
   await openWith(page,{onboarded:true});

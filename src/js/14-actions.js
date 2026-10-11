@@ -47,6 +47,9 @@ document.addEventListener('click',async e=>{
   if(d.act==='closecam'){$('#camPage')?.remove();document.body.style.overflow='';return}
   if(d.clvl){CAM.lvl=d.clvl;majCam();return}
   if(d.cshift){const n=shift({lvl:CAM.lvl,y:CAM.y,m:CAM.m},+d.cshift);CAM.y=n.y;CAM.m=n.m;majCam();return}
+  if(d.camcat){CAM.open=CAM.open===d.camcat?null:d.camcat;majCam();return}
+  if(d.camautres){CAM.autres=!CAM.autres;majCam();return}
+  if(d.camvoir){FIL={lvl:CAM.lvl,cat:d.camvoir,du:'',au:''};P={lvl:'M',y:CAM.y,m:CAM.m};$('#camPage')?.remove();document.body.style.overflow='';aller('operations');return}
   if(d.cside){CAM.u=d.cside;majCam();return}
   if(d.act==='restok'){if(RESTAURER)appliquerRestauration(RESTAURER);return}
   if(d.act==='restno'){RESTAURER=null;render();return}

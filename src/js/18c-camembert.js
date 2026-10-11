@@ -6,7 +6,7 @@ const NB_PARTS=7, COUL=['var(--c1)','var(--i-ciel)','var(--i-menthe)','var(--i-r
 const boutonCam=()=>`<button class="ico-vue seul" data-act="camembert" data-tip="Voir ces dépenses en camembert : chaque part porte son nom et son montant."><i data-lucide="chart-pie"></i><span class="sr">Voir en camembert</span></button>`;
 function ouvrirCamembert(){
   const bilanVu=view==='bilan'&&PB, base=bilanVu?PB:{...P,lvl:AL};
-  CAM={lvl:base.lvl||'M',y:base.y,m:base.m,u:bilanVu?bilanU():'perso'};
+  CAM={lvl:base.lvl||'M',y:base.y,m:base.m,u:bilanVu?bilanU():'perso',open:null,autres:false};
   $('#camPage')?.remove();
   document.body.insertAdjacentHTML('beforeend','<div id="camPage" role="dialog" aria-modal="true" aria-label="Vos dépenses en camembert"></div>');
   document.body.style.overflow='hidden'; majCam();
@@ -20,7 +20,7 @@ function majCam(){
     ${seg('data-clvl',[['M','Mois'],['Q','Trimestre'],['Y','Année']],CAM.lvl)}
     ${hasFraisPro()?seg('data-cside',[['perso','Perso'],['pro','Activité']],u):''}
     <div class="mois"><button class="fleche" data-cshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${esc(nomPeriode(p))}</h2><button class="fleche" data-cshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>
-    ${rows.length?`<p class="rep-total">${eur0(rows.reduce((s,r)=>s+r.v,0))} <span>au total</span></p>${camembert(rows)}
+    ${rows.length?`<p class="rep-total">${eur0(rows.reduce((s,r)=>s+r.v,0))} <span>au total</span></p>${camembert(rows,{open:CAM.open,autres:CAM.autres,by:B.A.by})}
       <p class="aide">Les ${NB_PARTS} plus grosses rubriques ont leur part ; les autres sont regroupées dans « Autres ». Changez la période avec les boutons Mois, Trimestre et Année.</p>`
       :S.ops.length?'<p class="aide centre">Aucune dépense sur cette période. Changez de période avec les flèches.</p>'
       :'<div class="vide"><p>Le camembert montrera où part votre argent, une fois vos relevés ajoutés.</p><div class="boutons"><button class="btn" data-act="camimporter">Ajouter mes relevés</button></div></div>'}</div>`;
@@ -33,7 +33,8 @@ function lignesNom(nom){
   return L;
 }
 /* rows : [{id, nom, v}] de la plus grosse à la plus petite */
-function camembert(rows){
+function camembert(rows,opt){
+  opt=opt||{};
   const L=rows.filter(r=>r.v>0.005); if(!L.length) return '';
   const total=L.reduce((s,r)=>s+r.v,0), reste=L.slice(NB_PARTS);
   const parts=L.slice(0,NB_PARTS).map((r,i)=>({...r,i}));
@@ -65,5 +66,19 @@ function camembert(rows){
   const vy=Math.floor(Math.min(haut,CY-R)-12), vh=Math.ceil(Math.max(bas,CY+R)+12-vy);
   const resume=parts.map(p=>`${p.nom} ${eur0(p.v)}`).join(', ');
   return `<div class="camembert"><svg viewBox="0 ${vy} ${W} ${vh}" role="img" aria-label="Camembert des dépenses : ${esc(resume)}">${formes}${traits}${textes}</svg>
-    <div class="cam-leg">${parts.map(p=>`<div class="cam-l"><span class="cam-pt" style="background:${COUL[p.i]}"></span><span class="cam-nom">${esc(p.id==='_autres'&&reste.length>1?`Autres rubriques (${reste.length})`:p.nom)}</span><span class="cam-val"><b>${eur0(p.v)}</b> <span class="cam-pc">${Math.round(p.v/total*100)} %</span></span></div>`).join('')}</div></div>`;
+    <div class="cam-leg">${parts.map(p=>ligneLegende(p,total,reste,opt)).join('')}</div></div>`;
+}
+/* Une ligne de la légende : on la touche pour voir les opérations de cette rubrique, pour la période montrée seulement */
+function ligneLegende(p,total,reste,opt){
+  const autres=p.id==='_autres'&&reste.length>1, ouvert=autres?opt.autres:opt.open===p.id;
+  const nom=autres?`Autres rubriques (${reste.length})`:p.nom;
+  let h=`<button class="cam-l" ${autres?'data-camautres="1"':`data-camcat="${esc(p.id)}"`} aria-expanded="${!!ouvert}"><span class="cam-pt" style="background:${COUL[p.i]}"></span><span class="cam-nom">${esc(nom)}</span><span class="cam-val"><b>${eur0(p.v)}</b> <span class="cam-pc">${Math.round(p.v/total*100)} %</span></span><i data-lucide="${ouvert?'chevron-up':'chevron-down'}"></i></button>`;
+  if(ouvert&&autres) h+=`<div class="cam-sous">${reste.map(r=>{const o2=opt.open===r.id;return `<button class="cam-l cam-l2" data-camcat="${esc(r.id)}" aria-expanded="${o2}"><span class="cam-nom">${esc(r.nom)}</span><span class="cam-val"><b>${eur0(r.v)}</b></span><i data-lucide="${o2?'chevron-up':'chevron-down'}"></i></button>${o2?opsRubrique(r.id,opt):''}`}).join('')}</div>`;
+  else if(ouvert) h+=opsRubrique(p.id,opt);
+  return h;
+}
+function opsRubrique(id,opt){
+  const e=opt.by&&opt.by[id], ops=e?e.ops.slice().sort((a,b)=>a.date<b.date?1:-1):[];
+  return `<div class="cam-ops">${ops.length?ops.map(o=>opLine(o,true)).join(''):'<p class="aide">Aucune opération.</p>'}
+    <button class="btn secondaire" data-camvoir="${esc(id)}"><i data-lucide="list"></i>Les voir dans Mes opérations</button></div>`;
 }
