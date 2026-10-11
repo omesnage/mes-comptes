@@ -65,7 +65,7 @@ const MSG_PAS_RELEVE='Ce fichier n’est pas un relevé PDF ou CSV. Si vous avez
 async function lireFichier(f){
   if(/\.csv$/i.test(f.name)||f.type==='text/csv') return parseCSV(await f.text());
   const tete=new TextDecoder('latin1').decode(new Uint8Array(await f.slice(0,1024).arrayBuffer()));
-  if(!/\.pdf$/i.test(f.name)&&f.type!=='application/pdf'&&!tete.includes('%PDF')) throw new Error(MSG_PAS_RELEVE);
+  if(!tete.includes('%PDF')) throw new Error(MSG_PAS_RELEVE);
   return await parsePDF(f);
 }
 /* Bouton « Coller le relevé copié » : lit le presse-papiers (quand le téléphone le permet) */
@@ -73,19 +73,44 @@ async function collerReleveCopie(){
   try{
     const items=await navigator.clipboard.read(), fs=[];
     for(const it of items){const t=it.types.find(x=>/pdf|csv/.test(x)); if(t){const b=await it.getType(t);fs.push(new File([b],t.includes('pdf')?'Relevé collé.pdf':'Relevé collé.csv',{type:t}))}}
-    if(fs.length){importFiles(fs);return}
+    if(fs.length){importFiles(fs,'bouton');return}
   }catch(e){}
-  const r=newReport({name:'Relevé collé'},false);
-  r.error='Le relevé copié n’a pas pu être lu ici. Dans le partage, choisissez plutôt « Enregistrer dans Fichiers », puis touchez « Ajouter mes relevés » et choisissez-le. Autre possibilité : touchez la zone « Coller ici » ci-dessous un instant, puis « Coller ».';
-  reports.unshift(r); render();
+  messageCollage(MSG_COLLE_VIDE('')+' Autre possibilité : touchez la zone « Coller ici » ci-dessous un instant, puis « Coller ».');
 }
-/* Un lien (ou un fichier) collé dans la page : un fichier PDF ou CSV est importé, un lien est expliqué */
+/* Fichier collé dans la page (iPhone : « Copier » dans le partage, puis « Coller » dans la zone prévue).
+   Le nom ou le type peuvent manquer : c'est le contenu (%PDF) qui décide, dans lireFichier. */
+let COLLE_T=0;
+const nommer=f=>/\.(pdf|csv)$/i.test(f.name||'')?f:new File([f],(f.name||'Relevé collé')+(/csv/.test(f.type)?'.csv':'.pdf'),{type:f.type||'application/pdf'});
+function fichiersCollage(dt){
+  if(!dt) return [];
+  const l=[...(dt.files||[]),...[...(dt.items||[])].filter(i=>i.kind==='file').map(i=>i.getAsFile())].filter(Boolean), vus=new Set();
+  return l.filter(f=>{const k=f.name+'|'+f.size;if(vus.has(k))return false;vus.add(k);return true}).map(nommer);
+}
+function messageCollage(txt){const r=newReport({name:'Relevé collé'},false);r.error=txt;reports.unshift(r);render()}
+const MSG_COLLE_VIDE=det=>'Le relevé copié n’a pas pu être lu ici'+(det?' (reçu : '+det+')':'')+'. Dans le partage, choisissez plutôt « Enregistrer dans Fichiers », puis touchez « Ajouter mes relevés » et choisissez-le.';
+function traiterCollage(e,dt){
+  const fs=fichiersCollage(dt);
+  if(fs.length){e.preventDefault();COLLE_T=Date.now();const z=document.getElementById('zoneColle');if(z)z.textContent='';importFiles(fs,'zone');return true}
+  return false;
+}
 document.addEventListener('paste',e=>{
   if(view!=='importer'||/^(INPUT|TEXTAREA)$/.test((e.target||{}).tagName)) return;
-  const cd=e.clipboardData; if(!cd) return;
-  const fs=[...(cd.files||[]),...[...(cd.items||[])].filter(i=>i.kind==='file').map(i=>i.getAsFile())].filter(f=>f&&(/\.(pdf|csv)$/i.test(f.name)||/pdf|csv/.test(f.type)));
-  if(fs.length){e.preventDefault();const z=document.getElementById('zoneColle');if(z)z.textContent='';importFiles(fs);return}
-  if(/^\s*https?:\/\//i.test(cd.getData('text')||'')){e.preventDefault();const r=newReport({name:'Lien collé'},false);r.error=MSG_PAS_RELEVE;reports.unshift(r);render()}
+  const cd=e.clipboardData; if(!cd||traiterCollage(e,cd)) return;
+  const txt=cd.getData('text')||'';
+  if(/^\s*https?:\/\//i.test(txt)){e.preventDefault();messageCollage(MSG_PAS_RELEVE);return}
+  if(e.target&&e.target.id==='zoneColle'){e.preventDefault();messageCollage(MSG_COLLE_VIDE([...(cd.types||[])].join(', ')||'rien'))}
+});
+/* Certains navigateurs ne donnent le fichier qu'à cette étape, ou le placent dans la zone */
+document.addEventListener('beforeinput',e=>{
+  if(!e.target||e.target.id!=='zoneColle'||Date.now()-COLLE_T<1500) return;
+  if(e.inputType==='insertFromPaste'||e.inputType==='insertFromDrop') traiterCollage(e,e.dataTransfer);
+});
+document.addEventListener('input',async e=>{
+  const z=e.target; if(!z||z.id!=='zoneColle'||Date.now()-COLLE_T<1500) return;
+  const els=[...z.querySelectorAll('[src],[href]')].map(x=>x.getAttribute('src')||x.getAttribute('href')).filter(u=>/^(blob|data):/.test(u||''));
+  if(!els.length) return;
+  try{const fs=[];for(const u of els){const b=await (await fetch(u)).blob();fs.push(nommer(new File([b],'Relevé collé',{type:b.type})))}
+    COLLE_T=Date.now();z.textContent='';importFiles(fs,'zone')}catch(err){}
 });
 const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;
 /* Doublons exacts : comptés un par un face aux opérations déjà enregistrées (deux cafés identiques le même jour restent deux) */
@@ -105,8 +130,18 @@ async function testerFichier(f){
   try{analyse(await lireFichier(f),f,true,rep)}catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
   reports.unshift(rep); render();
 }
-async function importFiles(files){
+/* Dit clairement ce qui vient de se passer, et montre où : un message en haut de l'écran, puis le compte rendu du relevé */
+function annoncerImport(rs,via){
+  const n=rs.reduce((s,r)=>s+(r.added||0)+(r.completees||0),0), ko=rs.filter(r=>r.error||!r.found).length;
+  const quoi={zone:'Collage réussi (zone « Coller ici »)',bouton:'Collage réussi (bouton « Coller le relevé copié »)'}[via]||'Import réussi';
+  if(n) toast(`${quoi} ✓ : ${n} opération${n>1?'s':''} ajoutée${n>1?'s':''}.`,true);
+  else if(ko) toast('Le relevé n’a pas pu être lu : voir le message juste en dessous.',false);
+  else toast(`${quoi.replace('réussi','fait')} : ces opérations étaient déjà présentes, rien n’a été ajouté.`,true);
+  setTimeout(()=>{const el=document.querySelector('.releves');if(el)el.scrollIntoView({block:'start',behavior:'smooth'})},60);
+}
+async function importFiles(files,via){
   if(demo) exitDemo();
+  const traites=[];
   for(const f of files){
     const rep=newReport(f,false);
     try{
@@ -137,9 +172,9 @@ async function importFiles(files){
       classerNouvelles(nouvelles);
     }catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
     if(rep.added||rep.completees){S.imports=S.imports||{};S.imports[rep.imp]={nom:f.name,quand:Date.now()};if(rep.lus&&rep.lus.some(o=>o.lg!=null)){const ex=extraitsReleve({lignes:rep.lignes,ops:rep.lus});if(Object.keys(ex).length)S.imports[rep.imp].lg=ex}stateDirty=true}
-    reports.unshift(rep);
+    reports.unshift(rep); traites.push(rep);
   }
   if(!S.since&&S.ops.length) S.since=Date.now();
   S.ops.sort((a,b)=>a.date<b.date?1:-1);
-  P=null; save(); render();
+  P=null; save(); render(); annoncerImport(traites,via);
 }

@@ -19,3 +19,11 @@ document.addEventListener('touchstart',e=>{const c=cibleBulle(e);cacherBulle();i
 ['touchend','touchmove','touchcancel'].forEach(ev=>document.addEventListener(ev,()=>{if(ev!=='touchend')cacherBulle();else clearTimeout(BULLE_T)},{passive:true}));
 document.addEventListener('click',e=>{if(Date.now()-BULLE_LONG<900&&cibleBulle(e)){e.preventDefault();e.stopImmediatePropagation()}},true);
 document.addEventListener('contextmenu',e=>{if(cibleBulle(e)&&Date.now()-BULLE_LONG<2000)e.preventDefault()});
+
+/* Message de confirmation, en haut de l'écran */
+let TOAST_T=null;
+function toast(msg,ok){
+  const t=document.getElementById('toast'); if(!t) return;
+  t.textContent=msg; t.className='on '+(ok===false?'attention':'ok');
+  clearTimeout(TOAST_T); TOAST_T=setTimeout(()=>{t.className=''},6000);
+}

@@ -63,11 +63,20 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .ico.sable{--p:var(--p-sable);--i:var(--i-sable)}
 .ico.alerte{--p:var(--amber-soft);--i:var(--amber)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#toast{position:fixed;left:16px;right:16px;top:calc(12px + env(safe-area-inset-top,0px));z-index:70;max-width:560px;margin:0 auto;padding:14px 18px;font-size:18px;line-height:1.4;font-weight:500;color:var(--ink);background:var(--p-menthe);border:1px solid var(--i-menthe);opacity:0;transform:translateY(-12px);pointer-events:none;transition:opacity .2s,transform .2s}
+#toast.on{opacity:1;transform:none}
+#toast.attention{background:var(--amber-soft);border-color:var(--amber)}
 #bulle{position:fixed;z-index:60;max-width:min(280px,calc(100vw - 16px));padding:10px 14px;background:var(--ink);color:var(--bg);font-size:16px;line-height:1.4;pointer-events:none;opacity:0;transition:opacity .12s}
 #bulle.on{opacity:1}
 .zone-colle{min-height:56px;margin:10px 0;padding:14px 16px;border:1px dashed var(--i-peche);background:var(--p-peche);color:var(--ink);font-size:16px;overflow-wrap:anywhere}
 .zone-colle:empty::before{content:attr(data-vide);color:var(--muted)}
 #lastbk::before{content:"· "}
+.mois-extremes .mx{margin:12px 0 0;padding:12px 16px}
+.mois-extremes .mx-bon{background:var(--p-menthe)}
+.mois-extremes .mx-dur{background:var(--p-rose)}
+.mois-extremes .mx-t{display:flex;align-items:center;gap:10px;margin:0 0 6px;font-size:17px;font-weight:500}
+.mois-extremes .mx-bon svg{color:var(--i-menthe)}.mois-extremes .mx-dur svg{color:var(--i-rose)}
+.mois-extremes .ligne{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:18px}
 .etat-top{margin:-6px 0 14px;font-size:15px;color:var(--muted);text-align:right}
 .dern-sauv{font-size:15px;color:var(--muted)}
 .status{font-size:15px;color:var(--muted)}
@@ -573,6 +582,7 @@ a.chercher svg{width:20px;height:20px}
   <div id="demoBar"></div>
   <main id="view"></main>
   <div id="bulle" role="tooltip"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
 </div>
 
 <script>
@@ -1359,7 +1369,7 @@ const MSG_PAS_RELEVE='Ce fichier n’est pas un relevé PDF ou CSV. Si vous avez
 async function lireFichier(f){
   if(/\.csv$/i.test(f.name)||f.type==='text/csv') return parseCSV(await f.text());
   const tete=new TextDecoder('latin1').decode(new Uint8Array(await f.slice(0,1024).arrayBuffer()));
-  if(!/\.pdf$/i.test(f.name)&&f.type!=='application/pdf'&&!tete.includes('%PDF')) throw new Error(MSG_PAS_RELEVE);
+  if(!tete.includes('%PDF')) throw new Error(MSG_PAS_RELEVE);
   return await parsePDF(f);
 }
 /* Bouton « Coller le relevé copié » : lit le presse-papiers (quand le téléphone le permet) */
@@ -1367,19 +1377,44 @@ async function collerReleveCopie(){
   try{
     const items=await navigator.clipboard.read(), fs=[];
     for(const it of items){const t=it.types.find(x=>/pdf|csv/.test(x)); if(t){const b=await it.getType(t);fs.push(new File([b],t.includes('pdf')?'Relevé collé.pdf':'Relevé collé.csv',{type:t}))}}
-    if(fs.length){importFiles(fs);return}
+    if(fs.length){importFiles(fs,'bouton');return}
   }catch(e){}
-  const r=newReport({name:'Relevé collé'},false);
-  r.error='Le relevé copié n’a pas pu être lu ici. Dans le partage, choisissez plutôt « Enregistrer dans Fichiers », puis touchez « Ajouter mes relevés » et choisissez-le. Autre possibilité : touchez la zone « Coller ici » ci-dessous un instant, puis « Coller ».';
-  reports.unshift(r); render();
+  messageCollage(MSG_COLLE_VIDE('')+' Autre possibilité : touchez la zone « Coller ici » ci-dessous un instant, puis « Coller ».');
 }
-/* Un lien (ou un fichier) collé dans la page : un fichier PDF ou CSV est importé, un lien est expliqué */
+/* Fichier collé dans la page (iPhone : « Copier » dans le partage, puis « Coller » dans la zone prévue).
+   Le nom ou le type peuvent manquer : c'est le contenu (%PDF) qui décide, dans lireFichier. */
+let COLLE_T=0;
+const nommer=f=>/\.(pdf|csv)$/i.test(f.name||'')?f:new File([f],(f.name||'Relevé collé')+(/csv/.test(f.type)?'.csv':'.pdf'),{type:f.type||'application/pdf'});
+function fichiersCollage(dt){
+  if(!dt) return [];
+  const l=[...(dt.files||[]),...[...(dt.items||[])].filter(i=>i.kind==='file').map(i=>i.getAsFile())].filter(Boolean), vus=new Set();
+  return l.filter(f=>{const k=f.name+'|'+f.size;if(vus.has(k))return false;vus.add(k);return true}).map(nommer);
+}
+function messageCollage(txt){const r=newReport({name:'Relevé collé'},false);r.error=txt;reports.unshift(r);render()}
+const MSG_COLLE_VIDE=det=>'Le relevé copié n’a pas pu être lu ici'+(det?' (reçu : '+det+')':'')+'. Dans le partage, choisissez plutôt « Enregistrer dans Fichiers », puis touchez « Ajouter mes relevés » et choisissez-le.';
+function traiterCollage(e,dt){
+  const fs=fichiersCollage(dt);
+  if(fs.length){e.preventDefault();COLLE_T=Date.now();const z=document.getElementById('zoneColle');if(z)z.textContent='';importFiles(fs,'zone');return true}
+  return false;
+}
 document.addEventListener('paste',e=>{
   if(view!=='importer'||/^(INPUT|TEXTAREA)$/.test((e.target||{}).tagName)) return;
-  const cd=e.clipboardData; if(!cd) return;
-  const fs=[...(cd.files||[]),...[...(cd.items||[])].filter(i=>i.kind==='file').map(i=>i.getAsFile())].filter(f=>f&&(/\.(pdf|csv)$/i.test(f.name)||/pdf|csv/.test(f.type)));
-  if(fs.length){e.preventDefault();const z=document.getElementById('zoneColle');if(z)z.textContent='';importFiles(fs);return}
-  if(/^\s*https?:\/\//i.test(cd.getData('text')||'')){e.preventDefault();const r=newReport({name:'Lien collé'},false);r.error=MSG_PAS_RELEVE;reports.unshift(r);render()}
+  const cd=e.clipboardData; if(!cd||traiterCollage(e,cd)) return;
+  const txt=cd.getData('text')||'';
+  if(/^\s*https?:\/\//i.test(txt)){e.preventDefault();messageCollage(MSG_PAS_RELEVE);return}
+  if(e.target&&e.target.id==='zoneColle'){e.preventDefault();messageCollage(MSG_COLLE_VIDE([...(cd.types||[])].join(', ')||'rien'))}
+});
+/* Certains navigateurs ne donnent le fichier qu'à cette étape, ou le placent dans la zone */
+document.addEventListener('beforeinput',e=>{
+  if(!e.target||e.target.id!=='zoneColle'||Date.now()-COLLE_T<1500) return;
+  if(e.inputType==='insertFromPaste'||e.inputType==='insertFromDrop') traiterCollage(e,e.dataTransfer);
+});
+document.addEventListener('input',async e=>{
+  const z=e.target; if(!z||z.id!=='zoneColle'||Date.now()-COLLE_T<1500) return;
+  const els=[...z.querySelectorAll('[src],[href]')].map(x=>x.getAttribute('src')||x.getAttribute('href')).filter(u=>/^(blob|data):/.test(u||''));
+  if(!els.length) return;
+  try{const fs=[];for(const u of els){const b=await (await fetch(u)).blob();fs.push(nommer(new File([b],'Relevé collé',{type:b.type})))}
+    COLLE_T=Date.now();z.textContent='';importFiles(fs,'zone')}catch(err){}
 });
 const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;
 /* Doublons exacts : comptés un par un face aux opérations déjà enregistrées (deux cafés identiques le même jour restent deux) */
@@ -1399,8 +1434,18 @@ async function testerFichier(f){
   try{analyse(await lireFichier(f),f,true,rep)}catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
   reports.unshift(rep); render();
 }
-async function importFiles(files){
+/* Dit clairement ce qui vient de se passer, et montre où : un message en haut de l'écran, puis le compte rendu du relevé */
+function annoncerImport(rs,via){
+  const n=rs.reduce((s,r)=>s+(r.added||0)+(r.completees||0),0), ko=rs.filter(r=>r.error||!r.found).length;
+  const quoi={zone:'Collage réussi (zone « Coller ici »)',bouton:'Collage réussi (bouton « Coller le relevé copié »)'}[via]||'Import réussi';
+  if(n) toast(`${quoi} ✓ : ${n} opération${n>1?'s':''} ajoutée${n>1?'s':''}.`,true);
+  else if(ko) toast('Le relevé n’a pas pu être lu : voir le message juste en dessous.',false);
+  else toast(`${quoi.replace('réussi','fait')} : ces opérations étaient déjà présentes, rien n’a été ajouté.`,true);
+  setTimeout(()=>{const el=document.querySelector('.releves');if(el)el.scrollIntoView({block:'start',behavior:'smooth'})},60);
+}
+async function importFiles(files,via){
   if(demo) exitDemo();
+  const traites=[];
   for(const f of files){
     const rep=newReport(f,false);
     try{
@@ -1431,11 +1476,11 @@ async function importFiles(files){
       classerNouvelles(nouvelles);
     }catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
     if(rep.added||rep.completees){S.imports=S.imports||{};S.imports[rep.imp]={nom:f.name,quand:Date.now()};if(rep.lus&&rep.lus.some(o=>o.lg!=null)){const ex=extraitsReleve({lignes:rep.lignes,ops:rep.lus});if(Object.keys(ex).length)S.imports[rep.imp].lg=ex}stateDirty=true}
-    reports.unshift(rep);
+    reports.unshift(rep); traites.push(rep);
   }
   if(!S.since&&S.ops.length) S.since=Date.now();
   S.ops.sort((a,b)=>a.date<b.date?1:-1);
-  P=null; save(); render();
+  P=null; save(); render(); annoncerImport(traites,via);
 }
 /* ============ Classement automatique après un import ============
    Objectif : quelques questions au plus (5), tout le reste classé sans rien demander.
@@ -1939,7 +1984,7 @@ function render(){
   const onb=!S.onboarded&&!demo;
   document.body.classList.toggle('onb',onb);
   const nv=onb?0:nbAVerifier();
-  $('#tabs').innerHTML=onb?'':TABS.map(([k,l,ic])=>`<button data-tab="${k}" aria-current="${view===k}"><i data-lucide="${ic}"></i><span>${l}${k==='operations'&&nv?`<span class="badge" aria-label="${nv} à vérifier">${nv}</span>`:''}</span></button>`).join('');
+  $('#tabs').innerHTML=onb?'':TABS.map(([k,l,ic])=>`<button data-tab="${k}" aria-current="${view===k}"${k==='operations'&&nv?` data-tip="${nv} opération${nv>1?'s':''} à vérifier. Touchez Mes opérations pour les ranger, une par une."`:''}><i data-lucide="${ic}"></i><span>${l}${k==='operations'&&nv?`<span class="badge" aria-label="${nv} à vérifier">${nv}</span>`:''}</span></button>`).join('');
   $('#demoBar').innerHTML=demo?`<div class="demo-bar"><span>Vous regardez un exemple.</span><button data-act="exitdemo">Quitter l’exemple</button></div>`:'';
   const v=$('#view');
   if(onb&&view!=='aide') v.innerHTML=vDemarrage();
@@ -3020,6 +3065,14 @@ document.addEventListener('touchstart',e=>{const c=cibleBulle(e);cacherBulle();i
 ['touchend','touchmove','touchcancel'].forEach(ev=>document.addEventListener(ev,()=>{if(ev!=='touchend')cacherBulle();else clearTimeout(BULLE_T)},{passive:true}));
 document.addEventListener('click',e=>{if(Date.now()-BULLE_LONG<900&&cibleBulle(e)){e.preventDefault();e.stopImmediatePropagation()}},true);
 document.addEventListener('contextmenu',e=>{if(cibleBulle(e)&&Date.now()-BULLE_LONG<2000)e.preventDefault()});
+
+/* Message de confirmation, en haut de l'écran */
+let TOAST_T=null;
+function toast(msg,ok){
+  const t=document.getElementById('toast'); if(!t) return;
+  t.textContent=msg; t.className='on '+(ok===false?'attention':'ok');
+  clearTimeout(TOAST_T); TOAST_T=setTimeout(()=>{t.className=''},6000);
+}
 /* ============ Exemple fictif ============ */
 /* Douze mois complets jusqu'au mois dernier, un compte perso et un compte pro. Données fixes (tirage à graine).
    Mois affiché : au-dessus de l'objectif, restaurants qui dérapent, défi réussi, remboursement d'achat, frais kilométriques,
@@ -3278,6 +3331,22 @@ function periodeBarAccueil(PA){
   <div class="mois"><button class="fleche" data-ashift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button>
   <h2>${nomPeriode(PA)}</h2><button class="fleche" data-ashift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>`;
 }
+/* Année : les mois où il est resté le plus d'argent, et ceux où il en est le moins resté */
+function blocMeilleursMois(PA){
+  if(PA.lvl!=='Y') return '';
+  const L=[];
+  for(let m=1;m<=12;m++){
+    const pm={lvl:'M',y:PA.y,m}, R=aggRaw(pm); if(!R.any) continue;
+    const n=SAL?0:agg(pm,'pro').revenuNet; L.push({m,b:n+R.perso.income-agg(pm,'perso').net});
+  }
+  if(L.length<2) return '';
+  L.sort((a,b)=>b.b-a.b); const k=Math.min(3,Math.floor(L.length/2));
+  const lig=x=>`<div class="ligne"><span>${esc(MOIS[x.m-1][0].toUpperCase()+MOIS[x.m-1].slice(1))}</span><b>${signed(x.b)}</b></div>`;
+  return `<section class="carte mois-extremes"><h3>Vos meilleurs et vos plus difficiles mois</h3>
+    <p class="aide">Pour chaque mois : ce qui est entré, moins ce que vous avez dépensé.</p>
+    <div class="mx mx-bon"><p class="mx-t"><i data-lucide="trophy"></i>Vos meilleurs mois</p>${L.slice(0,k).map(lig).join('')}</div>
+    <div class="mx mx-dur"><p class="mx-t"><i data-lucide="cloud-rain"></i>Vos mois les plus difficiles</p>${L.slice(-k).reverse().map(lig).join('')}</div></section>`;
+}
 function vAccueil(){
   const PA={...P,lvl:AL}, nm=bounds(PA)[2], mens=AL==='M', PF={lvl:'M',...endOf(PA)};
   const X=agg(PA,'pro'), Pe=agg(PA,'perso'), part=moisPartiel(PA), V=netVise()*nm, H=heures()*nm;
@@ -3301,7 +3370,7 @@ function vAccueil(){
   else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ${mens?'ce mois-ci':'sur cette période'}.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p>${balanceBloc(0,Pe,PA)}</section>`;
   if(SAL) gagne=Pe.any?`<section class="carte gagne"><h3>Votre ${mens?'mois':AL==='Q'?'trimestre':'année'}</h3>${balanceBloc(0,Pe,PA)}</section>`:'';
   const q=S.accounts.filter(a=>!a.confirmed);
-  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
+  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+blocMeilleursMois(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
     <p class="phrase">${eur0(Pe.net)} dépensés côté perso</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;

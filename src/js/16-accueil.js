@@ -176,6 +176,22 @@ function periodeBarAccueil(PA){
   <div class="mois"><button class="fleche" data-ashift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button>
   <h2>${nomPeriode(PA)}</h2><button class="fleche" data-ashift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>`;
 }
+/* Année : les mois où il est resté le plus d'argent, et ceux où il en est le moins resté */
+function blocMeilleursMois(PA){
+  if(PA.lvl!=='Y') return '';
+  const L=[];
+  for(let m=1;m<=12;m++){
+    const pm={lvl:'M',y:PA.y,m}, R=aggRaw(pm); if(!R.any) continue;
+    const n=SAL?0:agg(pm,'pro').revenuNet; L.push({m,b:n+R.perso.income-agg(pm,'perso').net});
+  }
+  if(L.length<2) return '';
+  L.sort((a,b)=>b.b-a.b); const k=Math.min(3,Math.floor(L.length/2));
+  const lig=x=>`<div class="ligne"><span>${esc(MOIS[x.m-1][0].toUpperCase()+MOIS[x.m-1].slice(1))}</span><b>${signed(x.b)}</b></div>`;
+  return `<section class="carte mois-extremes"><h3>Vos meilleurs et vos plus difficiles mois</h3>
+    <p class="aide">Pour chaque mois : ce qui est entré, moins ce que vous avez dépensé.</p>
+    <div class="mx mx-bon"><p class="mx-t"><i data-lucide="trophy"></i>Vos meilleurs mois</p>${L.slice(0,k).map(lig).join('')}</div>
+    <div class="mx mx-dur"><p class="mx-t"><i data-lucide="cloud-rain"></i>Vos mois les plus difficiles</p>${L.slice(-k).reverse().map(lig).join('')}</div></section>`;
+}
 function vAccueil(){
   const PA={...P,lvl:AL}, nm=bounds(PA)[2], mens=AL==='M', PF={lvl:'M',...endOf(PA)};
   const X=agg(PA,'pro'), Pe=agg(PA,'perso'), part=moisPartiel(PA), V=netVise()*nm, H=heures()*nm;
@@ -199,7 +215,7 @@ function vAccueil(){
   else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ${mens?'ce mois-ci':'sur cette période'}.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p>${balanceBloc(0,Pe,PA)}</section>`;
   if(SAL) gagne=Pe.any?`<section class="carte gagne"><h3>Votre ${mens?'mois':AL==='Q'?'trimestre':'année'}</h3>${balanceBloc(0,Pe,PA)}</section>`:'';
   const q=S.accounts.filter(a=>!a.confirmed);
-  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
+  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+blocMeilleursMois(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
     <p class="phrase">${eur0(Pe.net)} dépensés côté perso</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;

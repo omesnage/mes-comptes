@@ -32,7 +32,7 @@ function render(){
   const onb=!S.onboarded&&!demo;
   document.body.classList.toggle('onb',onb);
   const nv=onb?0:nbAVerifier();
-  $('#tabs').innerHTML=onb?'':TABS.map(([k,l,ic])=>`<button data-tab="${k}" aria-current="${view===k}"><i data-lucide="${ic}"></i><span>${l}${k==='operations'&&nv?`<span class="badge" aria-label="${nv} à vérifier">${nv}</span>`:''}</span></button>`).join('');
+  $('#tabs').innerHTML=onb?'':TABS.map(([k,l,ic])=>`<button data-tab="${k}" aria-current="${view===k}"${k==='operations'&&nv?` data-tip="${nv} opération${nv>1?'s':''} à vérifier. Touchez Mes opérations pour les ranger, une par une."`:''}><i data-lucide="${ic}"></i><span>${l}${k==='operations'&&nv?`<span class="badge" aria-label="${nv} à vérifier">${nv}</span>`:''}</span></button>`).join('');
   $('#demoBar').innerHTML=demo?`<div class="demo-bar"><span>Vous regardez un exemple.</span><button data-act="exitdemo">Quitter l’exemple</button></div>`:'';
   const v=$('#view');
   if(onb&&view!=='aide') v.innerHTML=vDemarrage();

@@ -1,5 +1,6 @@
 import {test,expect,openWith,importer} from './helpers.js';
 import {releveColonnes} from './releves.js';
+import fs from 'fs';
 /* Fiche d'une opération : « Voir ce qui est écrit sur le relevé » (relevé fictif, le libellé du prélèvement occupe deux lignes) */
 test('fiche, lignes du releve sur demande',async({page},ti)=>{
   await openWith(page,null);
@@ -28,5 +29,19 @@ test('reimport sans detail, complete sans doublon',async({page},ti)=>{
   await page.evaluate(()=>{S.ops.forEach(o=>delete o.lg);Object.values(S.imports).forEach(i=>delete i.lg);save();render()});
   await importer(page,f);
   await page.waitForFunction(()=>S.ops.every(o=>o.lg!=null));
+  expect(await page.evaluate(()=>S.ops.length)).toBe(5);
+});
+
+test('coller un fichier copie : accepte meme sans extension, et explique si rien de lisible',async({page},ti)=>{
+  await openWith(page,null);
+  const f=await releveColonnes(ti.outputPath('ca.pdf'));
+  const b64=fs.readFileSync(f).toString('base64');
+  await page.click('nav.tabs [data-tab="importer"]');
+  // 1. rien de lisible dans le presse-papiers : message clair
+  await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('text/plain','bonjour');document.getElementById('zoneColle').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))});
+  await expect(page.locator('.releve').first()).toContainText('Enregistrer dans Fichiers');
+  // 2. un PDF collé, sans extension ni type : lu d'après son contenu
+  await page.evaluate(b=>{const u=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const dt=new DataTransfer();dt.items.add(new File([u],'Releve de compte',{type:''}));document.getElementById('zoneColle').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}))},b64);
+  await page.waitForFunction(()=>S.ops.length>=5);
   expect(await page.evaluate(()=>S.ops.length)).toBe(5);
 });
