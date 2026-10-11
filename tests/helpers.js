@@ -1,6 +1,8 @@
 // Outils communs : l'application est ouverte en file://, les bibliothèques des CDN sont servies depuis node_modules.
 import {test as base,expect} from '@playwright/test';
 import path from 'path';
+import fs from 'fs';
+import os from 'os';
 export const ROOT=path.resolve(path.dirname(new URL(import.meta.url).pathname),'..');
 export const APP='file://'+path.join(ROOT,'dist/mes-comptes.html');
 export const APP_SAL='file://'+path.join(ROOT,'dist/mon-compte.html');
@@ -16,6 +18,14 @@ export const test=base.extend({
     page.on('pageerror',e=>errors.push('pageerror: '+e.message));
     page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});
     page.on('dialog',d=>d.accept(d.type()==='prompt'?'Compte test':undefined));
+    /* Dans cet environnement, un chemin avec des accents (le titre du test sert de nom de dossier) n'est pas lu par le navigateur :
+       on copie alors le fichier sous un nom simple avant de le donner à la page. */
+    const setFiles=page.setInputFiles.bind(page);
+    page.setInputFiles=(sel,files,opts)=>{
+      const simple=f=>{if(typeof f!=='string'||!/[^\x00-\x7f]/.test(f)) return f;
+        const d=fs.mkdtempSync(path.join(os.tmpdir(),'sif-')), g=path.join(d,path.basename(f).normalize('NFD').replace(/[^\x00-\x7f]/g,'')||'fichier'); fs.copyFileSync(f,g); return g};
+      return setFiles(sel,Array.isArray(files)?files.map(simple):simple(files),opts);
+    };
     await routeLibs(page);
     await use(page);
     expect(errors,'aucune erreur dans la console').toEqual([]);

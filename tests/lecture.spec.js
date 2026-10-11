@@ -22,7 +22,7 @@ test('relevé non reconnu : aide de lecture dépliée, puis lecteur personnalis�
   const lecteur={nom:'Banque exotique',detection:'BANQUE EXOTIQUE',ligne:'^(?<date>\\d{4}\\.\\d{2}\\.\\d{2}) \\| (?<libelle>.+?) \\| (?<montant>[\\d.]+) EUR (?<sens>[DC])$',signe:'moins'};
   await page.fill('#readerIn','Voici le lecteur : '+JSON.stringify(lecteur));
   await page.click('[data-act="addreader"]');
-  await expect(page.locator('#avances')).toContainText('Lecteur « Banque exotique » ajouté');
+  await expect(page.locator('#avances')).toContainText('Méthode de lecture « Banque exotique » ajoutée');
   await importer(page,f);
   await expect(page.locator('.releve').first()).toContainText('3 opérations ajoutées ✓');
   expect(await page.evaluate(()=>S.ops.map(o=>o.amount).sort((a,b)=>a-b))).toEqual([-64.2,-12.5,800]);

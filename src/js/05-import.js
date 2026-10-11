@@ -65,7 +65,8 @@ const MSG_PAS_RELEVE='Ce fichier n’est pas un relevé PDF ou CSV. Si vous avez
 async function lireFichier(f){
   if(/\.csv$/i.test(f.name)||f.type==='text/csv') return parseCSV(await f.text());
   const tete=new TextDecoder('latin1').decode(new Uint8Array(await f.slice(0,1024).arrayBuffer()));
-  if(!tete.includes('%PDF')) throw new Error(MSG_PAS_RELEVE);
+  /* Un fichier qui se dit PDF garde le message habituel ; un autre type (lien, page web, image…) est expliqué */
+  if(!tete.includes('%PDF')&&!/\.pdf$/i.test(f.name)&&f.type!=='application/pdf') throw new Error(MSG_PAS_RELEVE);
   return await parsePDF(f);
 }
 /* Fichier collé dans la page (iPhone : « Copier » dans le partage, puis « Coller » dans la zone prévue).
