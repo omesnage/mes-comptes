@@ -82,7 +82,7 @@ function vBilan(){
   if(!PB) PB={lvl:'M',y:P.y,m:P.m};
   const U=bilanU(), B=bilan(PB,U), prev=bilan(shift(PB,-1),U);
   const lignes=B.rows.filter(([c,v])=>v>0.005||B.A.by[c]?.surplus>0.005).sort((a,b)=>b[1]-a[1]), max=Math.max(1,...lignes.map(x=>x[1])), fin={lvl:'M',...endOf(PB)};
-  const surp=cid=>B.A.by[cid]?.surplus>0.005?`<span class="leg-sous">dont ${eur0(B.A.by[cid].ref)} de remboursements</span>`:'';
+  const surp=cid=>motRemb(B.A.by[cid])?`<span class="leg-sous">${motRemb(B.A.by[cid])}</span>`:'';
   /* Écarts avec la période précédente : en euros seulement, au-delà de 30 € */
   const ids=[...new Set([...B.rows,...prev.rows].map(r=>r[0]))];
   const ecarts=ids.map(cid=>{const a=B.rows.find(r=>r[0]===cid)?.[1]||0, b=prev.rows.find(r=>r[0]===cid)?.[1]||0;return {cid,a,b,d:a-b}})
@@ -126,7 +126,7 @@ function ficheRub(cid){
   const quoi=PB.lvl==='M'?'au mois précédent':PB.lvl==='Q'?'au trimestre précédent':'à l’année précédente';
   return `<div class="fiche-fond" data-act="closefiche"></div><div class="fiche" role="dialog" aria-modal="true" aria-label="${esc(nomRub(cid))}">
     <button class="fermer" data-act="closefiche" aria-label="Fermer"><i data-lucide="x"></i></button>
-    <p class="f-m">${esc(nomRub(cid))}</p><p class="f-amt">${eur0(a)}</p><p class="aide">${esc(nomPeriode(PB))}${B.A.by[cid]?.surplus>0.005?`, dont ${eur0(B.A.by[cid].ref)} de remboursements`:''}</p>
+    <p class="f-m">${esc(nomRub(cid))}</p><p class="f-amt">${eur0(a)}</p><p class="aide">${esc(nomPeriode(PB))}${motRemb(B.A.by[cid])?`, ${motRemb(B.A.by[cid])}`:''}</p>
     <div class="ligne"><span>En moyenne par mois</span><b>${eur0(moy)}</b></div>
     <div class="ligne"><span>Par rapport ${quoi}</span><b class="${d>0?'m-hausse':d<0?'m-baisse':''}">${d>0?'↑ +':d<0?'↓ −':''}${eur0(Math.abs(d))}</b></div>
     <p class="f-lbl">Cette rubrique, mois par mois</p>

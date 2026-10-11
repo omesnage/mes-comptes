@@ -220,7 +220,7 @@ function vAccueil(){
     <p class="phrase">${eur0(Pe.net)} dépensés${SAL?'':' côté perso'}</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
-        <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}${e.surplus>0.005?`<span class="rub-sous">dont ${eur0(e.ref)} de remboursements</span>`:''}</span>
+        <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}${motRemb(e)?`<span class="rub-sous">${motRemb(e)}</span>`:''}</span>
         <span class="rub-amt">${eur0(e.net)}</span><span class="barre"><span style="width:${Math.max(1.5,e.net/max*100)}%"></span></span></button>
         ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div>
     <button class="lien ajout-rub" data-act="nouvrub"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>`:''}

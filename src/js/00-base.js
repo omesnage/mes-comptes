@@ -61,6 +61,9 @@ const CAISSES_RE=/\b(CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|IRCEC)\b/;
 /* Épargne et placements : ni une dépense ni une rentrée, dans un sens comme dans l'autre */
 const EPARGNE_RE=/\b(GENERALI VIE|ASSURANCES? ?VIE|PLACEMENTS?|LIVRETS?|LDDS?|LEP|PEA|PER|PERP|PERIN|PLAN (D )?EPARGNE|EPARGNE|COMPTE A TERME|LINXEA|YOMONI|NALO|SPIRICA|SURAVENIR)\b/;
 /* Retraite et pensions : une rentrée personnelle, jamais un revenu de l'activité */
+/* Remboursements de soins : caisse d'assurance maladie et mutuelles. Une rentrée de ce genre se range dans Santé, où elle se déduit des dépenses de santé.
+   (Les cotisations sociales des indépendants et les noms de personnes ne sont pas concernés.) */
+const SANTE_RENTREE_RE=/\b(CPAM|AMELI|CAISSE PRIMAIRE|ASSURANCE MALADIE|SECU(?:RITE)? SOCIALE(?! DES INDEPENDANTS)|MUTUELLE|MUTUALIA|MGEN|MALAKOFF|HUMANIS|KLESIA|AG2R|APRIL SANTE|SWISS ?LIFE SANTE|MAAF SANTE|MACIF (?:SANTE|MUTUALITE)|ALAN (?:SANTE|ASSURANCE)|RBT SOINS|REMB(?:OURSEMENT|T)? (?:DE )?(?:SANTE|SOINS|PHARMACIE|MEDICAL\w*))\b/;
 const RETRAITE_RE=/\b(RETRAITES?|CARSAT|CNAV|IRCEC|AGIRC|ARRCO|CAISSE D.?ASSURANCE RETRAITE|PENSIONS?|CIPAV|CARMF|CARPIMKO|CAVEC)\b/;
 function autoCatOf(label,atype,amount){
   const t=norm(label||'');
@@ -71,9 +74,10 @@ function autoCatOf(label,atype,amount){
   if(EPARGNE_RE.test(t.replace(/CAISSE D.?EPARGNE/g,'')))return 'epargne';
   if(SAL&&amount>0&&/\bSALAIRE\b|\bPAIE\b/.test(t))return 'salaire';
   if(RETRAITE_RE.test(t)&&amount>0)return 'retraite';
+  if(amount>0&&atype!=='pro'&&SANTE_RENTREE_RE.test(t))return 'sante';
   const b=brandOf(label);if(b&&b[2])return b[2];return null}
 /* Rubriques reconnues d'office qui dépendent du sens (rentrée ou dépense) */
-const AUTO_SENS=new Set(['retraite','cotisations','salaire']);
+const AUTO_SENS=new Set(['retraite','cotisations','salaire','sante']);
 /* Pose la règle reconnue d'office, sauf si une règle existe déjà pour ce marchand. Renvoie true si elle a été posée. */
 function appliqueAuto(o,atype){
   const c=autoCatOf(o.label,atype,o.amount); if(!c) return false;
@@ -252,6 +256,8 @@ function isRefund(o){
   return (c&&c!=='_pending')||REFUND_RE.test(norm(o.label));
 }
 function waitingReturns(){return S.ops.filter(o=>o.awaiting&&!LINKED[o.id]).sort((a,b)=>a.date<b.date?-1:1)}
+/* Mention sous une rubrique : ce qui a été remboursé et déjà déduit */
+const motRemb=e=>!e||!(e.ref>0.005)?'':e.surplus>0.005?`dont ${eur0(e.ref)} de remboursements`:`après ${eur0(e.ref)} de remboursements`;
 function opExtra(o){
   if(INTERNAL[o.id]&&!o.cat){const x=BYID[INTERNAL[o.id]];if(!x)return 'Virement entre vos comptes';
     const [d,c]=o.amount<0?[o,x]:[x,o];const r=remuDir(d,c);

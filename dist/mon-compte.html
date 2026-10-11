@@ -654,6 +654,9 @@ const CAISSES_RE=/\b(CIPAV|CARMF|CARPIMKO|CAVEC|CARCDSF|CAVP|IRCEC)\b/;
 /* Épargne et placements : ni une dépense ni une rentrée, dans un sens comme dans l'autre */
 const EPARGNE_RE=/\b(GENERALI VIE|ASSURANCES? ?VIE|PLACEMENTS?|LIVRETS?|LDDS?|LEP|PEA|PER|PERP|PERIN|PLAN (D )?EPARGNE|EPARGNE|COMPTE A TERME|LINXEA|YOMONI|NALO|SPIRICA|SURAVENIR)\b/;
 /* Retraite et pensions : une rentrée personnelle, jamais un revenu de l'activité */
+/* Remboursements de soins : caisse d'assurance maladie et mutuelles. Une rentrée de ce genre se range dans Santé, où elle se déduit des dépenses de santé.
+   (Les cotisations sociales des indépendants et les noms de personnes ne sont pas concernés.) */
+const SANTE_RENTREE_RE=/\b(CPAM|AMELI|CAISSE PRIMAIRE|ASSURANCE MALADIE|SECU(?:RITE)? SOCIALE(?! DES INDEPENDANTS)|MUTUELLE|MUTUALIA|MGEN|MALAKOFF|HUMANIS|KLESIA|AG2R|APRIL SANTE|SWISS ?LIFE SANTE|MAAF SANTE|MACIF (?:SANTE|MUTUALITE)|ALAN (?:SANTE|ASSURANCE)|RBT SOINS|REMB(?:OURSEMENT|T)? (?:DE )?(?:SANTE|SOINS|PHARMACIE|MEDICAL\w*))\b/;
 const RETRAITE_RE=/\b(RETRAITES?|CARSAT|CNAV|IRCEC|AGIRC|ARRCO|CAISSE D.?ASSURANCE RETRAITE|PENSIONS?|CIPAV|CARMF|CARPIMKO|CAVEC)\b/;
 function autoCatOf(label,atype,amount){
   const t=norm(label||'');
@@ -664,9 +667,10 @@ function autoCatOf(label,atype,amount){
   if(EPARGNE_RE.test(t.replace(/CAISSE D.?EPARGNE/g,'')))return 'epargne';
   if(SAL&&amount>0&&/\bSALAIRE\b|\bPAIE\b/.test(t))return 'salaire';
   if(RETRAITE_RE.test(t)&&amount>0)return 'retraite';
+  if(amount>0&&atype!=='pro'&&SANTE_RENTREE_RE.test(t))return 'sante';
   const b=brandOf(label);if(b&&b[2])return b[2];return null}
 /* Rubriques reconnues d'office qui dépendent du sens (rentrée ou dépense) */
-const AUTO_SENS=new Set(['retraite','cotisations','salaire']);
+const AUTO_SENS=new Set(['retraite','cotisations','salaire','sante']);
 /* Pose la règle reconnue d'office, sauf si une règle existe déjà pour ce marchand. Renvoie true si elle a été posée. */
 function appliqueAuto(o,atype){
   const c=autoCatOf(o.label,atype,o.amount); if(!c) return false;
@@ -845,6 +849,8 @@ function isRefund(o){
   return (c&&c!=='_pending')||REFUND_RE.test(norm(o.label));
 }
 function waitingReturns(){return S.ops.filter(o=>o.awaiting&&!LINKED[o.id]).sort((a,b)=>a.date<b.date?-1:1)}
+/* Mention sous une rubrique : ce qui a été remboursé et déjà déduit */
+const motRemb=e=>!e||!(e.ref>0.005)?'':e.surplus>0.005?`dont ${eur0(e.ref)} de remboursements`:`après ${eur0(e.ref)} de remboursements`;
 function opExtra(o){
   if(INTERNAL[o.id]&&!o.cat){const x=BYID[INTERNAL[o.id]];if(!x)return 'Virement entre vos comptes';
     const [d,c]=o.amount<0?[o,x]:[x,o];const r=remuDir(d,c);
@@ -3380,7 +3386,7 @@ function vAccueil(){
     <p class="phrase">${eur0(Pe.net)} dépensés${SAL?'':' côté perso'}</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
-        <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}${e.surplus>0.005?`<span class="rub-sous">dont ${eur0(e.ref)} de remboursements</span>`:''}</span>
+        <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}${motRemb(e)?`<span class="rub-sous">${motRemb(e)}</span>`:''}</span>
         <span class="rub-amt">${eur0(e.net)}</span><span class="barre"><span style="width:${Math.max(1.5,e.net/max*100)}%"></span></span></button>
         ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div>
     <button class="lien ajout-rub" data-act="nouvrub"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>`:''}
@@ -3602,7 +3608,7 @@ function vBilan(){
   if(!PB) PB={lvl:'M',y:P.y,m:P.m};
   const U=bilanU(), B=bilan(PB,U), prev=bilan(shift(PB,-1),U);
   const lignes=B.rows.filter(([c,v])=>v>0.005||B.A.by[c]?.surplus>0.005).sort((a,b)=>b[1]-a[1]), max=Math.max(1,...lignes.map(x=>x[1])), fin={lvl:'M',...endOf(PB)};
-  const surp=cid=>B.A.by[cid]?.surplus>0.005?`<span class="leg-sous">dont ${eur0(B.A.by[cid].ref)} de remboursements</span>`:'';
+  const surp=cid=>motRemb(B.A.by[cid])?`<span class="leg-sous">${motRemb(B.A.by[cid])}</span>`:'';
   /* Écarts avec la période précédente : en euros seulement, au-delà de 30 € */
   const ids=[...new Set([...B.rows,...prev.rows].map(r=>r[0]))];
   const ecarts=ids.map(cid=>{const a=B.rows.find(r=>r[0]===cid)?.[1]||0, b=prev.rows.find(r=>r[0]===cid)?.[1]||0;return {cid,a,b,d:a-b}})
@@ -3646,7 +3652,7 @@ function ficheRub(cid){
   const quoi=PB.lvl==='M'?'au mois précédent':PB.lvl==='Q'?'au trimestre précédent':'à l’année précédente';
   return `<div class="fiche-fond" data-act="closefiche"></div><div class="fiche" role="dialog" aria-modal="true" aria-label="${esc(nomRub(cid))}">
     <button class="fermer" data-act="closefiche" aria-label="Fermer"><i data-lucide="x"></i></button>
-    <p class="f-m">${esc(nomRub(cid))}</p><p class="f-amt">${eur0(a)}</p><p class="aide">${esc(nomPeriode(PB))}${B.A.by[cid]?.surplus>0.005?`, dont ${eur0(B.A.by[cid].ref)} de remboursements`:''}</p>
+    <p class="f-m">${esc(nomRub(cid))}</p><p class="f-amt">${eur0(a)}</p><p class="aide">${esc(nomPeriode(PB))}${motRemb(B.A.by[cid])?`, ${motRemb(B.A.by[cid])}`:''}</p>
     <div class="ligne"><span>En moyenne par mois</span><b>${eur0(moy)}</b></div>
     <div class="ligne"><span>Par rapport ${quoi}</span><b class="${d>0?'m-hausse':d<0?'m-baisse':''}">${d>0?'↑ +':d<0?'↓ −':''}${eur0(Math.abs(d))}</b></div>
     <p class="f-lbl">Cette rubrique, mois par mois</p>
