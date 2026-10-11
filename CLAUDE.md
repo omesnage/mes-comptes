@@ -5,9 +5,8 @@ Application de comptes personnels et professionnels pour les micro-entrepreneurs
 ## Règles de travail avec Olivier
 
 - **Pas de captures d'écran.** Compte rendu en **3 lignes**, sans jargon technique.
-- À la fin de chaque étape : `open dist/mes-comptes.html`, puis donner le chemin exact en une ligne.
+- À la fin de chaque étape : sur Mac, `open dist/mes-comptes.html` et donner le chemin exact en une ligne ; en session Cloud, envoyer le fichier construit.
 - Quand Olivier demande d'attendre d'autres instructions, ne rien lancer avant son feu vert.
-- **Ne jamais toucher au dossier Hara** (`~/site en cours/veronique/vero mag`).
 - Ne jamais mettre de vraies données bancaires (nom, adresse, IBAN, opérations) dans le dépôt ni dans les tests : reproduire les formats avec des données fictives.
 - Commits en français, terminés par la ligne `Co-Authored-By` indiquée par Claude Code.
 
@@ -82,9 +81,9 @@ npm test         # build + tests Playwright (Chromium)
 - « À vérifier » = une carte à la fois (suggestion en premier, deux autres rubriques probables, « Autre rubrique… », « Je ne sais pas »). Les suppositions sont listées dans « Classé automatiquement », avec « Tout valider ».
 - Tests : `tests/classement.spec.js` avec un relevé **fictif** (`tests/releves-fictifs.js`). Les mesures sur de vrais relevés se font hors du dépôt.
 
-## Session Cloud (travail sans le Mac)
-- Le dossier du projet est copié dans l'espace Cloud (`/home/claude/mes-comptes`). Lancer `sh cloud-setup.sh` au début de chaque session : outils installés, construction vérifiée.
-- Tests : `. ./.cloud-env && npx playwright test --workers=2` (le navigateur Cloud est indiqué par `CHROMIUM_PATH`, déjà géré par `playwright.config.js`). Compter environ 6 minutes pour la suite complète.
-- Pas de commande `open` dans le Cloud : à la fin d'une étape, envoyer `dist/mes-comptes.html` (et `dist/mon-compte.html` si touché) à Olivier avec SendUserFile, puis le renvoyer dans `~/Documents/mes-comptes/` si le Mac est relié.
-- L'espace Cloud est temporaire : en fin de session, toujours renvoyer les fichiers modifiés vers le Mac (ou pousser sur GitHub).
-- État connu au 11/10/2026 : 4 fichiers de tests échouent aussi sur le dernier commit (migration ×3 et univers ×1), probablement liés à des dates ; à examiner avant toute mise en ligne.
+## Session Cloud
+- Lancer `sh cloud-setup.sh` au début de chaque session : outils installés, construction vérifiée, navigateur de test repéré.
+- Tests : `. ./.cloud-env && npx playwright test --workers=2` (environ 6 minutes pour la suite complète).
+- Pas de commande `open` dans le Cloud : envoyer `dist/mes-comptes.html` (et `dist/mon-compte.html` si touché) à Olivier à la fin de chaque étape.
+- L'espace Cloud est temporaire : toujours enregistrer et pousser sur GitHub en fin de session.
+- État connu au 11/10/2026 : 4 fichiers de tests échouent aussi sur le commit précédent (migration ×3, univers ×1) ; à examiner avant toute mise en ligne.
