@@ -95,6 +95,7 @@ document.addEventListener('click',async e=>{
   if(d.act==='revok'){revImport();return}
   if(d.act==='revcancel'){revDraft=null;render();return}
   if(d.act==='exitdemo'){exitDemo();render();return}
+  if(d.act==='choisirsauv'){$('#restorefile2')?.click();return}
   if(d.act==='collerreleve'){collerReleveCopie();return}
   if(d.act==='wipe'){WIPE=true;render();return}
   if(d.act==='wipeno'){WIPE=false;render();return}

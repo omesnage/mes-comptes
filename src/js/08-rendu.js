@@ -36,7 +36,7 @@ function render(){
   $('#demoBar').innerHTML=demo?`<div class="demo-bar"><span>Vous regardez un exemple.</span><button data-act="exitdemo">Quitter l’exemple</button></div>`:'';
   const v=$('#view');
   if(onb&&view!=='aide') v.innerHTML=vDemarrage();
-  else if(!S.ops.length&&['accueil','bilan','operations'].includes(view)) v.innerHTML=libBanner()+vide();
+  else if(!S.ops.length&&['accueil','bilan','operations'].includes(view)) v.innerHTML=libBanner()+vide(view);
   else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,objectifs:vObjectifs,reglages:vReglages,aide:vAide}[view]();
   if(view!=='bilan') BCAT=null;
   v.insertAdjacentHTML('beforeend',(FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'')+(NEWCAT?fenetreRubrique():'')+(MODAL?fenetreModal():''));
@@ -48,9 +48,15 @@ function privacyText(){return mode==='db'
   ?'Vos comptes sont privés : personne d’autre ne peut les voir, pas même la personne qui vous a transmis l’application.'
   :'Vos comptes restent sur cet appareil : rien n’est envoyé ailleurs, et personne d’autre ne peut les voir. Ils ne se retrouvent pas tout seuls sur un autre appareil (téléphone, ordinateur) : voir Réglages, « Vos données », pour les emporter avec vous.'}
 function privacyBox(){return `<div class="note-box" role="note"><i data-lucide="lock"></i><p>${privacyText()}</p></div>`}
-function vide(){
-  return `<div class="vide"><h2>Ajoutez vos relevés pour commencer</h2><p>Téléchargez vos relevés de compte en PDF sur le site de votre banque, puis ajoutez-les ici.</p>
-  <div class="boutons"><button class="btn" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div></div>`;
+/* Écran sans aucune opération : chaque onglet dit ce qu'il montrera, avec les mêmes façons de démarrer */
+function vide(v){
+  const t={accueil:['Ajoutez vos relevés pour commencer','Téléchargez vos relevés de compte en PDF sur le site de votre banque, puis ajoutez-les ici.'],
+    bilan:['Votre bilan apparaîtra ici','Il se calcule à partir de vos relevés : ce qui est entré, ce qui est parti, et où part votre argent.'],
+    operations:['Vos opérations apparaîtront ici','Chaque ligne de vos relevés sera listée ici, et vous pourrez la ranger dans une rubrique.']}[v]||[];
+  return `<div class="vide"><h2>${t[0]}</h2><p>${t[1]}</p>
+  <div class="boutons"><button class="btn" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div>
+  <p class="aide">Vous avez déjà utilisé l’application sur un autre appareil ? Vos comptes ne passent pas d’un appareil à l’autre tout seuls : sauvegardez-les sur l’autre appareil, puis retrouvez-les ici.</p>
+  <div class="boutons"><button class="btn secondaire" data-act="choisirsauv"><i data-lucide="folder-down"></i>Retrouver mes comptes (fichier de sauvegarde)</button></div></div>`;
 }
 function moisBar(){
   return `<div class="mois"><button class="fleche" data-shift="-1" aria-label="Mois précédent"><i data-lucide="chevron-left"></i></button>
