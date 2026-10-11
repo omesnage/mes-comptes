@@ -170,6 +170,9 @@ details[open]>summary::before{transform:rotate(90deg)}
 .f-amt{font-size:36px;font-weight:300;font-variant-numeric:tabular-nums;margin:0 0 6px}
 .f-x{font-size:16px;color:var(--gold);margin:6px 0}
 .f-actions{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.extrait{margin:10px 0;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.ex-l{margin:0;padding:6px 0 6px 12px;font-size:15px;color:var(--muted);border-left:3px solid transparent;overflow-wrap:anywhere}
+.ex-l.cible{color:var(--ink);font-weight:500;border-left-color:var(--gold)}
 body.fige{overflow:hidden}
 
 .filtre{margin:0 0 16px}

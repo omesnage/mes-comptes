@@ -30,6 +30,28 @@ function jumeau(op,acct,pris,filtre){
     if(!doute) doute=o }
   return doute?{o:doute,sur:false}:null;
 }
+/* Pour chaque opération lue, retrouve la ligne du relevé d'où elle vient (méthode commune à toutes les lectures) :
+   la ligne qui contient le montant, avec le début du libellé sur cette ligne ou juste à côté. */
+function lierLignes(res){
+  const L=(res.lignes||[]).map(l=>l.text||''); if(!L.length) return;
+  const net=t=>norm(t).replace(/\s/g,''), lib=t=>norm(t).replace(/[^A-Z0-9]/g,'');
+  const c1=L.map(net), c2=L.map(lib); let ptr=0;
+  for(const o of res.ops){
+    const frag=lib(o.label).slice(0,8), a=Math.abs(o.amount).toFixed(2).replace('.',',');
+    if(frag.length<3) continue;
+    const re=new RegExp('(?<![0-9])'+a.replace(',','[,.]')+'(?![0-9])');
+    for(let k=0;k<L.length;k++){
+      const i=(ptr+k)%L.length;
+      if(re.test(c1[i])&&(c2[Math.max(0,i-1)]+c2[i]+(c2[i+1]||'')).includes(frag)){o.lg=i;ptr=i;break}
+    }
+  }
+}
+/* Les 3 lignes avant et après chaque opération, gardées avec le relevé pour pouvoir vérifier la lecture */
+function extraitsReleve(res){
+  const L=(res.lignes||[]).map(l=>l.text||''), m={};
+  for(const o of res.ops) if(o.lg!=null) for(let j=o.lg-3;j<=o.lg+3;j++) if(L[j]&&!m[j]) m[j]=L[j].slice(0,110);
+  return m;
+}
 async function lireFichier(f){return /\.csv$/i.test(f.name)?parseCSV(await f.text()):await parsePDF(f)}
 const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;
 /* Doublons exacts : comptés un par un face aux opérations déjà enregistrées (deux cafés identiques le même jour restent deux) */
@@ -54,7 +76,7 @@ async function importFiles(files){
   for(const f of files){
     const rep=newReport(f,false);
     try{
-      const res=await lireFichier(f);
+      const res=await lireFichier(f); lierLignes(res);
       const a=analyse(res,f,false,rep);
       if(a){
         const last=res.ops.reduce((m,o)=>o.date>m?o.date:m,'');
@@ -68,10 +90,11 @@ async function importFiles(files){
         if(deja.pris(cleOp(o))){rep.dups++;continue}
         /* Déjà là grâce au copier-coller : la version du relevé remplace, la rubrique et le reste sont gardés */
         const j=jumeau(o,rep.acct,pris,x=>x.src==='paste');
-        if(j&&j.sur){const x=j.o,c0=catOf(x);pris.add(x.id);dirtyMonths.add(x.date.slice(0,7));x.date=o.date;x.label=o.label;x.merchant=merchantOf(o.label);x.src=src;x.imp=rep.imp;dirtyMonths.add(o.date.slice(0,7));
+        if(j&&j.sur){const x=j.o,c0=catOf(x);pris.add(x.id);dirtyMonths.add(x.date.slice(0,7));x.date=o.date;x.label=o.label;x.merchant=merchantOf(o.label);x.src=src;x.imp=rep.imp;if(o.lg!=null)x.lg=o.lg;dirtyMonths.add(o.date.slice(0,7));
           if(c0&&c0!=='interne'&&!x.cat&&!S.rules[x.merchant]&&!S.rules[x.merchant+(x.amount>0?'|+':'|-')]){S.rules[x.merchant+(x.amount>0?'|+':'|-')]=c0;delete S.sugg[x.merchant]}
           rep.completees++;continue}
         const op={id:Math.random().toString(36).slice(2,10),date:o.date,label:o.label,amount:o.amount,merchant:merchantOf(o.label),acct:rep.acct,imp:rep.imp,src};
+        if(o.lg!=null) op.lg=o.lg;
         if(j){pris.add(j.o.id);S.douteux.push({a:j.o.id,b:op.id});rep.douteux++}
         S.ops.push(op); rep.added++; rep.sample.push(op); dirtyMonths.add(o.date.slice(0,7));
         if(appliqueAuto(op,atype)) stateDirty=true;
@@ -79,7 +102,7 @@ async function importFiles(files){
       }
       classerNouvelles(nouvelles);
     }catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
-    if(rep.added||rep.completees){S.imports=S.imports||{};S.imports[rep.imp]={nom:f.name,quand:Date.now()};stateDirty=true}
+    if(rep.added||rep.completees){S.imports=S.imports||{};S.imports[rep.imp]={nom:f.name,quand:Date.now()};if(rep.lus&&rep.lus.some(o=>o.lg!=null)){const ex=extraitsReleve({lignes:rep.lignes,ops:rep.lus});if(Object.keys(ex).length)S.imports[rep.imp].lg=ex}stateDirty=true}
     reports.unshift(rep);
   }
   if(!S.since&&S.ops.length) S.since=Date.now();

@@ -141,7 +141,17 @@ function aVerifier(){
   }
   return h;
 }
-let HEURES=null;
+let HEURES=null, RELEVE=false;
+/* Ce qui est écrit sur le relevé autour de l'opération (3 lignes avant, 3 après), à la demande */
+function blocReleve(o){
+  if(o.src!=='pdf'&&o.src!=='csv') return '';
+  const im=(S.imports||{})[o.imp], lg=im&&im.lg;
+  if(!lg) return o.src==='pdf'?`<p class="aide">Ce détail n’est pas gardé pour ce relevé. Pour le voir, supprimez le relevé dans Importer puis ajoutez-le de nouveau.</p>`:'';
+  if(o.lg==null) return `<p class="aide">Cette ligne n’a pas pu être retrouvée sur le relevé.</p>`;
+  if(!RELEVE) return `<button class="lien" data-act="releve"><i data-lucide="file-search"></i>Voir ce qui est écrit sur le relevé</button>`;
+  const l=[];for(let j=o.lg-3;j<=o.lg+3;j++) if(lg[j]!=null) l.push(`<p class="ex-l${j===o.lg?' cible':''}">${esc(lg[j])}</p>`);
+  return `<div class="extrait"><p class="aide">Relevé « ${esc(im.nom)} ». La ligne en gras est celle d’où vient cette opération.</p>${l.join('')}<button class="lien" data-act="releve">Masquer</button></div>`;
+}
 /* Sous un encaissement de l'activité : son équivalent en heures au prix minimum, et le temps réellement passé */
 function heuresBloc(o,statique){
   const px=heuresPrix(); if(!px||!estEncaissementPro(o)) return '';
@@ -235,6 +245,7 @@ function fiche(id){
     <p class="aide">${esc(o.label)}<br>${dfmt(o.date).replace(/(\d\d)\/(\d\d)\/(\d\d)/,'$1/$2/20$3')}${o.src!=='rev'&&ACCN>1?`, ${esc(acctName(o.acct))}`:''}</p>
     ${o.src==='rev'?'':lienRecherche(o.label)}
     ${opExtra(o)?`<p class="f-x">${esc(opExtra(o))}</p>`:''}
+    ${blocReleve(o)}
     ${o.src==='rev'||x?'':`<label class="f-lbl" for="ficheCat">Rubrique</label>
     <select class="grand" id="ficheCat">${c||FICHESEL?'':'<option value="">À vérifier</option>'}${catOptions(FICHESEL||c,false,'',true)}</select>
     <div class="radios"><label><input type="radio" name="portee" value="tout" checked> Pour toutes les opérations de ce marchand</label>

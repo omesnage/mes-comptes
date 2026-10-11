@@ -184,6 +184,9 @@ details[open]>summary::before{transform:rotate(90deg)}
 .f-amt{font-size:36px;font-weight:300;font-variant-numeric:tabular-nums;margin:0 0 6px}
 .f-x{font-size:16px;color:var(--gold);margin:6px 0}
 .f-actions{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.extrait{margin:10px 0;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.ex-l{margin:0;padding:6px 0 6px 12px;font-size:15px;color:var(--muted);border-left:3px solid transparent;overflow-wrap:anywhere}
+.ex-l.cible{color:var(--ink);font-weight:500;border-left-color:var(--gold)}
 body.fige{overflow:hidden}
 
 .filtre{margin:0 0 16px}
@@ -1270,6 +1273,28 @@ function jumeau(op,acct,pris,filtre){
     if(!doute) doute=o }
   return doute?{o:doute,sur:false}:null;
 }
+/* Pour chaque opération lue, retrouve la ligne du relevé d'où elle vient (méthode commune à toutes les lectures) :
+   la ligne qui contient le montant, avec le début du libellé sur cette ligne ou juste à côté. */
+function lierLignes(res){
+  const L=(res.lignes||[]).map(l=>l.text||''); if(!L.length) return;
+  const net=t=>norm(t).replace(/\s/g,''), lib=t=>norm(t).replace(/[^A-Z0-9]/g,'');
+  const c1=L.map(net), c2=L.map(lib); let ptr=0;
+  for(const o of res.ops){
+    const frag=lib(o.label).slice(0,8), a=Math.abs(o.amount).toFixed(2).replace('.',',');
+    if(frag.length<3) continue;
+    const re=new RegExp('(?<![0-9])'+a.replace(',','[,.]')+'(?![0-9])');
+    for(let k=0;k<L.length;k++){
+      const i=(ptr+k)%L.length;
+      if(re.test(c1[i])&&(c2[Math.max(0,i-1)]+c2[i]+(c2[i+1]||'')).includes(frag)){o.lg=i;ptr=i;break}
+    }
+  }
+}
+/* Les 3 lignes avant et après chaque opération, gardées avec le relevé pour pouvoir vérifier la lecture */
+function extraitsReleve(res){
+  const L=(res.lignes||[]).map(l=>l.text||''), m={};
+  for(const o of res.ops) if(o.lg!=null) for(let j=o.lg-3;j<=o.lg+3;j++) if(L[j]&&!m[j]) m[j]=L[j].slice(0,110);
+  return m;
+}
 async function lireFichier(f){return /\.csv$/i.test(f.name)?parseCSV(await f.text()):await parsePDF(f)}
 const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;
 /* Doublons exacts : comptés un par un face aux opérations déjà enregistrées (deux cafés identiques le même jour restent deux) */
@@ -1294,7 +1319,7 @@ async function importFiles(files){
   for(const f of files){
     const rep=newReport(f,false);
     try{
-      const res=await lireFichier(f);
+      const res=await lireFichier(f); lierLignes(res);
       const a=analyse(res,f,false,rep);
       if(a){
         const last=res.ops.reduce((m,o)=>o.date>m?o.date:m,'');
@@ -1308,10 +1333,11 @@ async function importFiles(files){
         if(deja.pris(cleOp(o))){rep.dups++;continue}
         /* Déjà là grâce au copier-coller : la version du relevé remplace, la rubrique et le reste sont gardés */
         const j=jumeau(o,rep.acct,pris,x=>x.src==='paste');
-        if(j&&j.sur){const x=j.o,c0=catOf(x);pris.add(x.id);dirtyMonths.add(x.date.slice(0,7));x.date=o.date;x.label=o.label;x.merchant=merchantOf(o.label);x.src=src;x.imp=rep.imp;dirtyMonths.add(o.date.slice(0,7));
+        if(j&&j.sur){const x=j.o,c0=catOf(x);pris.add(x.id);dirtyMonths.add(x.date.slice(0,7));x.date=o.date;x.label=o.label;x.merchant=merchantOf(o.label);x.src=src;x.imp=rep.imp;if(o.lg!=null)x.lg=o.lg;dirtyMonths.add(o.date.slice(0,7));
           if(c0&&c0!=='interne'&&!x.cat&&!S.rules[x.merchant]&&!S.rules[x.merchant+(x.amount>0?'|+':'|-')]){S.rules[x.merchant+(x.amount>0?'|+':'|-')]=c0;delete S.sugg[x.merchant]}
           rep.completees++;continue}
         const op={id:Math.random().toString(36).slice(2,10),date:o.date,label:o.label,amount:o.amount,merchant:merchantOf(o.label),acct:rep.acct,imp:rep.imp,src};
+        if(o.lg!=null) op.lg=o.lg;
         if(j){pris.add(j.o.id);S.douteux.push({a:j.o.id,b:op.id});rep.douteux++}
         S.ops.push(op); rep.added++; rep.sample.push(op); dirtyMonths.add(o.date.slice(0,7));
         if(appliqueAuto(op,atype)) stateDirty=true;
@@ -1319,7 +1345,7 @@ async function importFiles(files){
       }
       classerNouvelles(nouvelles);
     }catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
-    if(rep.added||rep.completees){S.imports=S.imports||{};S.imports[rep.imp]={nom:f.name,quand:Date.now()};stateDirty=true}
+    if(rep.added||rep.completees){S.imports=S.imports||{};S.imports[rep.imp]={nom:f.name,quand:Date.now()};if(rep.lus&&rep.lus.some(o=>o.lg!=null)){const ex=extraitsReleve({lignes:rep.lignes,ops:rep.lus});if(Object.keys(ex).length)S.imports[rep.imp].lg=ex}stateDirty=true}
     reports.unshift(rep);
   }
   if(!S.since&&S.ops.length) S.since=Date.now();
@@ -1937,7 +1963,17 @@ function aVerifier(){
   }
   return h;
 }
-let HEURES=null;
+let HEURES=null, RELEVE=false;
+/* Ce qui est écrit sur le relevé autour de l'opération (3 lignes avant, 3 après), à la demande */
+function blocReleve(o){
+  if(o.src!=='pdf'&&o.src!=='csv') return '';
+  const im=(S.imports||{})[o.imp], lg=im&&im.lg;
+  if(!lg) return o.src==='pdf'?`<p class="aide">Ce détail n’est pas gardé pour ce relevé. Pour le voir, supprimez le relevé dans Importer puis ajoutez-le de nouveau.</p>`:'';
+  if(o.lg==null) return `<p class="aide">Cette ligne n’a pas pu être retrouvée sur le relevé.</p>`;
+  if(!RELEVE) return `<button class="lien" data-act="releve"><i data-lucide="file-search"></i>Voir ce qui est écrit sur le relevé</button>`;
+  const l=[];for(let j=o.lg-3;j<=o.lg+3;j++) if(lg[j]!=null) l.push(`<p class="ex-l${j===o.lg?' cible':''}">${esc(lg[j])}</p>`);
+  return `<div class="extrait"><p class="aide">Relevé « ${esc(im.nom)} ». La ligne en gras est celle d’où vient cette opération.</p>${l.join('')}<button class="lien" data-act="releve">Masquer</button></div>`;
+}
 /* Sous un encaissement de l'activité : son équivalent en heures au prix minimum, et le temps réellement passé */
 function heuresBloc(o,statique){
   const px=heuresPrix(); if(!px||!estEncaissementPro(o)) return '';
@@ -2031,6 +2067,7 @@ function fiche(id){
     <p class="aide">${esc(o.label)}<br>${dfmt(o.date).replace(/(\d\d)\/(\d\d)\/(\d\d)/,'$1/$2/20$3')}${o.src!=='rev'&&ACCN>1?`, ${esc(acctName(o.acct))}`:''}</p>
     ${o.src==='rev'?'':lienRecherche(o.label)}
     ${opExtra(o)?`<p class="f-x">${esc(opExtra(o))}</p>`:''}
+    ${blocReleve(o)}
     ${o.src==='rev'||x?'':`<label class="f-lbl" for="ficheCat">Rubrique</label>
     <select class="grand" id="ficheCat">${c||FICHESEL?'':'<option value="">À vérifier</option>'}${catOptions(FICHESEL||c,false,'',true)}</select>
     <div class="radios"><label><input type="radio" name="portee" value="tout" checked> Pour toutes les opérations de ce marchand</label>
@@ -2742,7 +2779,8 @@ document.addEventListener('click',async e=>{
   if(d.nru){NEWCAT.nom=$('#nrNom').value;NEWCAT.univers=d.nru;render();return}
   if(d.nri){NEWCAT.nom=$('#nrNom').value;NEWCAT.icon=d.nri;render();return}
   if(d.act==='nouvrub'){ouvrirRubrique({de:d.de||'accueil'});return}
-  if(d.act==='closefiche'){FICHE=null;BCAT=null;FICHESEL=null;render();return}
+  if(d.act==='releve'){RELEVE=!RELEVE;render();return}
+  if(d.act==='closefiche'){RELEVE=false;FICHE=null;BCAT=null;FICHESEL=null;render();return}
   if(d.blvl){PB.lvl=d.blvl;BTOUT=false;render();return}
   if(d.bshift){PB=shift(PB,+d.bshift);BTOUT=false;render();return}
   if(d.bu){BU=d.bu;BCAT=null;render();return}
@@ -2771,7 +2809,7 @@ document.addEventListener('click',async e=>{
   if(d.oshift){const n=shift({...P,lvl:FIL.lvl},+d.oshift);P={lvl:'M',y:n.y,m:n.m};render();return}
   if(d.flvl){FIL.lvl=d.flvl;if(d.flvl==='D'&&!FIL.du&&!FIL.au){const [a,b]=bounds({...P,lvl:'M'});FIL.du=a+'-01';FIL.au=b+'-'+pad(new Date(P.y,P.m,0).getDate())}render();return}
   if(d.act==='filreset'){FIL={lvl:'M',cat:'',du:'',au:''};render();return}
-  if(d.op){FICHE=d.op;FICHESEL=null;render();setTimeout(()=>$('.fiche .fermer')?.focus(),30);return}
+  if(d.op){RELEVE=false;FICHE=d.op;FICHESEL=null;render();setTimeout(()=>$('.fiche .fermer')?.focus(),30);return}
   if(d.cat){openCat=openCat===d.cat?null:d.cat;render();return}
   if(d.qcat){setRule(d.qcat,d.c);render();return}
   if(d.heures){HEURES=d.heures;render();setTimeout(()=>$('#heuresIn')?.focus(),30);return}
