@@ -351,9 +351,11 @@ function vImport(){
   return privacyBox()+`<div class="note-box" role="note"><i data-lucide="info"></i><p>Le premier mois est un peu long : l’application vous pose quelques questions. Ensuite, environ 90 % du travail n’est plus à faire : elle retient vos réponses et reconnaît les enseignes toute seule. <button class="lien" data-tab="aide">Voir le mode d’emploi</button></p></div>
   <section class="carte">
   ${choixTypeImport()}
-  <label class="gros-bouton" data-drop="bank"><input type="file" id="file" accept=".pdf,.csv,application/pdf,text/csv" multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
+  <label class="gros-bouton" data-drop="bank"><input type="file" id="file"${ACCEPT_RELEVE} multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
   <p class="aide">Des relevés PDF, plusieurs à la fois, même de banques différentes. Ce qui est déjà importé est ignoré.</p>
-  <label class="btn secondaire">Tester un relevé<input type="file" id="testfile" accept=".pdf,.csv,application/pdf,text/csv" hidden></label>
+  <details class="autre"><summary>Sur iPhone ou iPad : le relevé est dans un lien ou un dossier ?</summary>
+    <p class="aide">L’application lit le fichier PDF lui-même : un lien copié ne peut pas être ouvert, car vos données ne quittent jamais votre appareil. Ouvrez d’abord le lien, puis enregistrez le PDF dans « Fichiers » (touchez le bouton Partager, puis « Enregistrer dans Fichiers »). Ensuite, touchez « Ajouter mes relevés » et choisissez-le dans « Fichiers », « iCloud Drive » ou « Google Drive ».</p></details>
+  <label class="btn secondaire">Tester un relevé<input type="file" id="testfile"${ACCEPT_RELEVE} hidden></label>
   <p class="aide">Pour voir comment un relevé est lu, sans rien enregistrer.</p>
   <button class="btn secondaire" data-act="coller"><i data-lucide="clipboard-paste"></i>Coller mes opérations</button>
   <p class="aide">Copiez les opérations sur le site de votre banque et collez-les ici. Celles qui sont déjà là ne sont pas ajoutées deux fois, même si vous importez le relevé PDF ensuite.</p></section>

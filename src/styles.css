@@ -45,13 +45,16 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .act-top:hover{border-color:var(--i)}
 .act-top.ciel{--p:var(--p-ciel);--i:var(--i-ciel)}
 .act-top.menthe{--p:var(--p-menthe);--i:var(--i-menthe)}
+.act-top.alerte{--p:var(--amber-soft);--i:var(--amber);font-weight:500}
 .act-top[hidden]{display:none}
 .dern-sauv{font-size:15px;color:var(--muted)}
 .status{font-size:15px;color:var(--muted)}
-nav.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:26px}
+nav.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:26px}
 nav.tabs:empty{display:none}
 nav.tabs button{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 16px;font-size:17px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 nav.tabs button svg{width:22px;height:22px}
+nav.tabs button{flex:1;flex-direction:column;justify-content:center;gap:4px;padding:8px 4px;min-width:0;text-align:center;line-height:1.25}
+nav.tabs button>span{display:flex;align-items:center;justify-content:center;text-align:center}
 nav.tabs button[aria-current="true"]{color:var(--ink);border-color:var(--gold);font-weight:500}
 nav.tabs button svg{color:var(--t,currentColor)}
 nav.tabs button[aria-current="true"]{background:var(--tf,transparent);border-color:var(--t,var(--gold))}

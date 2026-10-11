@@ -175,15 +175,15 @@ function exporterLecteur(i){
   const r=(S.readers||[])[i]; if(!r) return;
   const data=JSON.stringify({app:'mes-comptes-lecteur',version:1,lecteur:r},null,1), name=`lecteur-${norm(r.nom).toLowerCase().replace(/[^a-z0-9]+/g,'-')}.json`;
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();
-  readerErr=false; readerMsg=`Lecteur « ${r.nom} » exporté : envoyez le fichier ${name} à la personne qui a la même banque.`; render();
+  readerErr=false; readerMsg=`Méthode de lecture « ${r.nom} » enregistrée dans le fichier ${name} : envoyez-le à une personne qui a la même banque.`; render();
 }
 async function importerLecteur(file){
   readerErr=true;
   try{const j=JSON.parse(await file.text()), r=j&&j.lecteur||j;
-    if(!r||!r.nom) throw new Error('Ce fichier n’est pas un lecteur de relevés.');
+    if(!r||!r.nom) throw new Error('Ce fichier n’est pas une méthode de lecture reçue d’une autre personne.');
     if(r.type==='colonnes'){if(!r.cols||r.cols.date==null) throw new Error('Ce lecteur est incomplet.')} else compileReader(r);
     S.readers=(S.readers||[]).filter(x=>x.nom!==r.nom); S.readers.unshift(r); stateDirty=true; save();
-    readerErr=false; readerMsg=`Lecteur « ${r.nom} » ajouté : les relevés de cette banque seront lus automatiquement.`;
+    readerErr=false; readerMsg=`Méthode de lecture « ${r.nom} » ajoutée : les relevés de cette banque seront lus automatiquement.`;
   }catch(e){readerMsg=e&&e.message&&!/JSON/.test(e.message)?e.message:'Ce fichier n’est pas un lecteur de relevés.'}
   render();
 }

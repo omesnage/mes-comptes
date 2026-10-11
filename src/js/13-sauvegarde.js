@@ -3,7 +3,9 @@ let backupMsg='';
 /* Sous l'état de l'enregistrement : quand la dernière sauvegarde a eu lieu, et le bouton pour la mettre dans un dossier Cloud */
 function majSauvegardeEntete(){
   const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
-  b.hidden=!!demo; l.hidden=!!demo; if($('#importBtn')) $('#importBtn').hidden=!!demo;
+  b.hidden=!!demo; l.hidden=!!demo;
+  const aS=typeof S!=='undefined'&&S&&S.lastBackup, ib=$('#importBtn'), wb=$('#warnBtn');
+  if(ib&&wb){ib.hidden=!!demo||!aS; wb.hidden=!!demo||!!aS; if(aS) $('#importTxt').textContent='Importer la sauvegarde du '+new Date(S.lastBackup).toLocaleDateString('fr-FR')}
   const t=typeof S!=='undefined'&&S&&S.lastBackup;
   l.textContent=t?'Dernière sauvegarde : '+new Date(t).toLocaleDateString('fr-FR'):'Jamais sauvegardé';
 }
@@ -32,7 +34,7 @@ async function backup_(){
   S.lastBackup=Date.now();save();backupMsg='Sauvegarde téléchargée. Gardez ce fichier en lieu sûr.';majSauvegardeEntete();render();
 }
 /* Restaurer : la confirmation est dans la page (certains écrans, dont l’aperçu en ligne, masquent les fenêtres du navigateur) */
-let RESTAURER=null;
+let RESTAURER=null, WIPE=false;
 async function restore_(file){
   try{
     const j=JSON.parse(await file.text());
@@ -65,8 +67,8 @@ function addReader(){
     const n=test?readWith(c,test.raw.split('\n'),new Date().getFullYear()).length:null;
     S.readers=(S.readers||[]).filter(x=>x.nom!==r.nom); S.readers.unshift({nom:r.nom,detection:r.detection||'',ligne:r.ligne,signe:r.signe||'moins'});
     stateDirty=true; save();
-    readerErr=false; readerMsg=`Lecteur « ${r.nom} » ajouté.`+(n!=null?` Il reconnaît ${n} opération${n>1?'s':''} dans « ${test.name} ». Réimportez ce relevé pour les ajouter.`:' Réimportez votre relevé.');
-  }catch(e){readerMsg='Ce texte n’est pas un lecteur valide. '+(e&&e.message&&!/JSON/.test(e.message)?e.message:'Copiez bien toute la réponse de Claude, de { à }.')}
+    readerErr=false; readerMsg=`Méthode de lecture « ${r.nom} » ajoutée.`+(n!=null?` Il reconnaît ${n} opération${n>1?'s':''} dans « ${test.name} ». Réimportez ce relevé pour les ajouter.`:' Réimportez votre relevé.');
+  }catch(e){readerMsg='Ce texte n’est pas une méthode de lecture valide. '+(e&&e.message&&!/JSON/.test(e.message)?e.message:'Copiez bien toute la réponse de Claude, de { à }.')}
   render(); const el=$('#lecteurs'); if(el) el.scrollIntoView({block:'start'});
 }
 

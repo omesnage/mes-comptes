@@ -61,25 +61,32 @@ function vReglages(){
     <div class="boutons"><button class="btn" data-act="backup">Sauvegarder mes données</button><label class="btn secondaire">Restaurer une sauvegarde<input type="file" id="restorefile" accept=".json,application/json" hidden></label></div>
     ${RESTAURER?`<div class="question"><p class="q-t">Remplacer vos données actuelles par cette sauvegarde ?</p><p class="q-s">Ce qui est enregistré ici sera remplacé.</p><div class="choix gros"><button class="choix-btn" data-act="restok">Oui, restaurer</button><button class="choix-btn" data-act="restno">Non, garder mes données</button></div></div>`:''}
     ${backupMsg?`<p class="ok-txt">${esc(backupMsg)}</p>`:''}
-    <p class="aide">Le dictionnaire s’enrichit de temps en temps. Pour l’appliquer à vos opérations déjà ajoutées (sans toucher à ce que vous avez corrigé) :</p>
-    <div class="boutons"><button class="btn secondaire" data-act="reclasser">Reclasser mes suppositions</button></div>
-    <button class="lien danger" data-act="wipe">Tout effacer</button></section>
+    <h4>Classement automatique</h4>
+    <p class="aide">Quand l’application ne connaît pas un commerçant, elle devine sa rubrique : c’est écrit « classé automatiquement ». Elle apprend de nouveaux commerçants avec le temps. Ce bouton refait ces devinettes avec ses connaissances les plus récentes. Vos propres choix ne changent jamais.</p>
+    <div class="boutons"><button class="btn secondaire" data-act="reclasser">Refaire le classement automatique</button></div>
+    <h4>Repartir de zéro</h4>
+    <p class="aide">Supprime de cet appareil toutes vos opérations, vos choix et vos réglages. C’est définitif : faites d’abord une sauvegarde.</p>
+    ${WIPE?`<div class="question"><p class="q-t">Tout supprimer de cet appareil ?</p><p class="q-s">Opérations, choix et réglages seront effacés, sans retour possible.</p><div class="choix gros"><button class="choix-btn" data-act="wipeok">Oui, tout effacer</button><button class="choix-btn" data-act="wipeno">Non, tout garder</button></div></div>`:`<button class="lien danger" data-act="wipe">Effacer toutes mes données</button>`}</section>
   ${annees.length?`<section class="carte"><h3>Votre année en revue</h3><div class="boutons">${annees.slice(0,3).map(y=>`<button class="btn secondaire" data-act="review" data-year="${y}">Année ${y}</button>`).join('')}</div></section>`:''}
   <section class="carte"><h3>Présentation</h3><button class="btn secondaire" data-act="relancer">Revoir la présentation</button></section>
   <details class="carte repli" id="avances"><summary>Réglages avancés</summary>
     ${SAL?'':`<label class="champ">La part à garder de côté se calcule sur<select class="grand" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>ce que vous encaissez</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>ce qui reste après les frais</option></select></label>`}
     ${S.accounts.filter(a=>a.type==='pro').map(a=>`<label class="champ">Solde du compte ${esc(a.name)} (€)<input type="number" inputmode="decimal" step="0.01" data-solde="${a.id}" value="${a.solde!=null?a.solde:''}"></label>
       <label class="champ">À la date du<input type="date" data-soldedate="${a.id}" value="${esc(a.soldeDate||'')}"></label>`).join('')}
-    <h4>Règles apprises</h4>
-    ${r.length?r.map(([m,c])=>`<div class="regle"><span>${esc(ruleName(m))}</span><select class="grand" data-rule="${esc(m)}" aria-label="Rubrique pour ${esc(m)}">${catOptions(c)}</select><button class="lien" data-delrule="${esc(m)}">Oublier</button></div>`).join(''):'<p class="aide">Aucune pour l’instant.</p>'}
-    <h4 id="lecteurs">Lecteurs de relevés</h4>
-    <p class="aide">Si les relevés de votre banque sont mal lus, Claude peut écrire un lecteur. Importez le relevé, touchez « Copier la demande pour Claude » dans son aide à la lecture, collez-la dans Claude, puis collez sa réponse ici.</p>
-    <textarea id="readerIn" class="anon" placeholder="Collez ici la réponse de Claude, qui commence par { et finit par }"></textarea>
-    <button class="btn secondaire" data-act="addreader">Ajouter ce lecteur</button>
+    <h4>Vos choix mémorisés</h4>
+    <p class="aide">Quand vous rangez un commerçant dans une rubrique, l’application s’en souvient : ses prochaines opérations iront toutes seules dans cette rubrique. Ici, vous pouvez changer la rubrique retenue pour un commerçant. « Oublier ce choix » efface ce souvenir : l’application ne rangera plus ce commerçant d’office. Ses opérations seront rangées de nouveau par l’application, ou vous seront redemandées dans « À vérifier ».</p>
+    ${r.length?r.map(([m,c])=>`<div class="regle"><span>${esc(ruleName(m))}</span><select class="grand" data-rule="${esc(m)}" aria-label="Rubrique pour ${esc(m)}">${catOptions(c)}</select><button class="lien" data-delrule="${esc(m)}" aria-label="Oublier le choix pour ${esc(ruleName(m))}">Oublier ce choix</button></div>`).join(''):'<p class="aide">Aucun pour l’instant.</p>'}
+    <h4 id="lecteurs">Un relevé est mal lu ?</h4>
+    <p class="aide">Si des montants ou des noms sont faux ou manquants après l’ajout d’un relevé, on peut apprendre à l’application à lire les relevés de votre banque. On appelle cela une « méthode de lecture ».</p>
+    <ol class="aide liste-etapes"><li>Ajoutez le relevé dans « Importer », puis touchez « Copier la demande pour Claude » dans l’aide qui s’affiche.</li>
+      <li>Collez cette demande dans Claude (l’assistant). Il répond par un texte qui commence par { et finit par }.</li>
+      <li>Collez ce texte dans la case ci-dessous, puis touchez « Ajouter cette méthode de lecture ».</li></ol>
+    <textarea id="readerIn" class="anon" placeholder="Collez ici la réponse de Claude (elle commence par { et finit par })"></textarea>
+    <button class="btn secondaire" data-act="addreader">Ajouter cette méthode de lecture</button>
     ${readerMsg?`<p class="${readerErr?'ko-txt':'ok-txt'}">${esc(readerMsg)}</p>`:''}
-    ${(S.readers||[]).map((x,i)=>`<div class="regle"><span>${esc(x.nom)}</span><button class="lien" data-lexport="${i}">Exporter ce lecteur</button><button class="lien" data-delreader="${i}">Supprimer</button></div>`).join('')}
-    <label class="btn secondaire">Importer un lecteur<input type="file" id="lecteurfile" accept=".json,application/json" hidden></label>
-    <p class="aide">Un lecteur reçu d’une personne qui a la même banque s’applique automatiquement aux relevés de cette banque.</p>
+    ${(S.readers||[]).map((x,i)=>`<div class="regle"><span>${esc(x.nom)}</span><button class="lien" data-lexport="${i}">Enregistrer dans un fichier pour un proche</button><button class="lien" data-delreader="${i}">Supprimer</button></div>`).join('')}
+    <label class="btn secondaire">Ajouter une méthode de lecture reçue (fichier)<input type="file" id="lecteurfile" accept=".json,application/json" hidden></label>
+    <p class="aide">Une personne qui a la même banque que vous peut vous envoyer sa méthode de lecture sous forme de fichier : ajoutez-la ici, elle s’appliquera toute seule à vos relevés. Dans l’autre sens, « Enregistrer dans un fichier pour un proche » crée ce fichier à lui envoyer.</p>
   </details>`;
 }
 

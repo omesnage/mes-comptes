@@ -146,6 +146,9 @@ const BRANDS=[
 function brandOf(label){const s=norm(label);return BRANDS.find(b=>b[0].test(s))||null}
 
 let S=blank(), demo=false, backup=null;
+/* iPhone et iPad : on laisse choisir n'importe quel fichier, sinon des fichiers de Google Drive ou d'iCloud restent grisés */
+const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const ACCEPT_RELEVE=IOS?'':' accept=".pdf,.csv,application/pdf,text/csv"';
 let view='accueil', P=null, openCat=null, q='', FICHE=null, ONB=0;
 let UNIV='all', OPACC='';
 const reports=[];

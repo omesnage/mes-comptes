@@ -22,7 +22,8 @@
     <div class="top-droite"><span class="status" id="status"></span>
       <div class="actions-top">
         <button class="act-top ciel" id="cloudBtn" data-act="cloud"><i data-lucide="cloud-upload"></i>Sauvegarder dans mon dossier Cloud</button>
-        <label class="act-top menthe" id="importBtn"><i data-lucide="folder-down"></i>Importer depuis mon dossier<input type="file" id="restorefile2" accept=".json,application/json" hidden></label>
+        <label class="act-top menthe" id="importBtn"><i data-lucide="folder-down"></i><span id="importTxt">Importer la sauvegarde</span><input type="file" id="restorefile2" accept=".json,application/json" hidden></label>
+        <button class="act-top alerte" id="warnBtn" data-act="cloud"><i data-lucide="triangle-alert"></i>Aucune sauvegarde : sauvegarder maintenant</button>
       </div>
       <span class="dern-sauv" id="lastbk"></span>
       <button class="lien" data-tab="aide">Mode d’emploi</button></div>

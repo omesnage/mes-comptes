@@ -59,13 +59,16 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .act-top:hover{border-color:var(--i)}
 .act-top.ciel{--p:var(--p-ciel);--i:var(--i-ciel)}
 .act-top.menthe{--p:var(--p-menthe);--i:var(--i-menthe)}
+.act-top.alerte{--p:var(--amber-soft);--i:var(--amber);font-weight:500}
 .act-top[hidden]{display:none}
 .dern-sauv{font-size:15px;color:var(--muted)}
 .status{font-size:15px;color:var(--muted)}
-nav.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:26px}
+nav.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:26px}
 nav.tabs:empty{display:none}
 nav.tabs button{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 16px;font-size:17px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 nav.tabs button svg{width:22px;height:22px}
+nav.tabs button{flex:1;flex-direction:column;justify-content:center;gap:4px;padding:8px 4px;min-width:0;text-align:center;line-height:1.25}
+nav.tabs button>span{display:flex;align-items:center;justify-content:center;text-align:center}
 nav.tabs button[aria-current="true"]{color:var(--ink);border-color:var(--gold);font-weight:500}
 nav.tabs button svg{color:var(--t,currentColor)}
 nav.tabs button[aria-current="true"]{background:var(--tf,transparent);border-color:var(--t,var(--gold))}
@@ -542,7 +545,8 @@ a.chercher svg{width:20px;height:20px}
     <div class="top-droite"><span class="status" id="status"></span>
       <div class="actions-top">
         <button class="act-top ciel" id="cloudBtn" data-act="cloud"><i data-lucide="cloud-upload"></i>Sauvegarder dans mon dossier Cloud</button>
-        <label class="act-top menthe" id="importBtn"><i data-lucide="folder-down"></i>Importer depuis mon dossier<input type="file" id="restorefile2" accept=".json,application/json" hidden></label>
+        <label class="act-top menthe" id="importBtn"><i data-lucide="folder-down"></i><span id="importTxt">Importer la sauvegarde</span><input type="file" id="restorefile2" accept=".json,application/json" hidden></label>
+        <button class="act-top alerte" id="warnBtn" data-act="cloud"><i data-lucide="triangle-alert"></i>Aucune sauvegarde : sauvegarder maintenant</button>
       </div>
       <span class="dern-sauv" id="lastbk"></span>
       <button class="lien" data-tab="aide">Mode d’emploi</button></div>
@@ -701,6 +705,9 @@ const BRANDS=[
 function brandOf(label){const s=norm(label);return BRANDS.find(b=>b[0].test(s))||null}
 
 let S=blank(), demo=false, backup=null;
+/* iPhone et iPad : on laisse choisir n'importe quel fichier, sinon des fichiers de Google Drive ou d'iCloud restent grisés */
+const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const ACCEPT_RELEVE=IOS?'':' accept=".pdf,.csv,application/pdf,text/csv"';
 let view='accueil', P=null, openCat=null, q='', FICHE=null, ONB=0;
 let UNIV='all', OPACC='';
 const reports=[];
@@ -1329,7 +1336,21 @@ function ajouterDetail(o,res,f,rep){
   im.lg=Object.assign(im.lg||{},extraitsReleve({lignes:res.lignes,ops:[o]}));
   dirtyMonths.add(x.date.slice(0,7)); stateDirty=true; rep.detail=(rep.detail||0)+1;
 }
-async function lireFichier(f){return /\.csv$/i.test(f.name)?parseCSV(await f.text()):await parsePDF(f)}
+const MSG_PAS_RELEVE='Ce fichier n’est pas un relevé PDF ou CSV. Si vous avez copié un lien, ouvrez-le d’abord et enregistrez le PDF sur votre appareil (sur iPhone : Partager, puis « Enregistrer dans Fichiers »), puis choisissez ce fichier.';
+async function lireFichier(f){
+  if(/\.csv$/i.test(f.name)||f.type==='text/csv') return parseCSV(await f.text());
+  const tete=new TextDecoder('latin1').decode(new Uint8Array(await f.slice(0,1024).arrayBuffer()));
+  if(!/\.pdf$/i.test(f.name)&&f.type!=='application/pdf'&&!tete.includes('%PDF')) throw new Error(MSG_PAS_RELEVE);
+  return await parsePDF(f);
+}
+/* Un lien (ou un fichier) collé dans la page : un fichier PDF ou CSV est importé, un lien est expliqué */
+document.addEventListener('paste',e=>{
+  if(view!=='importer'||/^(INPUT|TEXTAREA)$/.test((e.target||{}).tagName)) return;
+  const cd=e.clipboardData; if(!cd) return;
+  const fs=[...(cd.files||[])].filter(f=>/\.(pdf|csv)$/i.test(f.name)||/pdf|csv/.test(f.type));
+  if(fs.length){e.preventDefault();importFiles(fs);return}
+  if(/^\s*https?:\/\//i.test(cd.getData('text')||'')){e.preventDefault();const r=newReport({name:'Lien collé'},false);r.error=MSG_PAS_RELEVE;reports.unshift(r);render()}
+});
 const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;
 /* Doublons exacts : comptés un par un face aux opérations déjà enregistrées (deux cafés identiques le même jour restent deux) */
 function compteur(){const m=new Map();for(const o of S.ops){const k=cleOp(o);m.set(k,(m.get(k)||0)+1)}return {pris:k=>{const n=m.get(k)||0;if(n>0){m.set(k,n-1);return true}return false}}}
@@ -2207,9 +2228,11 @@ function vImport(){
   return privacyBox()+`<div class="note-box" role="note"><i data-lucide="info"></i><p>Le premier mois est un peu long : l’application vous pose quelques questions. Ensuite, environ 90 % du travail n’est plus à faire : elle retient vos réponses et reconnaît les enseignes toute seule. <button class="lien" data-tab="aide">Voir le mode d’emploi</button></p></div>
   <section class="carte">
   ${choixTypeImport()}
-  <label class="gros-bouton" data-drop="bank"><input type="file" id="file" accept=".pdf,.csv,application/pdf,text/csv" multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
+  <label class="gros-bouton" data-drop="bank"><input type="file" id="file"${ACCEPT_RELEVE} multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
   <p class="aide">Des relevés PDF, plusieurs à la fois, même de banques différentes. Ce qui est déjà importé est ignoré.</p>
-  <label class="btn secondaire">Tester un relevé<input type="file" id="testfile" accept=".pdf,.csv,application/pdf,text/csv" hidden></label>
+  <details class="autre"><summary>Sur iPhone ou iPad : le relevé est dans un lien ou un dossier ?</summary>
+    <p class="aide">L’application lit le fichier PDF lui-même : un lien copié ne peut pas être ouvert, car vos données ne quittent jamais votre appareil. Ouvrez d’abord le lien, puis enregistrez le PDF dans « Fichiers » (touchez le bouton Partager, puis « Enregistrer dans Fichiers »). Ensuite, touchez « Ajouter mes relevés » et choisissez-le dans « Fichiers », « iCloud Drive » ou « Google Drive ».</p></details>
+  <label class="btn secondaire">Tester un relevé<input type="file" id="testfile"${ACCEPT_RELEVE} hidden></label>
   <p class="aide">Pour voir comment un relevé est lu, sans rien enregistrer.</p>
   <button class="btn secondaire" data-act="coller"><i data-lucide="clipboard-paste"></i>Coller mes opérations</button>
   <p class="aide">Copiez les opérations sur le site de votre banque et collez-les ici. Celles qui sont déjà là ne sont pas ajoutées deux fois, même si vous importez le relevé PDF ensuite.</p></section>
@@ -2432,15 +2455,15 @@ function exporterLecteur(i){
   const r=(S.readers||[])[i]; if(!r) return;
   const data=JSON.stringify({app:'mes-comptes-lecteur',version:1,lecteur:r},null,1), name=`lecteur-${norm(r.nom).toLowerCase().replace(/[^a-z0-9]+/g,'-')}.json`;
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();
-  readerErr=false; readerMsg=`Lecteur « ${r.nom} » exporté : envoyez le fichier ${name} à la personne qui a la même banque.`; render();
+  readerErr=false; readerMsg=`Méthode de lecture « ${r.nom} » enregistrée dans le fichier ${name} : envoyez-le à une personne qui a la même banque.`; render();
 }
 async function importerLecteur(file){
   readerErr=true;
   try{const j=JSON.parse(await file.text()), r=j&&j.lecteur||j;
-    if(!r||!r.nom) throw new Error('Ce fichier n’est pas un lecteur de relevés.');
+    if(!r||!r.nom) throw new Error('Ce fichier n’est pas une méthode de lecture reçue d’une autre personne.');
     if(r.type==='colonnes'){if(!r.cols||r.cols.date==null) throw new Error('Ce lecteur est incomplet.')} else compileReader(r);
     S.readers=(S.readers||[]).filter(x=>x.nom!==r.nom); S.readers.unshift(r); stateDirty=true; save();
-    readerErr=false; readerMsg=`Lecteur « ${r.nom} » ajouté : les relevés de cette banque seront lus automatiquement.`;
+    readerErr=false; readerMsg=`Méthode de lecture « ${r.nom} » ajoutée : les relevés de cette banque seront lus automatiquement.`;
   }catch(e){readerMsg=e&&e.message&&!/JSON/.test(e.message)?e.message:'Ce fichier n’est pas un lecteur de relevés.'}
   render();
 }
@@ -2727,7 +2750,9 @@ let backupMsg='';
 /* Sous l'état de l'enregistrement : quand la dernière sauvegarde a eu lieu, et le bouton pour la mettre dans un dossier Cloud */
 function majSauvegardeEntete(){
   const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
-  b.hidden=!!demo; l.hidden=!!demo; if($('#importBtn')) $('#importBtn').hidden=!!demo;
+  b.hidden=!!demo; l.hidden=!!demo;
+  const aS=typeof S!=='undefined'&&S&&S.lastBackup, ib=$('#importBtn'), wb=$('#warnBtn');
+  if(ib&&wb){ib.hidden=!!demo||!aS; wb.hidden=!!demo||!!aS; if(aS) $('#importTxt').textContent='Importer la sauvegarde du '+new Date(S.lastBackup).toLocaleDateString('fr-FR')}
   const t=typeof S!=='undefined'&&S&&S.lastBackup;
   l.textContent=t?'Dernière sauvegarde : '+new Date(t).toLocaleDateString('fr-FR'):'Jamais sauvegardé';
 }
@@ -2756,7 +2781,7 @@ async function backup_(){
   S.lastBackup=Date.now();save();backupMsg='Sauvegarde téléchargée. Gardez ce fichier en lieu sûr.';majSauvegardeEntete();render();
 }
 /* Restaurer : la confirmation est dans la page (certains écrans, dont l’aperçu en ligne, masquent les fenêtres du navigateur) */
-let RESTAURER=null;
+let RESTAURER=null, WIPE=false;
 async function restore_(file){
   try{
     const j=JSON.parse(await file.text());
@@ -2789,8 +2814,8 @@ function addReader(){
     const n=test?readWith(c,test.raw.split('\n'),new Date().getFullYear()).length:null;
     S.readers=(S.readers||[]).filter(x=>x.nom!==r.nom); S.readers.unshift({nom:r.nom,detection:r.detection||'',ligne:r.ligne,signe:r.signe||'moins'});
     stateDirty=true; save();
-    readerErr=false; readerMsg=`Lecteur « ${r.nom} » ajouté.`+(n!=null?` Il reconnaît ${n} opération${n>1?'s':''} dans « ${test.name} ». Réimportez ce relevé pour les ajouter.`:' Réimportez votre relevé.');
-  }catch(e){readerMsg='Ce texte n’est pas un lecteur valide. '+(e&&e.message&&!/JSON/.test(e.message)?e.message:'Copiez bien toute la réponse de Claude, de { à }.')}
+    readerErr=false; readerMsg=`Méthode de lecture « ${r.nom} » ajoutée.`+(n!=null?` Il reconnaît ${n} opération${n>1?'s':''} dans « ${test.name} ». Réimportez ce relevé pour les ajouter.`:' Réimportez votre relevé.');
+  }catch(e){readerMsg='Ce texte n’est pas une méthode de lecture valide. '+(e&&e.message&&!/JSON/.test(e.message)?e.message:'Copiez bien toute la réponse de Claude, de { à }.')}
   render(); const el=$('#lecteurs'); if(el) el.scrollIntoView({block:'start'});
 }
 
@@ -2891,7 +2916,9 @@ document.addEventListener('click',async e=>{
   if(d.act==='revok'){revImport();return}
   if(d.act==='revcancel'){revDraft=null;render();return}
   if(d.act==='exitdemo'){exitDemo();render();return}
-  if(d.act==='wipe'){if(confirm('Effacer toutes vos opérations, règles et réglages ? Pensez à sauvegarder avant.')){S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));S=blank();S.onboarded=true;reports.length=0;P=null;save();aller('accueil')}return}
+  if(d.act==='wipe'){WIPE=true;render();return}
+  if(d.act==='wipeno'){WIPE=false;render();return}
+  if(d.act==='wipeok'){WIPE=false;S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));S=blank();S.onboarded=true;reports.length=0;P=null;save();aller('accueil');return}
 });
 document.addEventListener('change',e=>{
   const t=e.target, d=t.dataset;
@@ -3293,25 +3320,32 @@ function vReglages(){
     <div class="boutons"><button class="btn" data-act="backup">Sauvegarder mes données</button><label class="btn secondaire">Restaurer une sauvegarde<input type="file" id="restorefile" accept=".json,application/json" hidden></label></div>
     ${RESTAURER?`<div class="question"><p class="q-t">Remplacer vos données actuelles par cette sauvegarde ?</p><p class="q-s">Ce qui est enregistré ici sera remplacé.</p><div class="choix gros"><button class="choix-btn" data-act="restok">Oui, restaurer</button><button class="choix-btn" data-act="restno">Non, garder mes données</button></div></div>`:''}
     ${backupMsg?`<p class="ok-txt">${esc(backupMsg)}</p>`:''}
-    <p class="aide">Le dictionnaire s’enrichit de temps en temps. Pour l’appliquer à vos opérations déjà ajoutées (sans toucher à ce que vous avez corrigé) :</p>
-    <div class="boutons"><button class="btn secondaire" data-act="reclasser">Reclasser mes suppositions</button></div>
-    <button class="lien danger" data-act="wipe">Tout effacer</button></section>
+    <h4>Classement automatique</h4>
+    <p class="aide">Quand l’application ne connaît pas un commerçant, elle devine sa rubrique : c’est écrit « classé automatiquement ». Elle apprend de nouveaux commerçants avec le temps. Ce bouton refait ces devinettes avec ses connaissances les plus récentes. Vos propres choix ne changent jamais.</p>
+    <div class="boutons"><button class="btn secondaire" data-act="reclasser">Refaire le classement automatique</button></div>
+    <h4>Repartir de zéro</h4>
+    <p class="aide">Supprime de cet appareil toutes vos opérations, vos choix et vos réglages. C’est définitif : faites d’abord une sauvegarde.</p>
+    ${WIPE?`<div class="question"><p class="q-t">Tout supprimer de cet appareil ?</p><p class="q-s">Opérations, choix et réglages seront effacés, sans retour possible.</p><div class="choix gros"><button class="choix-btn" data-act="wipeok">Oui, tout effacer</button><button class="choix-btn" data-act="wipeno">Non, tout garder</button></div></div>`:`<button class="lien danger" data-act="wipe">Effacer toutes mes données</button>`}</section>
   ${annees.length?`<section class="carte"><h3>Votre année en revue</h3><div class="boutons">${annees.slice(0,3).map(y=>`<button class="btn secondaire" data-act="review" data-year="${y}">Année ${y}</button>`).join('')}</div></section>`:''}
   <section class="carte"><h3>Présentation</h3><button class="btn secondaire" data-act="relancer">Revoir la présentation</button></section>
   <details class="carte repli" id="avances"><summary>Réglages avancés</summary>
     ${SAL?'':`<label class="champ">La part à garder de côté se calcule sur<select class="grand" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>ce que vous encaissez</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>ce qui reste après les frais</option></select></label>`}
     ${S.accounts.filter(a=>a.type==='pro').map(a=>`<label class="champ">Solde du compte ${esc(a.name)} (€)<input type="number" inputmode="decimal" step="0.01" data-solde="${a.id}" value="${a.solde!=null?a.solde:''}"></label>
       <label class="champ">À la date du<input type="date" data-soldedate="${a.id}" value="${esc(a.soldeDate||'')}"></label>`).join('')}
-    <h4>Règles apprises</h4>
-    ${r.length?r.map(([m,c])=>`<div class="regle"><span>${esc(ruleName(m))}</span><select class="grand" data-rule="${esc(m)}" aria-label="Rubrique pour ${esc(m)}">${catOptions(c)}</select><button class="lien" data-delrule="${esc(m)}">Oublier</button></div>`).join(''):'<p class="aide">Aucune pour l’instant.</p>'}
-    <h4 id="lecteurs">Lecteurs de relevés</h4>
-    <p class="aide">Si les relevés de votre banque sont mal lus, Claude peut écrire un lecteur. Importez le relevé, touchez « Copier la demande pour Claude » dans son aide à la lecture, collez-la dans Claude, puis collez sa réponse ici.</p>
-    <textarea id="readerIn" class="anon" placeholder="Collez ici la réponse de Claude, qui commence par { et finit par }"></textarea>
-    <button class="btn secondaire" data-act="addreader">Ajouter ce lecteur</button>
+    <h4>Vos choix mémorisés</h4>
+    <p class="aide">Quand vous rangez un commerçant dans une rubrique, l’application s’en souvient : ses prochaines opérations iront toutes seules dans cette rubrique. Ici, vous pouvez changer la rubrique retenue pour un commerçant. « Oublier ce choix » efface ce souvenir : l’application ne rangera plus ce commerçant d’office. Ses opérations seront rangées de nouveau par l’application, ou vous seront redemandées dans « À vérifier ».</p>
+    ${r.length?r.map(([m,c])=>`<div class="regle"><span>${esc(ruleName(m))}</span><select class="grand" data-rule="${esc(m)}" aria-label="Rubrique pour ${esc(m)}">${catOptions(c)}</select><button class="lien" data-delrule="${esc(m)}" aria-label="Oublier le choix pour ${esc(ruleName(m))}">Oublier ce choix</button></div>`).join(''):'<p class="aide">Aucun pour l’instant.</p>'}
+    <h4 id="lecteurs">Un relevé est mal lu ?</h4>
+    <p class="aide">Si des montants ou des noms sont faux ou manquants après l’ajout d’un relevé, on peut apprendre à l’application à lire les relevés de votre banque. On appelle cela une « méthode de lecture ».</p>
+    <ol class="aide liste-etapes"><li>Ajoutez le relevé dans « Importer », puis touchez « Copier la demande pour Claude » dans l’aide qui s’affiche.</li>
+      <li>Collez cette demande dans Claude (l’assistant). Il répond par un texte qui commence par { et finit par }.</li>
+      <li>Collez ce texte dans la case ci-dessous, puis touchez « Ajouter cette méthode de lecture ».</li></ol>
+    <textarea id="readerIn" class="anon" placeholder="Collez ici la réponse de Claude (elle commence par { et finit par })"></textarea>
+    <button class="btn secondaire" data-act="addreader">Ajouter cette méthode de lecture</button>
     ${readerMsg?`<p class="${readerErr?'ko-txt':'ok-txt'}">${esc(readerMsg)}</p>`:''}
-    ${(S.readers||[]).map((x,i)=>`<div class="regle"><span>${esc(x.nom)}</span><button class="lien" data-lexport="${i}">Exporter ce lecteur</button><button class="lien" data-delreader="${i}">Supprimer</button></div>`).join('')}
-    <label class="btn secondaire">Importer un lecteur<input type="file" id="lecteurfile" accept=".json,application/json" hidden></label>
-    <p class="aide">Un lecteur reçu d’une personne qui a la même banque s’applique automatiquement aux relevés de cette banque.</p>
+    ${(S.readers||[]).map((x,i)=>`<div class="regle"><span>${esc(x.nom)}</span><button class="lien" data-lexport="${i}">Enregistrer dans un fichier pour un proche</button><button class="lien" data-delreader="${i}">Supprimer</button></div>`).join('')}
+    <label class="btn secondaire">Ajouter une méthode de lecture reçue (fichier)<input type="file" id="lecteurfile" accept=".json,application/json" hidden></label>
+    <p class="aide">Une personne qui a la même banque que vous peut vous envoyer sa méthode de lecture sous forme de fichier : ajoutez-la ici, elle s’appliquera toute seule à vos relevés. Dans l’autre sens, « Enregistrer dans un fichier pour un proche » crée ce fichier à lui envoyer.</p>
   </details>`;
 }
 

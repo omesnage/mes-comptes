@@ -61,7 +61,21 @@ function ajouterDetail(o,res,f,rep){
   im.lg=Object.assign(im.lg||{},extraitsReleve({lignes:res.lignes,ops:[o]}));
   dirtyMonths.add(x.date.slice(0,7)); stateDirty=true; rep.detail=(rep.detail||0)+1;
 }
-async function lireFichier(f){return /\.csv$/i.test(f.name)?parseCSV(await f.text()):await parsePDF(f)}
+const MSG_PAS_RELEVE='Ce fichier n’est pas un relevé PDF ou CSV. Si vous avez copié un lien, ouvrez-le d’abord et enregistrez le PDF sur votre appareil (sur iPhone : Partager, puis « Enregistrer dans Fichiers »), puis choisissez ce fichier.';
+async function lireFichier(f){
+  if(/\.csv$/i.test(f.name)||f.type==='text/csv') return parseCSV(await f.text());
+  const tete=new TextDecoder('latin1').decode(new Uint8Array(await f.slice(0,1024).arrayBuffer()));
+  if(!/\.pdf$/i.test(f.name)&&f.type!=='application/pdf'&&!tete.includes('%PDF')) throw new Error(MSG_PAS_RELEVE);
+  return await parsePDF(f);
+}
+/* Un lien (ou un fichier) collé dans la page : un fichier PDF ou CSV est importé, un lien est expliqué */
+document.addEventListener('paste',e=>{
+  if(view!=='importer'||/^(INPUT|TEXTAREA)$/.test((e.target||{}).tagName)) return;
+  const cd=e.clipboardData; if(!cd) return;
+  const fs=[...(cd.files||[])].filter(f=>/\.(pdf|csv)$/i.test(f.name)||/pdf|csv/.test(f.type));
+  if(fs.length){e.preventDefault();importFiles(fs);return}
+  if(/^\s*https?:\/\//i.test(cd.getData('text')||'')){e.preventDefault();const r=newReport({name:'Lien collé'},false);r.error=MSG_PAS_RELEVE;reports.unshift(r);render()}
+});
 const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;
 /* Doublons exacts : comptés un par un face aux opérations déjà enregistrées (deux cafés identiques le même jour restent deux) */
 function compteur(){const m=new Map();for(const o of S.ops){const k=cleOp(o);m.set(k,(m.get(k)||0)+1)}return {pris:k=>{const n=m.get(k)||0;if(n>0){m.set(k,n-1);return true}return false}}}

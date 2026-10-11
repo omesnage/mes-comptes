@@ -22,12 +22,25 @@ test('restaurer une sauvegarde sans fenêtre du navigateur : directe si vide, av
   expect(await page.evaluate(()=>S.ops.length)).toBe(5);
 });
 
-test('bouton du haut Importer depuis mon dossier, amene aux reglages avec le message',async({page},ti)=>{
+test('bouton du haut : alerte sans sauvegarde, puis Importer la sauvegarde du (date)',async({page},ti)=>{
   await openWith(page,null);
   const f=ti.outputPath('haut.json'); fs.writeFileSync(f,JSON.stringify(sauv(2)));
-  await expect(page.locator('#importBtn')).toContainText('Importer depuis mon dossier');
-  await expect(page.locator('#cloudBtn')).toContainText('Sauvegarder dans mon dossier Cloud');
+  await expect(page.locator('#warnBtn')).toContainText('Aucune sauvegarde');
+  await expect(page.locator('#importBtn')).toBeHidden();
+  await page.evaluate(()=>{S.lastBackup=new Date('2026-09-29T10:00:00').getTime();majSauvegardeEntete()});
+  await expect(page.locator('#importBtn')).toContainText('Importer la sauvegarde du 29/09/2026');
+  await expect(page.locator('#warnBtn')).toBeHidden();
   await page.setInputFiles('#restorefile2',f);
   await expect(page.locator('#donnees')).toContainText('restaurée');
   expect(await page.evaluate(()=>S.ops.length)).toBe(2);
+});
+
+test('onglets sur une meme ligne et lien colle explique',async({page})=>{
+  await openWith(page,null);
+  const r=await page.evaluate(()=>{const n=document.querySelector('nav.tabs').getBoundingClientRect();return [...document.querySelectorAll('nav.tabs button')].map(b=>{const x=b.getBoundingClientRect();return [Math.round(x.top),x.right<=n.right+1]})});
+  expect(new Set(r.map(x=>x[0])).size).toBe(1);
+  expect(r.every(x=>x[1])).toBe(true);
+  await page.click('nav.tabs [data-tab="importer"]');
+  await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('text','https://exemple.fr/releve.pdf');document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true}))});
+  await expect(page.locator('.releve')).toContainText('Ce fichier n’est pas un relevé PDF ou CSV');
 });

@@ -39,7 +39,7 @@ test('un lecteur se partage : exporter puis importer sur un autre appareil',asyn
   await page.evaluate(()=>{S.readers=[];render()});
   await page.locator('#avances summary').click().catch(()=>{});
   await page.setInputFiles('#lecteurfile',fichier);
-  await expect(page.locator('#avances')).toContainText('Lecteur « Banque du Littoral » ajouté : les relevés de cette banque seront lus automatiquement.');
+  await expect(page.locator('#avances')).toContainText('Méthode de lecture « Banque du Littoral » ajoutée : les relevés de cette banque seront lus automatiquement.');
   const f=await releveInconnu(ti.outputPath('inconnu.pdf'));
   await page.click('nav.tabs [data-tab="importer"]'); await page.setInputFiles('#file',f);
   await expect(page.locator('.releve').first()).toContainText('Relevé vérifié ✓');
