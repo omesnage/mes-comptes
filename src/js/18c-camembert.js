@@ -22,7 +22,8 @@ function majCam(){
     <div class="mois"><button class="fleche" data-cshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${esc(nomPeriode(p))}</h2><button class="fleche" data-cshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>
     ${rows.length?`<p class="rep-total">${eur0(rows.reduce((s,r)=>s+r.v,0))} <span>au total</span></p>${camembert(rows)}
       <p class="aide">Les ${NB_PARTS} plus grosses rubriques ont leur part ; les autres sont regroupées dans « Autres ». Changez la période avec les boutons Mois, Trimestre et Année.</p>`
-      :'<p class="aide centre">Aucune dépense sur cette période.</p>'}</div>`;
+      :S.ops.length?'<p class="aide centre">Aucune dépense sur cette période. Changez de période avec les flèches.</p>'
+      :'<div class="vide"><p>Le camembert montrera où part votre argent, une fois vos relevés ajoutés.</p><div class="boutons"><button class="btn" data-act="camimporter">Ajouter mes relevés</button></div></div>'}</div>`;
   icons();
 }
 /* Coupe un nom en deux lignes au plus (12 caractères), sans couper un mot */

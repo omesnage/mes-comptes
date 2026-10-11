@@ -1,4 +1,4 @@
-import {test,expect,openWith,importer,APP_SAL} from './helpers.js';
+import {test,expect,openWith,importer,APP,APP_SAL} from './helpers.js';
 import {bforbank} from './banques.js';
 import os from 'os'; import path from 'path';
 
@@ -241,4 +241,11 @@ test('Mon compte : bulle sur le nombre à vérifier, et résumé de l’accueil 
   expect(t).toMatch(/dépensés\b/); expect(t).not.toContain('côté perso');
   await page.click('nav.tabs [data-tab="bilan"]');
   expect(await ecran(page)).not.toMatch(/dépenses perso/);
+});
+
+for(const [nom,url] of [['Mon compte',APP_SAL],['Mes comptes',APP]])
+test(`${nom} affiche la date de sa construction dans Reglages`,async({page})=>{
+  await openWith(page,{onboarded:true},url);
+  await page.click('nav.tabs [data-tab="reglages"]');
+  await expect(page.locator('#version')).toContainText(/Version du \d{1,2}(er)? \w+ 20\d\d/);
 });

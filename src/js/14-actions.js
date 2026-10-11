@@ -43,6 +43,7 @@ document.addEventListener('click',async e=>{
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
   if(d.act==='camembert'){ouvrirCamembert();return}
+  if(d.act==='camimporter'){$('#camPage')?.remove();document.body.style.overflow='';aller('importer');return}
   if(d.act==='closecam'){$('#camPage')?.remove();document.body.style.overflow='';return}
   if(d.clvl){CAM.lvl=d.clvl;majCam();return}
   if(d.cshift){const n=shift({lvl:CAM.lvl,y:CAM.y,m:CAM.m},+d.cshift);CAM.y=n.y;CAM.m=n.m;majCam();return}

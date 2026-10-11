@@ -59,9 +59,14 @@ for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]]){
   });
 }
 
-test('icone camembert cachee sans operation, et message dans la page si la periode est vide',async({page})=>{
+test('icone camembert toujours visible : sans operation, la page explique et renvoie vers Importer',async({page})=>{
   await openWith(page,{onboarded:true});
-  await expect(page.locator('#camBtn')).toBeHidden();
+  await expect(page.locator('#camBtn')).toBeVisible();
+  await page.click('#camBtn');
+  await expect(page.locator('#camPage')).toContainText('une fois vos relevés ajoutés');
+  await page.click('[data-act="camimporter"]');
+  await expect(page.locator('#camPage')).toHaveCount(0);
+  await expect(page.locator('nav.tabs [data-tab="importer"]')).toHaveAttribute('aria-current','true');
   await donnees(page,['2026-09']);
   await page.evaluate(()=>{P={lvl:'M',y:2025,m:1};render()});
   await page.click('#camBtn');

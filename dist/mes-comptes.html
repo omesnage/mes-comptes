@@ -627,6 +627,8 @@ a.chercher svg{width:20px;height:20px}
 /* ============ Données de base ============ */
 /* Version salariés : rien de ce qui concerne une activité indépendante (le build remplace false par true) */
 const SAL=false;
+/* Date et heure de la construction du fichier : permet de vérifier qu'on regarde bien la dernière version */
+const BUILD="11 octobre 2026, 20:39";
 const SCHEMA=16;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
@@ -2909,7 +2911,7 @@ let backupMsg='';
 function majSauvegardeEntete(){
   const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
   b.hidden=!!demo; l.hidden=!!demo;
-  if($('#camBtn')) $('#camBtn').hidden=!(typeof S!=='undefined'&&S&&S.ops&&S.ops.length);
+  if($('#camBtn')) $('#camBtn').hidden=false;
   const aS=typeof S!=='undefined'&&S&&S.lastBackup, ib=$('#importBtn'), wb=$('#warnBtn');
   const videA=!(S&&S.ops&&S.ops.length);
   if(ib&&wb){ib.hidden=!!demo||(!aS&&!videA); wb.hidden=!!demo||!!aS||videA; if(!aS){$('#importTxt').textContent='Importer une sauvegarde';ib.dataset.tip='Vous avez déjà des comptes sur un autre appareil ? Choisissez ici le fichier de sauvegarde pour les retrouver.'} if(aS){const d=new Date(S.lastBackup).toLocaleDateString('fr-FR');$('#importTxt').textContent='Importer la sauvegarde du '+d;ib.dataset.tip='Retrouver vos comptes : choisissez le fichier de la sauvegarde du '+d+'.'}}
@@ -3024,6 +3026,7 @@ document.addEventListener('click',async e=>{
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
   if(d.act==='camembert'){ouvrirCamembert();return}
+  if(d.act==='camimporter'){$('#camPage')?.remove();document.body.style.overflow='';aller('importer');return}
   if(d.act==='closecam'){$('#camPage')?.remove();document.body.style.overflow='';return}
   if(d.clvl){CAM.lvl=d.clvl;majCam();return}
   if(d.cshift){const n=shift({lvl:CAM.lvl,y:CAM.y,m:CAM.m},+d.cshift);CAM.y=n.y;CAM.m=n.m;majCam();return}
@@ -3538,7 +3541,7 @@ function vReglages(){
     <p class="aide">Supprime de cet appareil toutes vos opérations, vos choix et vos réglages. C’est définitif : faites d’abord une sauvegarde.</p>
     ${WIPE?`<div class="question"><p class="q-t">Tout supprimer de cet appareil ?</p><p class="q-s">Opérations, choix et réglages seront effacés, sans retour possible.</p><div class="choix gros"><button class="choix-btn" data-act="wipeok">Oui, tout effacer</button><button class="choix-btn" data-act="wipeno">Non, tout garder</button></div></div>`:`<button class="lien danger" data-act="wipe">Effacer toutes mes données</button>`}</section>
   ${annees.length?`<section class="carte"><h3>Votre année en revue</h3><div class="boutons">${annees.slice(0,3).map(y=>`<button class="btn secondaire" data-act="review" data-year="${y}">Année ${y}</button>`).join('')}</div></section>`:''}
-  <section class="carte"><h3>Présentation</h3><button class="btn secondaire" data-act="relancer">Revoir la présentation</button></section>
+  <section class="carte"><h3>Présentation</h3><button class="btn secondaire" data-act="relancer">Revoir la présentation</button><p class="aide" id="version">Version du ${esc(BUILD)}</p></section>
   <details class="carte repli" id="avances"><summary>Réglages avancés</summary>
     ${SAL?'':`<label class="champ">La part à garder de côté se calcule sur<select class="grand" data-assiette="1"><option value="ca"${s.assiette!=='resultat'?' selected':''}>ce que vous encaissez</option><option value="resultat"${s.assiette==='resultat'?' selected':''}>ce qui reste après les frais</option></select></label>`}
     ${S.accounts.filter(a=>a.type==='pro').map(a=>`<label class="champ">Solde du compte ${esc(a.name)} (€)<input type="number" inputmode="decimal" step="0.01" data-solde="${a.id}" value="${a.solde!=null?a.solde:''}"></label>
@@ -3816,7 +3819,8 @@ function majCam(){
     <div class="mois"><button class="fleche" data-cshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${esc(nomPeriode(p))}</h2><button class="fleche" data-cshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>
     ${rows.length?`<p class="rep-total">${eur0(rows.reduce((s,r)=>s+r.v,0))} <span>au total</span></p>${camembert(rows)}
       <p class="aide">Les ${NB_PARTS} plus grosses rubriques ont leur part ; les autres sont regroupées dans « Autres ». Changez la période avec les boutons Mois, Trimestre et Année.</p>`
-      :'<p class="aide centre">Aucune dépense sur cette période.</p>'}</div>`;
+      :S.ops.length?'<p class="aide centre">Aucune dépense sur cette période. Changez de période avec les flèches.</p>'
+      :'<div class="vide"><p>Le camembert montrera où part votre argent, une fois vos relevés ajoutés.</p><div class="boutons"><button class="btn" data-act="camimporter">Ajouter mes relevés</button></div></div>'}</div>`;
   icons();
 }
 /* Coupe un nom en deux lignes au plus (12 caractères), sans couper un mot */

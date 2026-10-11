@@ -1,6 +1,8 @@
 /* ============ Données de base ============ */
 /* Version salariés : rien de ce qui concerne une activité indépendante (le build remplace false par true) */
 const SAL=/*@SAL*/false;
+/* Date et heure de la construction du fichier : permet de vérifier qu'on regarde bien la dernière version */
+const BUILD=/*@BUILD*/'version de travail';
 const SCHEMA=16;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
