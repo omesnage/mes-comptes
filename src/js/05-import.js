@@ -86,7 +86,7 @@ function fichiersCollage(dt){
   const l=[...(dt.files||[]),...[...(dt.items||[])].filter(i=>i.kind==='file').map(i=>i.getAsFile())].filter(Boolean), vus=new Set();
   return l.filter(f=>{const k=f.name+'|'+f.size;if(vus.has(k))return false;vus.add(k);return true}).map(nommer);
 }
-function messageCollage(txt){const r=newReport({name:'Relevé collé'},false);r.error=txt;reports.unshift(r);render()}
+function messageCollage(txt){const r=newReport({name:'Relevé collé'},false);r.error=txt;reports.unshift(r);render();toast(txt,false)}
 const MSG_COLLE_VIDE=det=>'Le relevé copié n’a pas pu être lu ici'+(det?' (reçu : '+det+')':'')+'. Dans le partage, choisissez plutôt « Enregistrer dans Fichiers », puis touchez « Ajouter mes relevés » et choisissez-le.';
 function traiterCollage(e,dt){
   const fs=fichiersCollage(dt);
@@ -95,7 +95,8 @@ function traiterCollage(e,dt){
 }
 document.addEventListener('paste',e=>{
   if(view!=='importer'||/^(INPUT|TEXTAREA)$/.test((e.target||{}).tagName)) return;
-  const cd=e.clipboardData; if(!cd||traiterCollage(e,cd)) return;
+  const cd=e.clipboardData; if(e.target&&e.target.id==='zoneColle') toast('Collage reçu : lecture en cours…',true);
+  if(!cd||traiterCollage(e,cd)) return;
   const txt=cd.getData('text')||'';
   if(/^\s*https?:\/\//i.test(txt)){e.preventDefault();messageCollage(MSG_PAS_RELEVE);return}
   if(e.target&&e.target.id==='zoneColle'){e.preventDefault();messageCollage(MSG_COLLE_VIDE([...(cd.types||[])].join(', ')||'rien'))}
@@ -108,7 +109,7 @@ document.addEventListener('beforeinput',e=>{
 document.addEventListener('input',async e=>{
   const z=e.target; if(!z||z.id!=='zoneColle'||Date.now()-COLLE_T<1500) return;
   const els=[...z.querySelectorAll('[src],[href]')].map(x=>x.getAttribute('src')||x.getAttribute('href')).filter(u=>/^(blob|data):/.test(u||''));
-  if(!els.length) return;
+  if(!els.length){if(z.textContent.trim()||z.children.length){z.textContent='';toast('Quelque chose a été collé, mais l’iPhone ne l’a pas transmis comme un fichier lisible. Utilisez plutôt « Enregistrer dans Fichiers ».',false)}return}
   try{const fs=[];for(const u of els){const b=await (await fetch(u)).blob();fs.push(nommer(new File([b],'Relevé collé',{type:b.type})))}
     COLLE_T=Date.now();z.textContent='';importFiles(fs,'zone')}catch(err){}
 });

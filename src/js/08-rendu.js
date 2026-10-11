@@ -359,11 +359,13 @@ function vImport(){
   <label class="gros-bouton" data-drop="bank"><input type="file" id="file"${ACCEPT_RELEVE} multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
   <p class="aide">Des relevés PDF, plusieurs à la fois, même de banques différentes. Ce qui est déjà importé est ignoré.</p>
   <details class="autre"${IOS?' open':''}><summary>Sur iPhone ou iPad : le relevé est dans l’application de ma banque ?</summary>
-    <p class="aide">Dans l’application de votre banque, touchez le relevé, puis le bouton Partager. Deux possibilités :</p>
-    <p class="aide"><b>1. « Enregistrer dans Fichiers »</b> (le plus sûr). Revenez ensuite ici, touchez « Ajouter mes relevés » et choisissez le relevé dans « Fichiers ».</p>
-    <p class="aide"><b>2. « Copier »</b>, puis touchez le bouton ci-dessous.</p>
+    <p class="aide">L’iPhone ne permet pas toujours à une page web de recevoir un fichier copié. Le plus sûr :</p>
+    <ol class="aide liste-etapes"><li>Créez une fois un dossier « Relevés » dans l’application Fichiers.</li>
+      <li>Pour chaque relevé : bouton Partager, « Enregistrer dans Fichiers », puis ce dossier (l’iPhone retient le dernier dossier choisi).</li>
+      <li>Ici, touchez « Ajouter mes relevés », « Sélectionner des fichiers », ouvrez le dossier, touchez « Sélectionner » en haut à droite puis chaque relevé : ils sont tous lus d’un seul coup.</li></ol>
+    <p class="aide">Vous pouvez aussi essayer « Copier » dans le partage, puis ce bouton. Si rien ne se passe, un message vous l’indique.</p>
     <button class="btn secondaire" data-act="collerreleve"><i data-lucide="clipboard-paste"></i>Coller le relevé copié</button>
-    <div class="zone-colle" id="zoneColle" contenteditable="true" role="textbox" aria-label="Zone pour coller un relevé copié" data-vide="Si le bouton ne marche pas : touchez ici un instant, puis « Coller »."></div>
+    <div class="zone-colle" id="zoneColle" contenteditable="true" role="textbox" aria-label="Zone pour coller un relevé copié" data-vide="Autre essai : touchez ici un instant, puis « Coller »."></div>
     <p class="aide">Un lien copié ne peut pas être ouvert par l’application, car vos données ne quittent jamais votre appareil : il faut le fichier PDF lui-même.</p></details>
   <label class="btn secondaire">Tester un relevé<input type="file" id="testfile"${ACCEPT_RELEVE} hidden></label>
   <p class="aide">Pour voir comment un relevé est lu, sans rien enregistrer.</p>

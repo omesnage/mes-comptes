@@ -1390,7 +1390,7 @@ function fichiersCollage(dt){
   const l=[...(dt.files||[]),...[...(dt.items||[])].filter(i=>i.kind==='file').map(i=>i.getAsFile())].filter(Boolean), vus=new Set();
   return l.filter(f=>{const k=f.name+'|'+f.size;if(vus.has(k))return false;vus.add(k);return true}).map(nommer);
 }
-function messageCollage(txt){const r=newReport({name:'Relevé collé'},false);r.error=txt;reports.unshift(r);render()}
+function messageCollage(txt){const r=newReport({name:'Relevé collé'},false);r.error=txt;reports.unshift(r);render();toast(txt,false)}
 const MSG_COLLE_VIDE=det=>'Le relevé copié n’a pas pu être lu ici'+(det?' (reçu : '+det+')':'')+'. Dans le partage, choisissez plutôt « Enregistrer dans Fichiers », puis touchez « Ajouter mes relevés » et choisissez-le.';
 function traiterCollage(e,dt){
   const fs=fichiersCollage(dt);
@@ -1399,7 +1399,8 @@ function traiterCollage(e,dt){
 }
 document.addEventListener('paste',e=>{
   if(view!=='importer'||/^(INPUT|TEXTAREA)$/.test((e.target||{}).tagName)) return;
-  const cd=e.clipboardData; if(!cd||traiterCollage(e,cd)) return;
+  const cd=e.clipboardData; if(e.target&&e.target.id==='zoneColle') toast('Collage reçu : lecture en cours…',true);
+  if(!cd||traiterCollage(e,cd)) return;
   const txt=cd.getData('text')||'';
   if(/^\s*https?:\/\//i.test(txt)){e.preventDefault();messageCollage(MSG_PAS_RELEVE);return}
   if(e.target&&e.target.id==='zoneColle'){e.preventDefault();messageCollage(MSG_COLLE_VIDE([...(cd.types||[])].join(', ')||'rien'))}
@@ -1412,7 +1413,7 @@ document.addEventListener('beforeinput',e=>{
 document.addEventListener('input',async e=>{
   const z=e.target; if(!z||z.id!=='zoneColle'||Date.now()-COLLE_T<1500) return;
   const els=[...z.querySelectorAll('[src],[href]')].map(x=>x.getAttribute('src')||x.getAttribute('href')).filter(u=>/^(blob|data):/.test(u||''));
-  if(!els.length) return;
+  if(!els.length){if(z.textContent.trim()||z.children.length){z.textContent='';toast('Quelque chose a été collé, mais l’iPhone ne l’a pas transmis comme un fichier lisible. Utilisez plutôt « Enregistrer dans Fichiers ».',false)}return}
   try{const fs=[];for(const u of els){const b=await (await fetch(u)).blob();fs.push(nommer(new File([b],'Relevé collé',{type:b.type})))}
     COLLE_T=Date.now();z.textContent='';importFiles(fs,'zone')}catch(err){}
 });
@@ -2311,11 +2312,13 @@ function vImport(){
   <label class="gros-bouton" data-drop="bank"><input type="file" id="file"${ACCEPT_RELEVE} multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
   <p class="aide">Des relevés PDF, plusieurs à la fois, même de banques différentes. Ce qui est déjà importé est ignoré.</p>
   <details class="autre"${IOS?' open':''}><summary>Sur iPhone ou iPad : le relevé est dans l’application de ma banque ?</summary>
-    <p class="aide">Dans l’application de votre banque, touchez le relevé, puis le bouton Partager. Deux possibilités :</p>
-    <p class="aide"><b>1. « Enregistrer dans Fichiers »</b> (le plus sûr). Revenez ensuite ici, touchez « Ajouter mes relevés » et choisissez le relevé dans « Fichiers ».</p>
-    <p class="aide"><b>2. « Copier »</b>, puis touchez le bouton ci-dessous.</p>
+    <p class="aide">L’iPhone ne permet pas toujours à une page web de recevoir un fichier copié. Le plus sûr :</p>
+    <ol class="aide liste-etapes"><li>Créez une fois un dossier « Relevés » dans l’application Fichiers.</li>
+      <li>Pour chaque relevé : bouton Partager, « Enregistrer dans Fichiers », puis ce dossier (l’iPhone retient le dernier dossier choisi).</li>
+      <li>Ici, touchez « Ajouter mes relevés », « Sélectionner des fichiers », ouvrez le dossier, touchez « Sélectionner » en haut à droite puis chaque relevé : ils sont tous lus d’un seul coup.</li></ol>
+    <p class="aide">Vous pouvez aussi essayer « Copier » dans le partage, puis ce bouton. Si rien ne se passe, un message vous l’indique.</p>
     <button class="btn secondaire" data-act="collerreleve"><i data-lucide="clipboard-paste"></i>Coller le relevé copié</button>
-    <div class="zone-colle" id="zoneColle" contenteditable="true" role="textbox" aria-label="Zone pour coller un relevé copié" data-vide="Si le bouton ne marche pas : touchez ici un instant, puis « Coller »."></div>
+    <div class="zone-colle" id="zoneColle" contenteditable="true" role="textbox" aria-label="Zone pour coller un relevé copié" data-vide="Autre essai : touchez ici un instant, puis « Coller »."></div>
     <p class="aide">Un lien copié ne peut pas être ouvert par l’application, car vos données ne quittent jamais votre appareil : il faut le fichier PDF lui-même.</p></details>
   <label class="btn secondaire">Tester un relevé<input type="file" id="testfile"${ACCEPT_RELEVE} hidden></label>
   <p class="aide">Pour voir comment un relevé est lu, sans rien enregistrer.</p>
