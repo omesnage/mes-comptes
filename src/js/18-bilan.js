@@ -103,7 +103,7 @@ function vBilan(){
         <span class="rep-barre"><span style="width:${Math.max(1,v/max*100)}%"></span></span>
         ${e?`<span class="rep-lim ${e.etat}">Limite : ${eur0(e.dep)} sur ${eur0(e.lim)} ${e.mot}${e.msg?`. ${esc(e.msg)}`:''}</span>${barreLimite(e)}`:''}</button>`}).join('')}</div>`
     :'<p class="aide">Aucune dépense sur cette période.</p>'}</section>
-  <section class="carte evolution"><h3>Évolution</h3><p class="aide">Vos dépenses ${U==='pro'?'de l’activité':'perso'}, mois par mois : le mois sous chaque barre, le montant au-dessus. Touchez une barre pour voir ce mois.</p>
+  <section class="carte evolution"><h3>Évolution</h3><p class="aide">Vos dépenses${SAL?'':U==='pro'?' de l’activité':' perso'}, mois par mois : le mois sous chaque barre, le montant au-dessus. Touchez une barre pour voir ce mois.</p>
     ${barres(moisBilan(PB),q=>bilan(q,U).total,q=>PB.lvl==='M'&&q.y===PB.y&&q.m===PB.m,moisBilan(PB).length>6?'defile':'')}</section>
   <section class="carte ecarts"><h3>Par rapport ${PB.lvl==='M'?'au mois':PB.lvl==='Q'?'au trimestre':'à l’année'} précédent${PB.lvl==='Y'?'e':''}</h3>
     ${vus.length?vus.map(x=>`<button class="ecart ${x.d>0?'hausse':'baisse'}" data-bcat="${x.cid}"><span class="e-nom">${esc(nomRub(x.cid))} : ${x.a>0.005?`${eur0(x.a)} ${L0}`:`rien ${L0}`}${x.b>0.005?`, contre ${eur0(x.b)} ${L1}`:`, rien ${L1}`}</span><span class="e-fleche" aria-label="${x.d>0?'en hausse':'en baisse'}">${x.d>0?'↑':'↓'}</span></button>`).join('')

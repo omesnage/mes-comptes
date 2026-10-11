@@ -217,7 +217,7 @@ function vAccueil(){
   const q=S.accounts.filter(a=>!a.confirmed);
   return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+blocMeilleursMois(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
-    <p class="phrase">${eur0(Pe.net)} dépensés côté perso</p>
+    <p class="phrase">${eur0(Pe.net)} dépensés${SAL?'':' côté perso'}</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
         <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}${e.surplus>0.005?`<span class="rub-sous">dont ${eur0(e.ref)} de remboursements</span>`:''}</span>

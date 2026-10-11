@@ -2803,13 +2803,26 @@ function openReview(y){
   const defis=S.challenges.filter(c=>c.id==='auto'&&c.month.startsWith(y+'-')).map(evalDefi).filter(x=>x&&x.status==='réussi');
   /* Tout sur une seule page : une ligne par chiffre important */
   const li=(couleur,icone,lbl,v,c)=>`<div class="rv-l ${couleur}"><i data-lucide="${icone}"></i><div><p class="rv-lbl">${lbl}</p><p class="rv-v">${v}</p>${c?`<p class="rv-c">${c}</p>`:''}</div></div>`;
-  const html=`<div id="review" role="dialog" aria-label="Votre année en revue"><div class="rv-page">
-    <div class="rv-tete"><h2>Votre année ${y}</h2><button class="close" data-act="closereview"><i data-lucide="x"></i>Fermer</button></div>
-    <p class="aide">Les chiffres importants de l’année, sur une seule page.</p>
+  /* Salarié : ce qui est entré (salaire et autres rentrées), ce qui est parti, la balance */
+  const sm=SAL?mois.map(x=>{const pm={lvl:'M',y,m:x.m},R=aggRaw(pm);return R.any?{m:x.m,rec:R.perso.income,dep:x.pe.net}:null}).filter(Boolean):[];
+  const recT=sm.reduce((s,x)=>s+x.rec,0), depT=sm.reduce((s,x)=>s+x.dep,0), balT=recT-depT;
+  const smt=sm.slice().sort((a,b)=>(b.rec-b.dep)-(a.rec-a.dep)), bestS=smt[0], worstS=smt[smt.length-1];
+  const lignesSalarie=sm.length?
+    li('menthe','banknote','Ce que vous avez reçu',esc(eur0(recT)),`Sur ${sm.length} mois, soit ${esc(eur0(recT/sm.length))} par mois en moyenne.`)+
+    li('rose','shopping-cart','Ce que vous avez dépensé',esc(eur0(depT)),top?`La première rubrique : ${esc(catById(top[0])?.name||'')}, ${esc(eur0(top[1]))}.`:'')+
+    li('ciel','piggy-bank','Balance de l’année',esc(signed(balT)),balT>=0?`Vous avez dépensé moins que ce qui est entré : ${esc(eur0(balT))} de côté.`:`Vous avez dépensé ${esc(eur0(-balT))} de plus que ce qui est entré.`)+
+    (sm.length>1?li('peche','trophy','Votre meilleur mois',esc(MOIS[bestS.m-1]),`${esc(signed(bestS.rec-bestS.dep))} de balance. Le plus difficile : ${esc(MOIS[worstS.m-1])}, avec ${esc(signed(worstS.rec-worstS.dep))}.`):''):'';
+  const lignesIndep=`
     ${pro.length?li('menthe','banknote','Vous avez encaissé',esc(eur0(ca)),`Sur ${pro.length} mois, soit ${esc(eur0(ca/pro.length))} par mois en moyenne.`):''}
     ${pro.length?li('ciel','piggy-bank','Ce que vous avez gagné',esc(signed(net)),`Une heure de travail vous a rapporté ${esc(eurH(net/pro.length/heures()))} en moyenne, pour ${esc(eurH(tauxCible()))} visés.`):''}
     ${best&&pro.length>1?li('peche','trophy','Votre meilleur mois',esc(MOIS[best.m-1]),`${esc(eur0(best.pro.revenuNet))} gagnés. Le plus difficile : ${esc(MOIS[worst.m-1])}, avec ${esc(signed(worst.pro.revenuNet))}.`):''}
     ${pe.length?li('rose','shopping-cart','Vos dépenses perso',esc(eur0(dep)),top?`La première rubrique : ${esc(catById(top[0])?.name||'')}, ${esc(eur0(top[1]))}.`:''):''}
+  `;
+  const lignesChiffres=SAL?lignesSalarie:lignesIndep;
+  const html=`<div id="review" role="dialog" aria-label="Votre année en revue"><div class="rv-page">
+    <div class="rv-tete"><h2>Votre année ${y}</h2><button class="close" data-act="closereview"><i data-lucide="x"></i>Fermer</button></div>
+    <p class="aide">Les chiffres importants de l’année, sur une seule page.</p>
+    ${lignesChiffres}
     ${fav?li('lavande','heart','Votre adresse préférée',esc(fav[0]),`${fav[1]} passages dans l’année.`):''}
     ${li('sable','target','Défis réussis',String(defis.length),defis.length?`Bravo : ${esc(eur0(defis.reduce((s,x)=>s+x.economie,0)))} économisés grâce à eux.`:'Relevez le défi du mois : il est sur votre page d’accueil.')}
     <p class="aide centre">Continuez d’ajouter vos relevés chaque mois.</p>
@@ -3363,7 +3376,7 @@ function vAccueil(){
   const q=S.accounts.filter(a=>!a.confirmed);
   return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+blocMeilleursMois(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
-    <p class="phrase">${eur0(Pe.net)} dépensés côté perso</p>
+    <p class="phrase">${eur0(Pe.net)} dépensés${SAL?'':' côté perso'}</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
         <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}${e.surplus>0.005?`<span class="rub-sous">dont ${eur0(e.ref)} de remboursements</span>`:''}</span>
@@ -3416,7 +3429,7 @@ function vReglages(){
   <button class="carte lien-objectifs" data-tab="objectifs"><span><span class="r-t">${SAL?'Vos limites de dépenses':'Votre objectif, votre temps de travail et vos limites'}</span><span class="aide">${SAL?'Elles se règlent':'Ils se règlent'} dans l’onglet Mes objectifs.</span></span><i data-lucide="chevron-right"></i></button>
   <section class="carte" id="reserve"><h3>Votre réserve</h3>
     <label class="champ">Épargne disponible (€)<input type="number" inputmode="numeric" min="0" step="100" data-set="epargne" value="${s.epargne||''}" placeholder="0"></label>
-    ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:'<p class="aide">Elle indique combien de mois vous tiendriez sans rien encaisser.</p>'}</section>
+    ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:`<p class="aide">Elle indique combien de mois vous tiendriez ${SAL?'sans aucun salaire':'sans rien encaisser'}.</p>`}</section>
   ${S.accounts.length?`<section class="carte" id="comptes"><h3>Vos comptes</h3>
     ${S.accounts.map(a=>`<div class="compte-reg"><p class="cr-nom">${esc(a.name)} <button class="lien" data-renacct="${a.id}">Renommer</button></p>
       ${SAL?'':`      <p class="aide">Ce compte est-il professionnel, personnel, ou sert-il à tout ?</p>
@@ -3609,7 +3622,7 @@ function vBilan(){
         <span class="rep-barre"><span style="width:${Math.max(1,v/max*100)}%"></span></span>
         ${e?`<span class="rep-lim ${e.etat}">Limite : ${eur0(e.dep)} sur ${eur0(e.lim)} ${e.mot}${e.msg?`. ${esc(e.msg)}`:''}</span>${barreLimite(e)}`:''}</button>`}).join('')}</div>`
     :'<p class="aide">Aucune dépense sur cette période.</p>'}</section>
-  <section class="carte evolution"><h3>Évolution</h3><p class="aide">Vos dépenses ${U==='pro'?'de l’activité':'perso'}, mois par mois : le mois sous chaque barre, le montant au-dessus. Touchez une barre pour voir ce mois.</p>
+  <section class="carte evolution"><h3>Évolution</h3><p class="aide">Vos dépenses${SAL?'':U==='pro'?' de l’activité':' perso'}, mois par mois : le mois sous chaque barre, le montant au-dessus. Touchez une barre pour voir ce mois.</p>
     ${barres(moisBilan(PB),q=>bilan(q,U).total,q=>PB.lvl==='M'&&q.y===PB.y&&q.m===PB.m,moisBilan(PB).length>6?'defile':'')}</section>
   <section class="carte ecarts"><h3>Par rapport ${PB.lvl==='M'?'au mois':PB.lvl==='Q'?'au trimestre':'à l’année'} précédent${PB.lvl==='Y'?'e':''}</h3>
     ${vus.length?vus.map(x=>`<button class="ecart ${x.d>0?'hausse':'baisse'}" data-bcat="${x.cid}"><span class="e-nom">${esc(nomRub(x.cid))} : ${x.a>0.005?`${eur0(x.a)} ${L0}`:`rien ${L0}`}${x.b>0.005?`, contre ${eur0(x.b)} ${L1}`:`, rien ${L1}`}</span><span class="e-fleche" aria-label="${x.d>0?'en hausse':'en baisse'}">${x.d>0?'↑':'↓'}</span></button>`).join('')

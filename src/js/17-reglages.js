@@ -39,7 +39,7 @@ function vReglages(){
   <button class="carte lien-objectifs" data-tab="objectifs"><span><span class="r-t">${SAL?'Vos limites de dépenses':'Votre objectif, votre temps de travail et vos limites'}</span><span class="aide">${SAL?'Elles se règlent':'Ils se règlent'} dans l’onglet Mes objectifs.</span></span><i data-lucide="chevron-right"></i></button>
   <section class="carte" id="reserve"><h3>Votre réserve</h3>
     <label class="champ">Épargne disponible (€)<input type="number" inputmode="numeric" min="0" step="100" data-set="epargne" value="${s.epargne||''}" placeholder="0"></label>
-    ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:'<p class="aide">Elle indique combien de mois vous tiendriez sans rien encaisser.</p>'}</section>
+    ${st&&st.autonomie!=null?`<p class="phrase">Votre réserve couvre ${fmt1(st.autonomie)} mois de dépenses.</p>`:`<p class="aide">Elle indique combien de mois vous tiendriez ${SAL?'sans aucun salaire':'sans rien encaisser'}.</p>`}</section>
   ${S.accounts.length?`<section class="carte" id="comptes"><h3>Vos comptes</h3>
     ${S.accounts.map(a=>`<div class="compte-reg"><p class="cr-nom">${esc(a.name)} <button class="lien" data-renacct="${a.id}">Renommer</button></p>
       ${SAL?'':`      <p class="aide">Ce compte est-il professionnel, personnel, ou sert-il à tout ?</p>
