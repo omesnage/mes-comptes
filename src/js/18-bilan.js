@@ -89,14 +89,17 @@ function vBilan(){
     .filter(x=>Math.abs(x.d)>30).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
   const vus=BTOUT?ecarts:ecarts.slice(0,5), [L0,L1]=motsPeriode(PB);
   const lvl=[['M','Mois'],['Q','Trimestre'],['Y','Année']];
-  return `<div class="seg" role="group" aria-label="Période">${lvl.map(([k,l])=>`<button data-blvl="${k}" aria-pressed="${PB.lvl===k}">${l}</button>`).join('')}</div>
+  return blocMoisManquants(true)+`<div class="seg" role="group" aria-label="Période">${lvl.map(([k,l])=>`<button data-blvl="${k}" aria-pressed="${PB.lvl===k}">${l}</button>`).join('')}</div>
   <div class="mois"><button class="fleche" data-bshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${nomPeriode(PB)}</h2><button class="fleche" data-bshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>
   ${hasFraisPro()?`<div class="seg" role="group" aria-label="Dépenses montrées"><button data-bu="perso" aria-pressed="${U==='perso'}">Perso</button><button data-bu="pro" aria-pressed="${U==='pro'}">Activité</button></div>`:''}
   ${essentiel(U,B,prev)}
   ${U==='pro'?`<section class="carte salaire-bilan">${salaireBloc(PB,'bilan')||'<p class="aide">Aucune activité sur cette période.</p>'}</section>${justePrixBloc()}`:''}
   ${U==='pro'?heuresPeriode(PB):''}
-  <section class="carte repartition"><h3>Répartition de vos dépenses ${esc(deP(PB))}</h3>
-    ${lignes.length?`<p class="rep-total">${eur0(B.total)} <span>au total</span></p>
+  <section class="carte repartition"><div class="titre-vue"><h3>Répartition de vos dépenses ${esc(deP(PB))}</h3>${lignes.length?boutonsVue():''}</div>
+    ${lignes.length&&VUE_REP==='camembert'?`<p class="rep-total">${eur0(B.total)} <span>au total</span></p>
+    <p class="aide">Chaque part porte son montant. Touchez une rubrique de la liste pour voir le détail.</p>
+    ${camembert(lignes.map(([cid,v])=>({id:cid,nom:nomRub(cid),v})),true)}`
+    :lignes.length?`<p class="rep-total">${eur0(B.total)} <span>au total</span></p>
     <p class="aide">Chaque barre montre le poids d’une rubrique dans vos dépenses ${esc(deP(PB))}. Touchez-en une pour voir le détail.</p>
     <div class="rep">${lignes.map(([cid,v])=>{const c=catById(cid), e=etatLimite(c,fin);
       return `<button class="rep-l" data-bcat="${cid}"><span class="rep-h"><span class="rep-nom">${esc(nomRub(cid))}${surp(cid)}</span><span class="rep-val"><b>${eur0(v)}</b> · ${B.total>0?Math.round(v/B.total*100):0} %</span></span>

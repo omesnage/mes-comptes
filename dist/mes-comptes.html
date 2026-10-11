@@ -82,6 +82,29 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .mode-court[open]>summary{margin-bottom:12px}
 .comment-ajouter>summary{display:flex;align-items:center;gap:8px;min-height:44px;color:var(--ink);font-size:16px}
 .comment-ajouter>summary svg{width:20px;height:20px;color:var(--i-ciel)}
+.manque{border-color:var(--amber);background:var(--amber-soft)}
+.manque-t{display:flex;gap:14px;align-items:flex-start}
+.manque-t>svg{width:26px;height:26px;color:var(--amber);margin-top:2px}
+.manque-t p{margin:0 0 8px;font-size:17px}
+.manque-t .btn{margin-top:4px}
+.titre-vue{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.titre-vue h3{margin:0 0 6px}
+.vue-rep{display:flex;flex:none;border:1px solid var(--line);background:var(--surface)}
+.ico-vue{position:relative;display:grid;place-items:center;width:44px;height:44px;color:var(--muted)}
+.ico-vue svg{width:22px;height:22px}
+.ico-vue+.ico-vue{border-left:1px solid var(--line)}
+.ico-vue[aria-pressed="true"]{background:var(--p-lavande);color:var(--i-lavande)}
+.camembert{margin:8px 0 0}
+.camembert svg{display:block;width:min(340px,100%);height:auto;margin:6px auto 14px}
+.camembert .part{stroke:var(--surface);stroke-width:2}
+.camembert .part-t{font-family:var(--sans);font-size:19px;font-weight:500;fill:var(--ink);paint-order:stroke;stroke:var(--bg);stroke-width:5px;stroke-linejoin:round}
+.c1{fill:var(--c1);background:var(--c1)}.c2{fill:var(--i-ciel);background:var(--i-ciel)}.c3{fill:var(--i-menthe);background:var(--i-menthe)}.c4{fill:var(--i-rose);background:var(--i-rose)}.c5{fill:var(--i-peche);background:var(--i-peche)}.c6{fill:var(--i-lavande);background:var(--i-lavande)}.c7{fill:var(--i-sable);background:var(--i-sable)}
+.cam-leg{border-top:1px solid var(--line)}
+.cam-l{display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:center;width:100%;min-height:52px;padding:8px 0;border-bottom:1px solid var(--line);font-size:18px;text-align:left}
+.cam-pt{width:18px;height:18px;border:1px solid var(--line)}
+.cam-nom{min-width:0;overflow-wrap:anywhere}
+.cam-val{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cam-pc{color:var(--muted);font-size:16px}
 .etat-top{margin:-6px 0 14px;font-size:15px;color:var(--muted);text-align:right}
 .dern-sauv{font-size:15px;color:var(--muted)}
 .status{font-size:15px;color:var(--muted)}
@@ -2176,7 +2199,7 @@ function vOps(){
   const list=(t?filtreRubrique(S.ops.filter(o=>norm(o.label+' '+o.merchant+' '+((catById(catOf(o))||{}).name||'')).includes(t)||okSom(o))):opsFiltrees()).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
   const resume=t?`${list.length} opération${list.length>1?'s':''} trouvée${list.length>1?'s':''}, tous mois confondus.`
     :filActif()?`${list.length} opération${list.length>1?'s':''}${FIL.cat?' dans '+(FIL.cat==='_aver'?'« À vérifier »':'« '+esc(catById(FIL.cat)?.name||'')+' »'):''}${FIL.lvl!=='M'?', '+esc(periodeTexte()):''}.`:'';
-  return aVerifier()+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand ou une somme" value="${esc(q)}" aria-label="Rechercher un marchand ou une somme">
+  return aVerifier()+blocMoisManquants(true)+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand ou une somme" value="${esc(q)}" aria-label="Rechercher un marchand ou une somme">
   ${filtreBar(t)}
   ${resume?`<p class="aide">${resume}</p>`:''}${t||filActif()?totalRecherche(list):''}
   <div class="ops">${list.slice(0,300).map(opLine).join('')||'<p class="aide">Aucune opération.</p>'}</div>
@@ -2281,10 +2304,23 @@ function phraseMoisManquants(mois){
   const liste=txt.join(', puis ');
   return `${mois.length>1?'Il manque des mois':'Il manque un mois'} : ${liste}.`;
 }
-function blocMoisManquants(){
-  const l=S.accounts.map(a=>({a,m:moisManquants(a.id)})).filter(x=>x.m.length);
+/* Le relevé du mois dernier n'est pas encore ajouté : seulement quand le dernier mois connu du compte est l'avant-dernier mois du calendrier
+   (plus ancien, le compte est sans doute délaissé et on ne le répète pas). */
+function releveRecentManquant(acctId){
+  const vus=S.ops.filter(o=>o.acct===acctId&&o.src!=='rev').map(o=>o.date.slice(0,7)).sort(); if(!vus.length) return null;
+  const d=new Date(), p=new Date(d.getFullYear(),d.getMonth()-1,1), pp=new Date(d.getFullYear(),d.getMonth()-2,1);
+  const cle=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0');
+  return vus[vus.length-1]===cle(pp)?cle(p):null;
+}
+/* Rappel visible : un mois sauté entre deux relevés, ou le relevé du mois dernier pas encore ajouté. avecBouton : renvoie vers Importer. */
+function blocMoisManquants(avecBouton){
+  const l=S.accounts.map(a=>({a,m:moisManquants(a.id),r:releveRecentManquant(a.id)})).filter(x=>x.m.length||x.r);
   if(!l.length) return '';
-  return `<section class="carte manque">${l.map(({a,m})=>`<p class="r-alerte"><b>${esc(a.name)}</b> — ${phraseMoisManquants(m)} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`).join('')}</section>`;
+  const nomMois=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4);
+  const nom=a=>`<b>${esc(a.name)}</b> : `;
+  return `<section class="carte manque" role="status"><div class="manque-t"><i data-lucide="triangle-alert"></i><div>
+    ${l.map(({a,m,r})=>`${m.length?`<p>${nom(a)}${phraseMoisManquants(m).replace(/^Il manque un mois/,'Il manque un relevé').replace(/^Il manque des mois/,'Il manque des relevés')} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`:''}${r?`<p>${nom(a)}le relevé de ${esc(nomMois(r))} n’est pas encore ajouté.</p>`:''}`).join('')}
+    ${avecBouton?'<button class="btn secondaire" data-tab="importer">Ajouter un relevé</button>':''}</div></div></section>`;
 }
 function choixTypeImport(){
   if(SAL) return '';
@@ -2295,7 +2331,7 @@ function choixTypeImport(){
 }
 function vImport(){
   const nRev=S.ops.filter(o=>o.src==='rev').length;
-  return `<details class="mode-court"><summary><i data-lucide="circle-help"></i>Mode d’emploi</summary>
+  return blocMoisManquants(false)+`<details class="mode-court"><summary><i data-lucide="circle-help"></i>Mode d’emploi</summary>
     ${privacyBox()}<div class="note-box" role="note"><i data-lucide="info"></i><p>Le premier mois est un peu long : l’application vous pose quelques questions. Ensuite, environ 90 % du travail n’est plus à faire : elle retient vos réponses et reconnaît les enseignes toute seule. <button class="lien" data-tab="aide">Voir le mode d’emploi complet</button></p></div></details>
   <section class="carte">
   ${choixTypeImport()}
@@ -2314,7 +2350,6 @@ function vImport(){
   <p class="aide">Copiez les opérations sur le site de votre banque et collez-les ici. Celles qui sont déjà là ne sont pas ajoutées deux fois, même si vous importez le relevé PDF ensuite.</p></section>
   ${COLLE?panneauColler():''}
   ${reports.length?`<section class="releves">${reports.map(reportLine).join('')}</section>`:''}
-  ${blocMoisManquants()}
   ${relevesAjoutes()}
   ${SAL?'':`<details class="carte repli"${revDraft||revMsg||revError?' open':''}><summary>Vous suivez vos revenus dans un tableau ?</summary>
   <p class="aide">Choisissez le fichier Excel, Numbers ou CSV où vous notez ce que vous encaissez. L’application le lit à la place de vos relevés pour vos encaissements.</p>
@@ -2955,6 +2990,7 @@ document.addEventListener('click',async e=>{
   if(d.alvl){AL=d.alvl;openCat=null;render();return}
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
+  if(d.vue){VUE_REP=d.vue;render();return}
   if(d.act==='restok'){if(RESTAURER)appliquerRestauration(RESTAURER);return}
   if(d.act==='restno'){RESTAURER=null;render();return}
   if(d.oshift){const n=shift({...P,lvl:FIL.lvl},+d.oshift);P={lvl:'M',y:n.y,m:n.m};render();return}
@@ -3381,19 +3417,20 @@ function vAccueil(){
   else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ${mens?'ce mois-ci':'sur cette période'}.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p>${balanceBloc(0,Pe,PA)}</section>`;
   if(SAL) gagne=Pe.any?`<section class="carte gagne"><h3>Votre ${mens?'mois':AL==='Q'?'trimestre':'année'}</h3>${balanceBloc(0,Pe,PA)}</section>`:'';
   const q=S.accounts.filter(a=>!a.confirmed);
-  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+blocMeilleursMois(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
-  ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
+  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+blocMoisManquants(true)+periodeBarAccueil(PA)+blocMeilleursMois(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
+  ${Pe.any?`<section class="carte argent"><div class="titre-vue"><h3>Où part votre argent</h3>${boutonsVue()}</div>
     <p class="phrase">${eur0(Pe.net)} dépensés${SAL?'':' côté perso'}</p>
-    <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
+    ${VUE_REP==='camembert'?camembert(lignes.map(([cid,e])=>({id:cid,nom:cid==='_pending'?'À vérifier':(catById(cid)?.name||cid),v:e.net})),false):`<div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
         <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}${motRemb(e)?`<span class="rub-sous">${motRemb(e)}</span>`:''}</span>
         <span class="rub-amt">${eur0(e.net)}</span><span class="barre"><span style="width:${Math.max(1.5,e.net/max*100)}%"></span></span></button>
         ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div>
+`}
     <button class="lien ajout-rub" data-act="nouvrub"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>`:''}
   ${S.ops.length?blocLimites(PF):''}
   ${mens?blocsDefi():''}
   ${cs.length?`<section class="conseils">${cs.map(c=>`<button class="conseil ${c.lvl}" ${c.go}><i data-lucide="${c.lvl==='ko'?'triangle-alert':'lightbulb'}"></i><span>${esc(c.t)}</span><i data-lucide="chevron-right"></i></button>`).join('')}</section>`:''}
-  ${revue?`<button class="carte revue" data-act="review" data-year="${P.m===12?P.y:P.y-1}"><span><span class="r-t">Votre année ${P.m===12?P.y:P.y-1} en revue</span><span class="aide">Vos meilleurs et vos pires moments, en quelques écrans.</span></span><i data-lucide="sparkles"></i></button>`:''}`;
+  ${revue?`<button class="carte revue" data-act="review" data-year="${P.m===12?P.y:P.y-1}"><span><span class="r-t">Votre année ${P.m===12?P.y:P.y-1} en revue</span><span class="aide">Vos meilleurs et vos plus difficiles moments, sur une seule page.</span></span><i data-lucide="sparkles"></i></button>`:''}`;
 }
 /* ============ Réglages ============ */
 const CONSEIL_TAUX='Souvent entre 25 et 45 % selon votre statut. En cas de doute, renseignez-vous auprès de votre centre de formalités ou d’un conseiller.';
@@ -3615,14 +3652,17 @@ function vBilan(){
     .filter(x=>Math.abs(x.d)>30).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
   const vus=BTOUT?ecarts:ecarts.slice(0,5), [L0,L1]=motsPeriode(PB);
   const lvl=[['M','Mois'],['Q','Trimestre'],['Y','Année']];
-  return `<div class="seg" role="group" aria-label="Période">${lvl.map(([k,l])=>`<button data-blvl="${k}" aria-pressed="${PB.lvl===k}">${l}</button>`).join('')}</div>
+  return blocMoisManquants(true)+`<div class="seg" role="group" aria-label="Période">${lvl.map(([k,l])=>`<button data-blvl="${k}" aria-pressed="${PB.lvl===k}">${l}</button>`).join('')}</div>
   <div class="mois"><button class="fleche" data-bshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${nomPeriode(PB)}</h2><button class="fleche" data-bshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>
   ${hasFraisPro()?`<div class="seg" role="group" aria-label="Dépenses montrées"><button data-bu="perso" aria-pressed="${U==='perso'}">Perso</button><button data-bu="pro" aria-pressed="${U==='pro'}">Activité</button></div>`:''}
   ${essentiel(U,B,prev)}
   ${U==='pro'?`<section class="carte salaire-bilan">${salaireBloc(PB,'bilan')||'<p class="aide">Aucune activité sur cette période.</p>'}</section>${justePrixBloc()}`:''}
   ${U==='pro'?heuresPeriode(PB):''}
-  <section class="carte repartition"><h3>Répartition de vos dépenses ${esc(deP(PB))}</h3>
-    ${lignes.length?`<p class="rep-total">${eur0(B.total)} <span>au total</span></p>
+  <section class="carte repartition"><div class="titre-vue"><h3>Répartition de vos dépenses ${esc(deP(PB))}</h3>${lignes.length?boutonsVue():''}</div>
+    ${lignes.length&&VUE_REP==='camembert'?`<p class="rep-total">${eur0(B.total)} <span>au total</span></p>
+    <p class="aide">Chaque part porte son montant. Touchez une rubrique de la liste pour voir le détail.</p>
+    ${camembert(lignes.map(([cid,v])=>({id:cid,nom:nomRub(cid),v})),true)}`
+    :lignes.length?`<p class="rep-total">${eur0(B.total)} <span>au total</span></p>
     <p class="aide">Chaque barre montre le poids d’une rubrique dans vos dépenses ${esc(deP(PB))}. Touchez-en une pour voir le détail.</p>
     <div class="rep">${lignes.map(([cid,v])=>{const c=catById(cid), e=etatLimite(c,fin);
       return `<button class="rep-l" data-bcat="${cid}"><span class="rep-h"><span class="rep-nom">${esc(nomRub(cid))}${surp(cid)}</span><span class="rep-val"><b>${eur0(v)}</b> · ${B.total>0?Math.round(v/B.total*100):0} %</span></span>
@@ -3718,6 +3758,35 @@ function fenetreModal(){
   return `<div class="fiche-fond haut" data-act="mclose"></div><div class="fiche fenetre haut" role="dialog" aria-modal="true" aria-label="${MODAL.type==='cascade'?'D’où vient ce chiffre ?':'Comment c’est calculé ?'}">
     <button class="fermer" data-act="mclose" aria-label="Fermer"><i data-lucide="x"></i></button>${h}
     <div class="boutons"><button class="btn" data-act="mclose">Fermer</button></div></div>`;
+}
+/* ============ Dépenses en camembert ============
+   Une petite icône bascule les dépenses entre la liste et un camembert. Chaque part porte son montant ; le détail est dans la légende, en gros. */
+let VUE_REP='liste';
+const NB_PARTS=6;
+function boutonsVue(){
+  const b=(k,ic,tip)=>`<button class="ico-vue" data-vue="${k}" aria-pressed="${VUE_REP===k}" data-tip="${tip}"><i data-lucide="${ic}"></i><span class="sr">${tip}</span></button>`;
+  return `<div class="vue-rep" role="group" aria-label="Façon de voir les dépenses">${b('liste','list','Voir en liste')}${b('camembert','chart-pie','Voir en camembert : chaque part porte son montant')}</div>`;
+}
+/* rows : [{id, nom, v}] déjà triées de la plus grosse à la plus petite. cliquable : les lignes de la légende ouvrent la rubrique (data-bcat). */
+function camembert(rows,cliquable){
+  const L=rows.filter(r=>r.v>0.005); if(!L.length) return '';
+  const total=L.reduce((s,r)=>s+r.v,0);
+  let parts=L.slice(0,NB_PARTS).map((r,i)=>({...r,i}));
+  const reste=L.slice(NB_PARTS);
+  if(reste.length) parts.push({id:'_autres',nom:reste.length>1?`Autres rubriques (${reste.length})`:reste[0].nom,v:reste.reduce((s,r)=>s+r.v,0),i:NB_PARTS});
+  const C=160, R=140, pt=(a,r)=>[C+r*Math.cos(a),C+r*Math.sin(a)];
+  let a0=-Math.PI/2, svg='';
+  for(const p of parts){
+    const f=p.v/total, a1=a0+f*2*Math.PI, am=(a0+a1)/2;
+    if(parts.length===1) svg+=`<circle class="part c${p.i+1}" cx="${C}" cy="${C}" r="${R}"/>`;
+    else{const [x0,y0]=pt(a0,R),[x1,y1]=pt(a1,R); svg+=`<path class="part c${p.i+1}" d="M${C} ${C}L${x0.toFixed(1)} ${y0.toFixed(1)}A${R} ${R} 0 ${f>.5?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}Z"/>`}
+    if(f>=0.07){const [tx,ty]=parts.length===1?[C,C]:pt(am,R*0.62); svg+=`<text class="part-t" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle" dominant-baseline="central">${esc(eur0(p.v))}</text>`}
+    a0=a1;
+  }
+  const resume=parts.map(p=>`${p.nom} ${eur0(p.v)}`).join(', ');
+  return `<div class="camembert"><svg viewBox="0 0 320 320" role="img" aria-label="Camembert des dépenses : ${esc(resume)}">${svg}</svg>
+    <div class="cam-leg">${parts.map(p=>{const tag=cliquable&&p.id!=='_autres'?'button':'div', at=cliquable&&p.id!=='_autres'?` data-bcat="${p.id}"`:'';
+      return `<${tag} class="cam-l"${at}><span class="cam-pt c${p.i+1}"></span><span class="cam-nom">${esc(p.nom)}</span><span class="cam-val"><b>${eur0(p.v)}</b> <span class="cam-pc">${Math.round(p.v/total*100)} %</span></span></${tag}>`}).join('')}</div></div>`;
 }
 /* ============ Mes objectifs ============ */
 const LIMITES_TETE=['shopping','loisirs','voyages','cadeaux'];

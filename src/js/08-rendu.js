@@ -234,7 +234,7 @@ function vOps(){
   const list=(t?filtreRubrique(S.ops.filter(o=>norm(o.label+' '+o.merchant+' '+((catById(catOf(o))||{}).name||'')).includes(t)||okSom(o))):opsFiltrees()).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
   const resume=t?`${list.length} opération${list.length>1?'s':''} trouvée${list.length>1?'s':''}, tous mois confondus.`
     :filActif()?`${list.length} opération${list.length>1?'s':''}${FIL.cat?' dans '+(FIL.cat==='_aver'?'« À vérifier »':'« '+esc(catById(FIL.cat)?.name||'')+' »'):''}${FIL.lvl!=='M'?', '+esc(periodeTexte()):''}.`:'';
-  return aVerifier()+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand ou une somme" value="${esc(q)}" aria-label="Rechercher un marchand ou une somme">
+  return aVerifier()+blocMoisManquants(true)+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand ou une somme" value="${esc(q)}" aria-label="Rechercher un marchand ou une somme">
   ${filtreBar(t)}
   ${resume?`<p class="aide">${resume}</p>`:''}${t||filActif()?totalRecherche(list):''}
   <div class="ops">${list.slice(0,300).map(opLine).join('')||'<p class="aide">Aucune opération.</p>'}</div>
@@ -339,10 +339,23 @@ function phraseMoisManquants(mois){
   const liste=txt.join(', puis ');
   return `${mois.length>1?'Il manque des mois':'Il manque un mois'} : ${liste}.`;
 }
-function blocMoisManquants(){
-  const l=S.accounts.map(a=>({a,m:moisManquants(a.id)})).filter(x=>x.m.length);
+/* Le relevé du mois dernier n'est pas encore ajouté : seulement quand le dernier mois connu du compte est l'avant-dernier mois du calendrier
+   (plus ancien, le compte est sans doute délaissé et on ne le répète pas). */
+function releveRecentManquant(acctId){
+  const vus=S.ops.filter(o=>o.acct===acctId&&o.src!=='rev').map(o=>o.date.slice(0,7)).sort(); if(!vus.length) return null;
+  const d=new Date(), p=new Date(d.getFullYear(),d.getMonth()-1,1), pp=new Date(d.getFullYear(),d.getMonth()-2,1);
+  const cle=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0');
+  return vus[vus.length-1]===cle(pp)?cle(p):null;
+}
+/* Rappel visible : un mois sauté entre deux relevés, ou le relevé du mois dernier pas encore ajouté. avecBouton : renvoie vers Importer. */
+function blocMoisManquants(avecBouton){
+  const l=S.accounts.map(a=>({a,m:moisManquants(a.id),r:releveRecentManquant(a.id)})).filter(x=>x.m.length||x.r);
   if(!l.length) return '';
-  return `<section class="carte manque">${l.map(({a,m})=>`<p class="r-alerte"><b>${esc(a.name)}</b> — ${phraseMoisManquants(m)} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`).join('')}</section>`;
+  const nomMois=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4);
+  const nom=a=>`<b>${esc(a.name)}</b> : `;
+  return `<section class="carte manque" role="status"><div class="manque-t"><i data-lucide="triangle-alert"></i><div>
+    ${l.map(({a,m,r})=>`${m.length?`<p>${nom(a)}${phraseMoisManquants(m).replace(/^Il manque un mois/,'Il manque un relevé').replace(/^Il manque des mois/,'Il manque des relevés')} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`:''}${r?`<p>${nom(a)}le relevé de ${esc(nomMois(r))} n’est pas encore ajouté.</p>`:''}`).join('')}
+    ${avecBouton?'<button class="btn secondaire" data-tab="importer">Ajouter un relevé</button>':''}</div></div></section>`;
 }
 function choixTypeImport(){
   if(SAL) return '';
@@ -353,7 +366,7 @@ function choixTypeImport(){
 }
 function vImport(){
   const nRev=S.ops.filter(o=>o.src==='rev').length;
-  return `<details class="mode-court"><summary><i data-lucide="circle-help"></i>Mode d’emploi</summary>
+  return blocMoisManquants(false)+`<details class="mode-court"><summary><i data-lucide="circle-help"></i>Mode d’emploi</summary>
     ${privacyBox()}<div class="note-box" role="note"><i data-lucide="info"></i><p>Le premier mois est un peu long : l’application vous pose quelques questions. Ensuite, environ 90 % du travail n’est plus à faire : elle retient vos réponses et reconnaît les enseignes toute seule. <button class="lien" data-tab="aide">Voir le mode d’emploi complet</button></p></div></details>
   <section class="carte">
   ${choixTypeImport()}
@@ -372,7 +385,6 @@ function vImport(){
   <p class="aide">Copiez les opérations sur le site de votre banque et collez-les ici. Celles qui sont déjà là ne sont pas ajoutées deux fois, même si vous importez le relevé PDF ensuite.</p></section>
   ${COLLE?panneauColler():''}
   ${reports.length?`<section class="releves">${reports.map(reportLine).join('')}</section>`:''}
-  ${blocMoisManquants()}
   ${relevesAjoutes()}
   ${SAL?'':`<details class="carte repli"${revDraft||revMsg||revError?' open':''}><summary>Vous suivez vos revenus dans un tableau ?</summary>
   <p class="aide">Choisissez le fichier Excel, Numbers ou CSV où vous notez ce que vous encaissez. L’application le lit à la place de vos relevés pour vos encaissements.</p>
