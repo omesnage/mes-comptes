@@ -42,8 +42,11 @@ document.addEventListener('click',async e=>{
   if(d.alvl){AL=d.alvl;openCat=null;render();return}
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
-  if(d.vue){VUE_REP=d.vue;render();return}
-  if(d.act==='camembert'){VUE_REP='camembert';aller('accueil','argent');if(!document.getElementById('argent'))toast('Aucune dépense sur cette période : changez de période pour voir le camembert.',false);return}
+  if(d.act==='camembert'){ouvrirCamembert();return}
+  if(d.act==='closecam'){$('#camPage')?.remove();document.body.style.overflow='';return}
+  if(d.clvl){CAM.lvl=d.clvl;majCam();return}
+  if(d.cshift){const n=shift({lvl:CAM.lvl,y:CAM.y,m:CAM.m},+d.cshift);CAM.y=n.y;CAM.m=n.m;majCam();return}
+  if(d.cside){CAM.u=d.cside;majCam();return}
   if(d.act==='restok'){if(RESTAURER)appliquerRestauration(RESTAURER);return}
   if(d.act==='restno'){RESTAURER=null;render();return}
   if(d.oshift){const n=shift({...P,lvl:FIL.lvl},+d.oshift);P={lvl:'M',y:n.y,m:n.m};render();return}

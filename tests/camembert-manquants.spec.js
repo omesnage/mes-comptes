@@ -15,8 +15,8 @@ for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]]){
       await expect(page.locator('.manque'),tab).toContainText('Il manque un relevé : août 2026');
     }
     await page.click('.manque [data-tab="importer"]');
-    await expect(page.locator('.manque')).toContainText('août 2026');           // aussi dans Importer, sans bouton
-    await expect(page.locator('.manque .btn')).toHaveCount(0);
+    await expect(page.locator('.etat-releves')).toContainText('Relevé manquant : août 2026');   // Importer : l'état à ce jour
+    await expect(page.locator('.etat-releves')).toContainText('Au ');
     await donnees(page,['2026-09','2026-08','2026-07']);                  // plus rien ne manque
     await page.click('nav.tabs [data-tab="accueil"]');
     await expect(page.locator('.manque')).toHaveCount(0);
@@ -30,38 +30,40 @@ for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]]){
     await expect(page.locator('.manque')).toContainText('n’est pas encore ajouté');
     await expect(page.locator('.manque')).toContainText(String(dernier.getFullYear()));
   });
-  test(`${nom} icône camembert : les sommes se lisent sur le graphique et dans la légende`,async({page})=>{
+  test(`${nom} icône camembert en haut : noms et sommes à côté des parts, période au choix`,async({page})=>{
     await openWith(page,{onboarded:true},url);
-    await donnees(page,['2026-09','2026-08']);
-    await expect(page.locator('#camBtn')).toBeVisible();                                 // l'icône du haut, avec les trois autres
-    await page.click('nav.tabs [data-tab="bilan"]');
+    await donnees(page,['2026-09','2026-08','2026-07']);
+    await expect(page.locator('#camBtn')).toBeVisible();                                 // avec les trois autres icônes
     await page.click('#camBtn');
-    await expect(page.locator('.camembert')).toBeVisible();                              // elle amène aux dépenses, en camembert
-    await page.click('[data-vue="liste"]');
-    await expect(page.locator('.camembert')).toHaveCount(0);
-    await page.click('[data-vue="camembert"]');
-    await expect(page.locator('.camembert svg path.part')).toHaveCount(5);
-    await expect(page.locator('.camembert .part-t').first()).toContainText('800 €');   // le loyer, la plus grosse part
-    await expect(page.locator('.cam-leg')).toContainText('Courses');
-    await expect(page.locator('.cam-leg')).toContainText('420 €');
-    const taille=await page.evaluate(()=>[...document.querySelectorAll('.cam-val b,.part-t')].map(e=>parseFloat(getComputedStyle(e).fontSize)));
-    expect(Math.min(...taille)).toBeGreaterThanOrEqual(17);
+    const p=page.locator('#camPage');
+    await expect(p).toContainText('Septembre 2026');
+    const textes=await p.locator('svg text').evaluateAll(l=>l.map(e=>e.textContent));
+    expect(textes.some(t=>/Logement/.test(t))).toBe(true);                               // le nom
+    expect(textes.some(t=>/800\s€/.test(t))).toBe(true);                                  // et la somme, côte à côte
+    expect(textes.filter(t=>/\s€/.test(t)).length).toBeGreaterThanOrEqual(5);              // au moins les cinq plus grosses rubriques
+    const taille=await page.evaluate(()=>{const s=document.querySelector('#camPage svg'),k=s.getBoundingClientRect().width/s.viewBox.baseVal.width;return Math.min(...[...s.querySelectorAll('text')].map(t=>parseFloat(getComputedStyle(t).fontSize)*k))});
+    expect(taille).toBeGreaterThanOrEqual(15);
+    await expect(p.locator('.rep-total')).toContainText('1 535 €');                       // un mois
+    await p.locator('[data-clvl="Q"]').click();
+    await expect(p.locator('.rep-total')).toContainText('4 605 €');                       // un trimestre : trois mois
+    await p.locator('[data-clvl="Y"]').click();
+    await expect(p.locator('.mois h2')).toContainText('2026');
+    await p.locator('[data-clvl="M"]').click();
+    await p.locator('[data-cshift="-1"]').click();
+    await expect(p.locator('.mois h2')).toContainText('Août 2026');
+    await page.click('[data-act="closecam"]');
+    await expect(page.locator('#camPage')).toHaveCount(0);
     await page.click('nav.tabs [data-tab="bilan"]');
-    await expect(page.locator('.repartition .camembert')).toBeVisible();                 // le choix suit dans le Bilan
-    await page.click('.repartition .cam-l[data-bcat="courses"]');
-    await expect(page.locator('.fiche')).toBeVisible();
-    await page.click('.fiche .fermer');
-    await page.click('.repartition [data-vue="liste"]');
-    await expect(page.locator('.repartition .camembert')).toHaveCount(0);
-    await expect(page.locator('.repartition .rep-l').first()).toBeVisible();
+    await page.click('.repartition [data-act="camembert"]');                              // la petite icône du Bilan ouvre la même page
+    await expect(page.locator('#camPage .camembert svg')).toBeVisible();
   });
 }
 
-test('icone camembert cachee sans operation, et message si la periode est vide',async({page})=>{
+test('icone camembert cachee sans operation, et message dans la page si la periode est vide',async({page})=>{
   await openWith(page,{onboarded:true});
   await expect(page.locator('#camBtn')).toBeHidden();
   await donnees(page,['2026-09']);
   await page.evaluate(()=>{P={lvl:'M',y:2025,m:1};render()});
   await page.click('#camBtn');
-  await expect(page.locator('#toast')).toContainText('Aucune dépense sur cette période');
+  await expect(page.locator('#camPage')).toContainText('Aucune dépense sur cette période');
 });

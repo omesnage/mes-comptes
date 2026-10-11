@@ -329,18 +329,39 @@ function moisManquants(acctId){
   for(let y=y0,m=m0;y<y1||(y===y1&&m<=m1);m++){ if(m>12){m=1;y++} const k=y+'-'+String(m).padStart(2,'0'); if(!vus.has(k)&&(y<y1||m<=m1)) out.push(k) }
   return out;
 }
-function phraseMoisManquants(mois){
+function listeMois(mois){
   const lab=(k,an)=>MOIS[+k.slice(5,7)-1]+(an?' '+k.slice(0,4):''), suivant=(a,b)=>{const [y,m]=a.split('-').map(Number);return b===(m===12?(y+1)+'-01':y+'-'+String(m+1).padStart(2,'0'))};
   const runs=[]; for(const k of mois){const r=runs[runs.length-1]; if(r&&suivant(r[r.length-1],k)) r.push(k); else runs.push([k])}
   const txt=runs.map(r=>{const an=r[0].slice(0,4)!==r[r.length-1].slice(0,4);
     if(r.length===1) return lab(r[0],true);
     if(r.length===2) return lab(r[0],an)+' et '+lab(r[1],true);
     return 'de '+lab(r[0],an)+' à '+lab(r[r.length-1],true)});
-  const liste=txt.join(', puis ');
-  return `${mois.length>1?'Il manque des mois':'Il manque un mois'} : ${liste}.`;
+  return txt.join(', puis ');
+}
+function phraseMoisManquants(mois){
+  return `${mois.length>1?'Il manque des mois':'Il manque un mois'} : ${listeMois(mois)}.`;
+}
+/* Importer : où en sont les relevés, banque par banque, à la date du jour. Un relevé par mois et par compte est attendu, jusqu'à celui du mois dernier. */
+function etatReleves(){
+  if(!S.ops.length) return '';
+  const d=new Date(), cle=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'), prev=cle(new Date(d.getFullYear(),d.getMonth()-1,1));
+  const nomMois=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4);
+  const L=S.accounts.map(a=>{
+    const vus=[...new Set(S.ops.filter(o=>o.acct===a.id&&o.src!=='rev').map(o=>o.date.slice(0,7)))].sort(); if(!vus.length) return null;
+    const dernier=vus[vus.length-1], fin=dernier<prev?monthKeys(dernier,prev).slice(1):[];
+    return {a,premier:vus[0],dernier,manque:[...moisManquants(a.id),...fin]};
+  }).filter(Boolean).sort((x,y)=>(x.a.bank||x.a.name).localeCompare(y.a.bank||y.a.name,'fr'));
+  if(!L.length) return '';
+  const jour=d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  return `<section class="carte etat-releves"><h3>Vos relevés, à ce jour</h3>
+    <p class="aide">Au ${esc(jour)} : un relevé par mois et par compte est attendu, jusqu’à celui de ${esc(nomMois(prev))}.</p>
+    ${L.map(({a,premier,dernier,manque})=>`<div class="er ${manque.length?'ko':'ok'}"><i data-lucide="${manque.length?'triangle-alert':'circle-check'}"></i><div>
+      <p class="er-t"><b>${esc(a.bank||a.name)}</b>${a.bank&&a.name&&a.name!==a.bank?` · ${esc(a.name)}`:''}</p>
+      <p>Relevés ajoutés : ${premier===dernier?esc(nomMois(premier)):`de ${esc(nomMois(premier))} à ${esc(nomMois(dernier))}`}.</p>
+      <p class="er-m">${manque.length?`${manque.length>1?'Relevés manquants':'Relevé manquant'} : ${esc(listeMois(manque))}.`:'Aucun relevé ne manque.'}</p></div></div>`).join('')}</section>`;
 }
 /* Le relevé du mois dernier n'est pas encore ajouté : seulement quand le dernier mois connu du compte est l'avant-dernier mois du calendrier
-   (plus ancien, le compte est sans doute délaissé et on ne le répète pas). */
+   (plus ancien, le compte est sans doute délaissé et on ne le répète pas ailleurs que dans Importer). */
 function releveRecentManquant(acctId){
   const vus=S.ops.filter(o=>o.acct===acctId&&o.src!=='rev').map(o=>o.date.slice(0,7)).sort(); if(!vus.length) return null;
   const d=new Date(), p=new Date(d.getFullYear(),d.getMonth()-1,1), pp=new Date(d.getFullYear(),d.getMonth()-2,1);
@@ -366,8 +387,9 @@ function choixTypeImport(){
 }
 function vImport(){
   const nRev=S.ops.filter(o=>o.src==='rev').length;
-  return blocMoisManquants(false)+`<details class="mode-court"><summary><i data-lucide="circle-help"></i>Mode d’emploi</summary>
+  return `<details class="mode-court"><summary><i data-lucide="circle-help"></i>Mode d’emploi</summary>
     ${privacyBox()}<div class="note-box" role="note"><i data-lucide="info"></i><p>Le premier mois est un peu long : l’application vous pose quelques questions. Ensuite, environ 90 % du travail n’est plus à faire : elle retient vos réponses et reconnaît les enseignes toute seule. <button class="lien" data-tab="aide">Voir le mode d’emploi complet</button></p></div></details>
+  ${etatReleves()}
   <section class="carte">
   ${choixTypeImport()}
   <label class="gros-bouton" data-drop="bank"><input type="file" id="file"${ACCEPT_RELEVE} multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>

@@ -48,8 +48,8 @@ test('un mois sauté entre deux relevés est signalé, pas un mois de bout',asyn
   expect(r[2]).toBe('Il manque un mois : février 2026.');
   expect(r[3]).toBe('Il manque des mois : décembre 2025 et janvier 2026.');
   await page.evaluate(()=>{view='importer';render()});
-  await expect(page.locator('.manque')).toContainText('BforBank');
-  await expect(page.locator('.manque')).toContainText('décembre 2025');
+  await expect(page.locator('.etat-releves')).toContainText('BforBank');
+  await expect(page.locator('.etat-releves')).toContainText('décembre 2025');
 });
 
 test('relevé rangé dans le mauvais compte : ses opérations passent dans le bon, le compte vide disparaît',async({page})=>{

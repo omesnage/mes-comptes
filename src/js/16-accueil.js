@@ -216,14 +216,13 @@ function vAccueil(){
   if(SAL) gagne=Pe.any?`<section class="carte gagne"><h3>Votre ${mens?'mois':AL==='Q'?'trimestre':'année'}</h3>${balanceBloc(0,Pe,PA)}</section>`:'';
   const q=S.accounts.filter(a=>!a.confirmed);
   return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+blocMoisManquants(true)+periodeBarAccueil(PA)+blocMeilleursMois(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
-  ${Pe.any?`<section class="carte argent" id="argent"><div class="titre-vue"><h3>Où part votre argent</h3>${boutonsVue()}</div>
+  ${Pe.any?`<section class="carte argent" id="argent"><div class="titre-vue"><h3>Où part votre argent</h3>${boutonCam()}</div>
     <p class="phrase">${eur0(Pe.net)} dépensés${SAL?'':' côté perso'}</p>
-    ${VUE_REP==='camembert'?camembert(lignes.map(([cid,e])=>({id:cid,nom:cid==='_pending'?'À vérifier':(catById(cid)?.name||cid),v:e.net})),false):`<div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
+    <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
         <span class="rub-nom">${esc(pend?'À vérifier':c?.name||cid)}${d?`<span class="rub-mention">${esc(d.txt)}</span>`:''}${motRemb(e)?`<span class="rub-sous">${motRemb(e)}</span>`:''}</span>
         <span class="rub-amt">${eur0(e.net)}</span><span class="barre"><span style="width:${Math.max(1.5,e.net/max*100)}%"></span></span></button>
         ${open?`<div class="rub-ops">${e.ops.slice().sort((a,b)=>a.date<b.date?1:-1).map(opLine).join('')}</div>`:''}`}).join('')}</div>
-`}
     <button class="lien ajout-rub" data-act="nouvrub"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>`:''}
   ${S.ops.length?blocLimites(PF):''}
   ${mens?blocsDefi():''}
