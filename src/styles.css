@@ -30,7 +30,10 @@ svg{flex:none}
 /* En-tête et navigation */
 header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding-top:env(safe-area-inset-top,0px)}
 .brand{font-size:26px;font-weight:500;letter-spacing:-.01em}
-.top-droite{display:flex;align-items:center;gap:10px}
+.top-droite{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right}
+.btn-cloud{display:inline-flex;align-items:center;gap:6px;font-size:15px;min-height:44px}
+.btn-cloud svg{width:16px;height:16px}
+.dern-sauv{font-size:15px;color:var(--muted)}
 .status{font-size:15px;color:var(--muted)}
 nav.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:26px}
 nav.tabs:empty{display:none}
@@ -475,3 +478,11 @@ a.chercher svg{width:20px;height:20px}
 
 .lignes-groupe .ligne-grp{padding:8px 0;border-top:1px solid var(--line)}.lignes-groupe .lg-t{margin:0 0 6px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.lignes-groupe .lg-t b{margin-left:auto}
 .liste-etapes{margin:8px 0 8px 20px;padding:0}.liste-etapes li{margin:0 0 6px}
+.wiz-tete{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.wiz-barre{height:6px;background:var(--line);border-radius:3px;margin:8px 0 6px;overflow:hidden}.wiz-barre span{display:block;height:100%;background:var(--gold)}
+.q-ex{margin:0 0 4px;font-size:15px;color:var(--muted)}
+.verifier .choix-btn.gros-q,.verifier summary.gros-q{min-height:56px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.gros-q-d{width:100%}.gros-q-d select{margin-top:8px}
+.devinees .ligne-grp{padding:8px 0;border-top:1px solid var(--line)}
+.lien-aide{margin:0 0 12px;text-align:center}.lien-aide .lien{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:15px}
+.aide-page .phrase{font-size:18px}

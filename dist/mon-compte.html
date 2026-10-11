@@ -44,7 +44,10 @@ svg{flex:none}
 /* En-tête et navigation */
 header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding-top:env(safe-area-inset-top,0px)}
 .brand{font-size:26px;font-weight:500;letter-spacing:-.01em}
-.top-droite{display:flex;align-items:center;gap:10px}
+.top-droite{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right}
+.btn-cloud{display:inline-flex;align-items:center;gap:6px;font-size:15px;min-height:44px}
+.btn-cloud svg{width:16px;height:16px}
+.dern-sauv{font-size:15px;color:var(--muted)}
 .status{font-size:15px;color:var(--muted)}
 nav.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:26px}
 nav.tabs:empty{display:none}
@@ -489,13 +492,24 @@ a.chercher svg{width:20px;height:20px}
 
 .lignes-groupe .ligne-grp{padding:8px 0;border-top:1px solid var(--line)}.lignes-groupe .lg-t{margin:0 0 6px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.lignes-groupe .lg-t b{margin-left:auto}
 .liste-etapes{margin:8px 0 8px 20px;padding:0}.liste-etapes li{margin:0 0 6px}
+.wiz-tete{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.wiz-barre{height:6px;background:var(--line);border-radius:3px;margin:8px 0 6px;overflow:hidden}.wiz-barre span{display:block;height:100%;background:var(--gold)}
+.q-ex{margin:0 0 4px;font-size:15px;color:var(--muted)}
+.verifier .choix-btn.gros-q,.verifier summary.gros-q{min-height:56px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.gros-q-d{width:100%}.gros-q-d select{margin-top:8px}
+.devinees .ligne-grp{padding:8px 0;border-top:1px solid var(--line)}
+.lien-aide{margin:0 0 12px;text-align:center}.lien-aide .lien{display:inline-flex;align-items:center;gap:6px;min-height:44px;font-size:15px}
+.aide-page .phrase{font-size:18px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="brand">Mon compte</div>
-    <div class="top-droite"><span class="status" id="status"></span></div>
+    <div class="top-droite"><span class="status" id="status"></span>
+      <button class="lien btn-cloud" id="cloudBtn" data-act="cloud"><i data-lucide="cloud-upload"></i>Sauvegarder dans mon dossier Cloud</button>
+      <span class="dern-sauv" id="lastbk"></span>
+      <button class="lien" data-tab="aide">Mode d’emploi</button></div>
   </header>
   <nav class="tabs" id="tabs" aria-label="Navigation principale"></nav>
   <div id="demoBar"></div>
@@ -519,9 +533,11 @@ const CATS0=[
  ['mutuelle','Mutuelle','shield-plus','expense','perso',1],
  ['loisirs','Sorties et loisirs','ticket','expense','perso'],
  ['shopping','Vêtements et shopping','shirt','expense','perso'],
+ ['enligne','Achats en ligne','shopping-cart','expense','perso'],
  ['maison','Maison et équipement','sofa','expense','perso'],
  ['animaux','Animaux','paw-print','expense','perso'],
  ['cadeaux','Cadeaux','gift','expense','perso'],
+ ['dons','Dons et associations','hand-heart','expense','perso'],
  ['voyages','Vacances et séjours','luggage','expense','perso'],
  ['frais','Banque','landmark','expense','auto',1],
  ['impotsfoyer','Impôts et taxes du foyer','receipt','expense','perso',1],
@@ -568,6 +584,7 @@ const RETRAITE_RE=/\b(RETRAITES?|CARSAT|CNAV|IRCEC|AGIRC|ARRCO|CAISSE D.?ASSURAN
 function autoCatOf(label,atype,amount){
   const t=norm(label||'');
   if(LOAN_RE.test(t))return atype==='pro'?'empruntpro':'pret';
+  if(/\bRETRAITS?\b|\bDAB\b|\bGAB\b/.test(t))return 'divers';
   if(!SAL&&COTIS_RE.test(t)&&!CESU_RE.test(t))return 'cotisations';
   if(!SAL&&CAISSES_RE.test(t)&&amount<0)return 'cotisations';
   if(EPARGNE_RE.test(t.replace(/CAISSE D.?EPARGNE/g,'')))return 'epargne';
@@ -611,7 +628,8 @@ const KW=[
  [/MUTUELLE|PREVOYANCE/,'mutuelle'],
  [/FREE MOBILE|FREE|ORANGE|SFR|BOUYGUES|SOSH|NETFLIX|SPOTIFY|DEEZER|DISNEY|CANAL|APPLE|ITUNES|GOOGLE|ADOBE|MICROSOFT|AMAZON PRIME|PRIME VIDEO|ANTHROPIC|CLAUDE|OPENAI|SQUARESPACE|DROPBOX/,'abonnements'],
  [/CINEMA|PATHE|GAUMONT|UGC|THEATRE|MUSEE|CONCERT|LIBRAIRIE|CULTURA|STEAM|PLAYSTATION|BILLET/,'loisirs'],
- [/AMAZON|FNAC|DECATHLON|ZARA|UNIQLO|SEPHORA|ETSY|VINTED|ZALANDO|H&M|KIABI|CELIO|JULES/,'shopping'],
+ [/AMAZON|FNAC|CDISCOUNT|ALIEXPRESS|TEMU|EBAY|ETSY|VINTED|LEBONCOIN|VEEPEE|RAKUTEN|MANOMANO|BACKMARKET/,'enligne'],
+ [/DECATHLON|ZARA|UNIQLO|SEPHORA|ETSY|VINTED|ZALANDO|H&M|KIABI|CELIO|JULES/,'shopping'],
  [/FRAIS TENUE|COTIS(ATION)? (CARTE|CB)|COMMISSION|AGIOS|INTERETS DEB|FRAIS BANCAIRES/,'frais'],
  [/SALAIRE|\bPAIE\b|HONORAIRES|\bCAF\b|FRANCE TRAVAIL|POLE EMPLOI/,'revenus'],
  [/RETRAIT ESPECES/,'divers']
@@ -652,7 +670,7 @@ let UNIV='all', OPACC='';
 const reports=[];
 const HAS_CLAUDE=!!(window.claude&&window.claude.use);
 
-function blank(){return{schemaVersion:SCHEMA,onboarded:false,accounts:[],categories:CATS0.map(c=>({...c})),rules:{},sugg:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
+function blank(){return{schemaVersion:SCHEMA,onboarded:false,accounts:[],categories:CATS0.map(c=>({...c})),rules:{},sugg:{},auto:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
@@ -696,8 +714,9 @@ function catOf(o){
   if(o.cat) return o.cat;
   if(INTERNAL[o.id]) return 'interne';
   if(o.amount>0&&LINK[o.id]){const p=BYID[LINK[o.id]];const c=p&&(p.cat||S.rules[p.merchant+'|-']||S.rules[p.merchant]);if(c)return c}
-  const dir=S.rules[o.merchant+(o.amount>0?'|+':'|-')]; if(dir) return dir;
-  const r=S.rules[o.merchant]; if(!r) return null;
+  const dk=o.merchant+(o.amount>0?'|+':'|-'), dir=S.rules[dk]; if(dir) return dir;
+  const r=S.rules[o.merchant];
+  if(!r){ const au=S.auto&&(S.auto[dk]||S.auto[o.merchant]); return au&&!(o.amount<0&&typeOf(au.c)==='income')?au.c:null }
   if(o.amount<0&&typeOf(r)==='income') return null;
   return r;
 }
@@ -758,7 +777,7 @@ function opExtra(o){
   if(o.amount>0&&LINK[o.id]){const p=BYID[LINK[o.id]];return `Remboursement de votre achat du ${p.date.slice(8,10)}/${p.date.slice(5,7)}${p.date.slice(0,7)!==o.date.slice(0,7)?`, compté en ${MOIS[+p.date.slice(5,7)-1]}`:''}`}
   if(o.amount<0&&LINKED[o.id]){const r=BYID[LINKED[o.id]];return `Remboursé le ${r.date.slice(8,10)}/${r.date.slice(5,7)}`}
   if(o.awaiting){const d=Math.max(0,Math.round((Date.now()-new Date(o.date))/864e5));return `Retour signalé : remboursement attendu depuis ${d} jour${d>1?'s':''}`}
-  if(isRefund(o)){const c=catById(catOf(o));return c?`Remboursement, déduit de ${c.name}`:'Remboursement'}
+  if(isRefund(o)){const c=catById(catOf(o));return !c||c.id==='remb'?'Remboursement reçu, sans rubrique précise':`Remboursement, retiré de vos dépenses « ${c.name} »`}
   return '';
 }
 /* ============ Libellés → marchand ============ */
@@ -794,18 +813,92 @@ function motsRecherche(label){
 }
 const lienRecherche=label=>{const q=motsRecherche(label);return q?`<a class="lien chercher" href="https://www.google.com/search?q=${encodeURIComponent(q)}" target="_blank" rel="noopener noreferrer"><i data-lucide="search"></i>À quoi correspond ce libellé ?</a>`:''};
 /* Suggestion de rubrique d'après le libellé et le type du compte (perso, pro ou mixte) */
-function kwSuggest(m,label,atype,amount){
+/* {c, sur} : sur=false pour une simple hypothèse (rentrée d'un compte perso sans indice) */
+function kwSuggestX(m,label,atype,amount){
   const t=norm(m+' '+label);
-  if(amount<0&&CESU_RE.test(t)) return 'maison';
-  if(atype==='pro'&&amount<0&&/\b(VIR|VIREMENT)\b/.test(t)&&/\b(PERSO|PERSONNEL|REMUNERATION|PRELEVEMENT EXPLOITANT)\b/.test(t)) return 'remu';
-  if(/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|\bCFE\b|\bTVA\b/.test(t)&&atype!=='perso') return 'impots';
-  if(!SAL){for(const [re,c] of KW_PRO) if(re.test(t)) return c;
-  if(atype==='pro') for(const [re,c] of KW_PROACC) if(re.test(t)) return c}
-  for(const [re,c] of KW) if(re.test(t)){ if(SAL&&c==='revenus') return amount>0?(/SALAIRE|\bPAIE\b/.test(t)?'salaire':'rentrees'):null; if(amount<0&&typeOf(c)==='income') return null; return c }
-  if(amount>0&&!REFUND_RE.test(t)) return atype==='perso'?'rentrees':'revenus';
+  if(amount<0&&CESU_RE.test(t)) return {c:'maison',sur:true};
+  if(atype==='pro'&&amount<0&&/\b(VIR|VIREMENT)\b/.test(t)&&/\b(PERSO|PERSONNEL|REMUNERATION|PRELEVEMENT EXPLOITANT)\b/.test(t)) return {c:'remu',sur:true};
+  if(/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|\bCFE\b|\bTVA\b/.test(t)&&atype!=='perso') return {c:'impots',sur:true};
+  if(!SAL){for(const [re,c] of KW_PRO) if(re.test(t)) return {c,sur:true};
+  if(atype==='pro') for(const [re,c] of KW_PROACC) if(re.test(t)) return {c,sur:true}}
+  for(const [re,c] of KW) if(re.test(t)){ if(SAL&&c==='revenus') return amount>0?{c:/SALAIRE|\bPAIE\b/.test(t)?'salaire':'rentrees',sur:true}:null; if(amount<0&&typeOf(c)==='income') return null; return {c,sur:true} }
+  if(amount>0&&!REFUND_RE.test(t)) return {c:atype==='perso'?'rentrees':'revenus',sur:false};
   return null;
 }
+function kwSuggest(m,label,atype,amount){const r=kwSuggestX(m,label,atype,amount);return r?r.c:null}
 
+/* ============ Dictionnaire intégré : enseignes et mots-clés par rubrique ============
+   Les libellés sont d'abord nettoyés (libelleNet : majuscules, sans accents, sans « PAIEMENT PAR CARTE », dates, numéros,
+   code pays et ville collée), puis comparés à ces listes. Les règles apprises par l'utilisateur passent toujours avant.
+   Syntaxe d'une entrée : MOT ou EXPRESSION (mots entiers) · RACINE* (début de mot) · ^MOT (au début du libellé) ·
+   une entrée terminée par ? est une simple probabilité (classement « deviné »), les autres sont sûres.
+   Les groupes sont lus dans l'ordre : les cas particuliers (station-service d'un supermarché…) viennent avant le général. */
+const DICO=[
+ /* --- cas particuliers, à lire en premier --- */
+ ['divers',['RETRAIT*','DISTRIBUTEUR*','DAB','GAB']],
+ ['transport',['LECLERC STATION','LECLERC CARBURANT','E LECLERC STATION','SUPER U STATION','U EXPRESS STATION','CARREFOUR STATION','CARREFOUR MARKET STATION','INTERMARCHE STATION','INTERMARCHE CARBURANT','AUCHAN STATION','AUCHAN CARBURANT','CASINO STATION','CORA STATION','LIDL STATION','STATION SERVICE','STATION ESSENCE','STATION CARBURANT','STATION TOTAL','STATION AVIA','STATION BP','STATION ESSO','STATION SHELL','STATION ELAN','TOTAL ACCESS','TOTALENERGIES STATION','TOTAL ENERGIES STATION']],
+ ['abonnements',['AMAZON PRIME','PRIME VIDEO','AMZN DIGITAL','AMAZON DIGITAL','AMAZON MUSIC','AD FREE','APPLE COM BILL','APPLE COM','ITUNES','APPLE ONE','ICLOUD','GOOGLE ONE','GOOGLE YOUTUBE','YOUTUBE*','GOOGLE PLAY','GOOGLE STORAGE']],
+ ['logement',['TOTALENERGIES ELECTRICITE','TOTALENERGIES GAZ','TOTAL ENERGIES ELECTRICITE','TOTAL ENERGIES GAZ','TOTAL DIRECT ENERGIE','DIRECT ENERGIE','ENI GAS','ENI ELECTRICITE','ENGIE','ENGIE*','EDF','EDF*','ENERCOOP','OHM ENERGIE','MINT ENERGIE','ILEK','PLUM ENERGIE','ENEDIS','GRDF','GAZ DE BORDEAUX','ELECTRICITE*','FIOUL*','GRANULES*','VEOLIA','SUEZ','SAUR','LYONNAISE DES EAUX','SERVICE DES EAUX','REGIE DES EAUX','SYNDICAT DES EAUX','SIAEP','SEPIG','EAU','EAUX','EAU DE*','LOYER*','SYNDIC*','FONCIA','NEXITY','CITYA','ORPI','CENTURY 21','LAFORET','SQUARE HABITAT','ASSURANCE HABITATION','ASSURANCE LOGEMENT','MULTIRISQUE HABITATION','CHARGES DE COPROPRIETE','COPROPRIETE*']],
+ ['maison',['CESU','CHEQUE EMPLOI SERVICE','PAJEMPLOI','SERVICES A LA PERSONNE','ADHAP','FEMME DE MENAGE','AIDE A DOMICILE']],
+ ['dons',['CHANGE ORG','HELLOASSO','HELLO ASSO','LEETCHI','ULULE','KISSKISSBANKBANK','MIIMOSA','TUDIGO','DON','DONS','CROIX ROUGE','RESTOS DU COEUR','SECOURS POPULAIRE','SECOURS CATHOLIQUE','MEDECINS SANS FRONTIERES','MSF','MEDECINS DU MONDE','UNICEF','UNHCR','WWF','GREENPEACE','LPO','AMNESTY*','ACTION CONTRE LA FAIM','HANDICAP INTERNATIONAL','FONDATION*','ABBE PIERRE','EMMAUS','30 MILLIONS D AMIS','LIGUE CONTRE LE CANCER','TELETHON','AFM TELETHON','APF FRANCE HANDICAP','ADMD','SOS AMITIES','SOS AMITIES','DENIER DE L EGLISE','QUETE','PAROISSE*','DIOCESE*','WIKIMEDIA','WIKIPEDIA','MOZILLA','ASSOCIATION*?','CAGNOTTE*']],
+ /* --- courses --- */
+ ['courses',['CARREFOUR*','LECLERC','E LECLERC','LECLERC DRIVE','INTERMARCHE*','SUPER U','HYPER U','U EXPRESS','MARCHE U','SYSTEME U','MAGASINS U','U DRIVE','AUCHAN*','LIDL','ALDI','NETTO','CASINO','CASINO SHOP','PETIT CASINO','VIVAL','SPAR','MONOPRIX','MONOP','FRANPRIX','G20','COCCINELLE','COCCIMARKET','CORA','COLRUYT','MATCH','SIMPLY MARKET','LEADER PRICE','PICARD','THIRIET','GRAND FRAIS','FRAIS D ICI','BIOCOOP','NATURALIA','LA VIE CLAIRE','BIO C BON','BIOMONDE','NATUREO','LES HALLES*','PRIMEUR*','BOUCHERIE*','CHARCUTERIE*','POISSONNERIE*','FROMAGER*','CREMERIE*','EPICERIE*','CAVE*','CAVISTE*','NICOLAS','V AND B','VANDB','CHRONODRIVE','COURSES U','SUPERMARCHE*','HYPERMARCHE*','SUPERETTE*','ALIMENTATION*','CROWDFARMING','GAEC','SCEA','EARL','FERME','FERME*','MIEL*','MARAICH*','LA RUCHE QUI DIT OUI','AMAP','TOO GOOD TO GO','MARCHE?','METRO','PROMOCASH','TRANSGOURMET','MAISON DU CAFE','VINS*','CAVES*','DRIVE*?']],
+ /* --- restauration --- */
+ ['resto',['RESTAURANT*','RESTO*','BRASSERIE*','BISTRO*','BISTROT*','CAFE','CAFES','CAFE*?','BAR','LE BAR','PUB','TAVERNE*','AUBERGE*','CREPERIE*','PIZZ*','SUSHI*','KEBAB*','TACOS*','BURGER*','BURGUER*','FRITERIE*','SNACK*','BOULANG*','PATISS*','VIENNOIS*','TRAITEUR*','GLACIER*','GLACES','SALON DE THE','TEA ROOM','TEAROOM','COFFEE*','STARBUCKS','MCDO*','MC DONALD*','MC DO','BURGER KING','KFC','QUICK','SUBWAY','O TACOS','FIVE GUYS','BAGELSTEIN','PAUL','BRIOCHE DOREE','LA MIE CALINE','MIE CALINE','COJEAN','EXKI','PRET A MANGER','COURTEPAILLE','BUFFALO GRILL','HIPPOPOTAMUS','FLUNCH','LEON DE BRUXELLES','LA BOUCHERIE','DOMINO*','PIZZA HUT','PIZZA PAI','SPEED RABBIT','DELIVEROO','UBER EATS','UBEREATS','JUST EAT','FRICHTI','FOODCHERI','BAGUETTE*','BIG FERNAND','PASTA*','MOULES*','CREPES*','WOK*','TRATTORIA*','OSTERIA*','TAPAS*','RESTAURATION*','FOOD TRUCK','SANDWICH*','DINETTE*','GOURMET*','COMPTOIR*','CHEZ*?','ROTISSERIE*','CANTINE*?','PLANCHA*?']],
+ /* --- santé --- */
+ ['mutuelle',['MUTUELLE*','MUTUALIA','HARMONIE MUTUELLE','MGEN','MACIF SANTE','MACIF MUTUALITE','MAAF SANTE','APRIL SANTE','ALAN','SWISS LIFE SANTE','MALAKOFF*','HUMANIS','AG2R*','KLESIA','APICIL','GROUPAMA SANTE','AXA SANTE','MNH','MGEFI','MGP','MUTAMI','SOLIMUT','PREVOYANCE*','APIVIA','HENNER','ALLIANZ SANTE','SMATIS','SMERRA']],
+ ['sante',['PHARM*','PHIE','PHAR','PHARMACIE*','PARAPHARM*','LABORATOIRE*','LABO','BIOGROUP','CERBALLIANCE','UNILABS','SYNLAB','BIOLAM','DOCTEUR*','MEDECIN*','CABINET MEDICAL','DENTIS*','ORTHODON*','KINE*','OSTEO*','PODOLOG*','OPHTALMO*','OPTIQUE*','OPTIC*','OPHTALLIANCE','AFFLELOU','KRYS','GRAND OPTICAL','GENERALE D OPTIQUE','ATOL','LISSAC','HOPITAL*','CLINIQUE*','CHU','URGENCES','AMBULANCE*','INFIRMI*','SAGE FEMME','PSYCHO*','THERAPEUTE*','DOCTOLIB','CPAM','AMELI','CENTRE DE SANTE','RADIOLOG*','IMAGERIE*','NATUROPATH*','ACUPUNCT*','AUDIOPROTH*','AUDIKA','AMPLIFON','SANTE*?','CABINET*?']],
+ /* --- transports --- */
+ ['transport',['TOTALENERGIES','TOTAL ENERGIES','TOTAL','ESSO*','SHELL','AVIA','BP','ELAN','AGIP','CARBURANT*','GAZOLE','ESSENCE','AUTOROUTE*','VINCI AUTOROUTES','APRR','SANEF','ASF','ATMB','COFIROUTE','ESCOTA','PEAGE*','TELEPEAGE','ULYS','LIBER T','BIP AND GO','PARKING*','INDIGO','Q PARK','QPARK','SAEMES','EFFIA','ONEPARK','YESPARK','PARCMETRE*','HORODATEUR*','FORFAIT POST STATIONNEMENT','STATIONNEMENT*','SNCF*','OUIGO','TGV*','INOUI','OUI SNCF','TRAINLINE','TRENITALIA','EUROSTAR','THALYS','RATP','NAVIGO','IDFM','ILE DE FRANCE MOBILITES','TISSEO','KEOLIS','TRANSDEV','TAXI*','UBER','BOLT','HEETCH','LE CAB','G7','ALLO TAXI','BLABLACAR','LIME','DOTT','VELIB','GARAGE*','CARROSSERIE*','PNEU*','MIDAS','NORAUTO','SPEEDY','FEU VERT','VULCO','EUROMASTER','POINT S','AD AUTO','CONTROLE TECHNIQUE','DEKRA','AUTOSUR','SECURITEST','ASSURANCE AUTO','AUTO ECOLE*','CARTE GRISE','CARGLASS','LAVAGE*?','CONCESSION*?','AUTO*?','MOTO*?','BUS','TRAM*']],
+ /* --- voyages --- */
+ ['voyages',['BOOKING*','AIRBNB','AGODA*','EXPEDIA','HOTELS COM','TRIVAGO','KAYAK','OPODO','LASTMINUTE','LAST MINUTE','GO VOYAGES','EDREAMS','LILIGO','TRANSAVIA*','EASYJET','RYANAIR','VOLOTEA','AIR FRANCE','AIRFRANCE','KLM','LUFTHANSA','BRITISH AIRWAYS','IBERIA','VUELING','WIZZ*','EMIRATES','QATAR AIRWAYS','TURKISH AIRLINES','AIR CARAIBES','CORSAIR','FRENCH BEE','AIR EUROPA','HOTEL*','HOTELS*','IBIS*','NOVOTEL','MERCURE','SOFITEL','PULLMAN','ACCOR','FORMULE 1','B AND B HOTELS','BB HOTELS','CAMPANILE','KYRIAD','PREMIERE CLASSE','BALLADINS','HOLIDAY INN','HILTON','MARRIOTT','RADISSON','BEST WESTERN','CAMPING*','VILLAGE VACANCES','CENTER PARCS','PIERRE ET VACANCES','CLUB MED','BELAMBRA','VVF','CARJET','RENTALCARS','EUROPCAR','HERTZ','SIXT','GITE*','GITES DE FRANCE','ABRITEL','VRBO','HOMEAWAY','VOYAGE*','AGENCE DE VOYAGE','FRAM','NOUVELLES FRONTIERES','JET TOURS','TUI','PROMOVACANCES','ODIGEO','AEROPORT*','DUTY FREE','TAXE DE SEJOUR','SUPER COM','SUPER?','VACANCES*','LOCATION*?','RESIDENCE*?']],
+ /* --- abonnements et télécoms --- */
+ ['abonnements',['NETFLIX','SPOTIFY','DEEZER','DISNEY*','MOLOTOV','CANAL PLUS','CANALSAT','CANAL SAT','MYCANAL','GROUPE CANAL','OCS','SALTO','PARAMOUNT','APPLE TV','DAZN','BEIN*','RMC SPORT','TF1 PLUS','AUDIBLE','KINDLE UNLIMITED','KOBO','STORYTEL','CRUNCHYROLL','TWITCH','XBOX','PLAYSTATION PLUS','NINTENDO ONLINE','CHATGPT','OPENAI','ANTHROPIC','CLAUDE AI','MIDJOURNEY','PATREON','SUBSTACK','MEDIAPART','LE MONDE','LE FIGARO','LIBERATION','LES ECHOS','OUEST FRANCE','L EQUIPE','COURRIER INTERNATIONAL','TELERAMA','LE PARISIEN','ARRET SUR IMAGES','NORDVPN','EXPRESSVPN','PROTON*','DROPBOX','ONEDRIVE','MICROSOFT 365','OFFICE 365','ADOBE','CANVA','NOTION','1PASSWORD','LASTPASS','BITWARDEN','FREE MOBILE','FREE SAS','FREEBOX','^FREE','SFR','BOUYGUES*','B AND YOU','BANDYOU','SOSH','ORANGE SA','^ORANGE','LA POSTE MOBILE','LEBARA','LYCAMOBILE','NRJ MOBILE','RED BY SFR','PRIXTEL','K NET','OVH*','GANDI','IONOS','SQUARESPACE','WIX*','TELEPHONE*','ABONNEMENT*']],
+ /* --- achats --- */
+ ['enligne',['AMAZON*','AMZN*','CDISCOUNT','ALIEXPRESS','TEMU','WISH','EBAY','ETSY','VINTED','LEBONCOIN','VEEPEE','SHOWROOMPRIVE','BRANDALLEY','RAKUTEN','PRICEMINISTER','FNAC','LA REDOUTE','CAMIF','MANOMANO','RUEDUCOMMERCE','BACKMARKET','PAYPAL?']],
+ ['shopping',['DARTY','BOULANGER','ZALANDO','ASOS','SHEIN','ZARA','H AND M','UNIQLO','MANGO','KIABI','CELIO','JULES','BRICE','PIMKIE','PROMOD','CAMAIEU','SANDRO','MAJE','COMPTOIR DES COTONNIERS','BONOBO','JENNYFER','GEMO','LA HALLE','CHAUSSEA','ERAM','SARENZA','SPARTOO','DECATHLON','INTERSPORT','GO SPORT','SPORT 2000','NIKE','ADIDAS','PUMA','NEW BALANCE','LACOSTE','LEVIS','PETIT BATEAU','OKAIDI','OBAIBI','CYRILLUS','VERTBAUDET','JACADI','TAPE A L OEIL','ORCHESTRA','SEPHORA','MARIONNAUD','NOCIBE','YVES ROCHER','L OCCITANE','LUSH','THE BODY SHOP','DOUGLAS','PARFUM*','BIJOUTERIE*','JOAILLERIE*','PANDORA','MAUBOUSSIN','JULIEN D ORCEL','HISTOIRE D OR','STROILI','CLAIRE S','ACCESSORIZE','GALERIES LAFAYETTE','PRINTEMPS','BHV*','3 SUISSES','DAMART','BLANCHEPORTE','NATURE ET DECOUVERTES','ACTION','GIFI','NOZ','B AND M','STOCKOMANIA','LA FOIR FOUILLE','TEDI','HEMA','FLYING TIGER','VETEMENT*','BOUTIQUE*?','DUMAS','COIFF*?','BARBIER*?','BARBER*?','ONGLERIE*?','ESTHETIC*?','INSTITUT DE BEAUTE?','MASSAGE*?','SPA?']],
+ ['maison',['IKEA','LEROY MERLIN','CASTORAMA','BRICO DEPOT','BRICOMARCHE','MR BRICOLAGE','BRICORAMA','WELDOM','POINT P','GEDIMAT','TOUT FAIRE','BRICOLAGE*','QUINCAILLERIE*','JARDIN*','JARDINERIE*','TRUFFAUT','GAMM VERT','BOTANIC','MAISONS DU MONDE','MAISONS DU MOND','CONFORAMA','^BUT','ALINEA','HABITAT','AM PM','LINVOSGES','BLANC DES VOSGES','LITERIE*','MATELAS*','BULTEX','TEMPUR','TOPPER','SOMMIER*','CUISINES*','CUISINELLA','SCHMIDT','MOBALPA','LAPEYRE','ELECTROMENAGER*','ELECTRO DEPOT','PLOMBIER*','ELECTRICIEN*','SERRURIER*','DEPANNAGE*','MENUISERIE*','PEINTURE*','BRICO*','DECO*','DECORATION*','MEUBLE*','MEUBLES*','TAPIS*','RIDEAUX*','ART DE LA TABLE','ARTHUR BONNET','PRESSING*?','LAVERIE*?','CORDONN*?','CLEFS*?','ARTISAN*?']],
+ ['animaux',['PETCO','ANIMALERIE*','ANIMALIS','MAXI ZOO','ZOOPLUS','VETO*','VETERINAIRE*','CLINIQUE VETERINAIRE','CROQUETTES*','TOILETTAGE*','PENSION CANINE','ANIMAUX']],
+ ['loisirs',['CINEMA*','UGC','PATHE','GAUMONT','MK2','CGR','KINEPOLIS','MEGARAMA','THEATRE*','OPERA*','CONCERT*','TICKETMASTER','DIGITICK','BILLETREDUC','WEEZEVENT','SHOTGUN','FRANCE BILLET','BILLETTERIE*','MUSEE*','EXPOSITION*','CHATEAU*','PARC ASTERIX','DISNEYLAND','PUY DU FOU','FUTUROSCOPE','ZOO*','ZOOPARC*','BEAUVAL*','PARC ZOOLOGIQUE*','PARC ANIMALIER','PARC D ATTRACTION*','PARC DE LOISIRS','PARC AVENTURE*','PARC NATUREL?','JARDIN ZOOLOGIQUE','REFUGE*?','FERME PEDAGOGIQUE*','FUTUROSCOPE','VULCANIA','PLANETE SAUVAGE','THOIRY','PAL','WALIBI','PARC SAINT PAUL','FRANCE MINIATURE','MER DE SABLE','NAUSICAA','OCEANOPOLIS','MARINELAND','AQUARIUM*','AQUABOULEVARD','AQUALAND','AQUALIBI','CENTER AQUATIQUE?','PARC DES PRINCES','STADE*?','MATCH DE FOOT?','OFFICE DE TOURISME*','OFFICE TOURISME*','MONUMENT*','ABBAYE*','GROTTE*','GOUFFRE*','CATHEDRALE','TOUR EIFFEL','PALAIS DE LA DECOUVERTE','CITE DES SCIENCES','PALAIS*?','SAINTE CHAPELLE','LOUVRE','ORSAY','CENTRE POMPIDOU','CENTRE DES MONUMENTS NATIONAUX','CMN','EXPO*','FESTIVAL*','SPECTACLE*','CABARET*','MOULIN ROUGE','LIDO','CRAZY HORSE','OLYMPIA','ZENITH','ACCOR ARENA','STADE DE FRANCE','FNAC SPECTACLES','SEE TICKETS','VIVATICKET','BILLETWEB','HELLOASSO BILLETTERIE','CINE*','CINEMAS','KINOPOLIS','PLANETE OCEAN?','PEDALO*','CANOE*','KAYAK LOCATION','LOCATION DE VELO?','SKI*','REMONTEES MECANIQUES','DOMAINE SKIABLE','FORFAIT SKI','SNOWPARK','PAINTBALL*','TIR A L ARC','EQUITATION*','CENTRE EQUESTRE','CLUB DE*?','ASSOCIATION SPORTIVE?','MJC','SALLE DE JEUX','JEUX VIDEO*','MICROSOFT XBOX?','XBOX','NINTENDO','GAMES WORKSHOP','MICROMANIA','GAMEFLY','ESPACE CULTUREL LECLERC','MAISON DE LA PRESSE','RELAY','LDLC EVENT?','LOTO*','EUROMILLIONS','ZOO*','AQUARIUM*','ACCROBRANCHE*','KARTING*','BOWLING*','LASER GAME','ESCAPE GAME','PISCINE*','PATINOIRE*','GOLF*','TENNIS*','SALLE DE SPORT','BASIC FIT','FITNESS PARK','L ORANGE BLEUE','NEONESS','KEEP COOL','STEAM','EPIC GAMES','PLAYSTATION','NINTENDO','LIBRAIRIE*','CULTURA','FURET DU NORD','MAISON DE LA PRESSE','PRESSE*','TABAC*','LOTO*','FDJ','FRANCAISE DES JEUX','PMU','WINAMAX','BETCLIC','PARIONS SPORT','PHOTOMATON','PHOTO*?','PHOTOGRAPH*?','CIRQUE*','FETE FORAINE','MANEGE*','LOISIRS*','JEUX*','CENTRE DE LOISIRS?','LICENCE*?']],
+ ['cadeaux',['JOUE CLUB','KING JOUET','LA GRANDE RECRE','SMYTHS','LEGO','CADEAU*','CADEAUX','FLEURISTE*','INTERFLORA','FLORAJET','ALLO FLEURS','COFFRET*','SMARTBOX','WONDERBOX']],
+ ['frais',['FRAIS BANCAIRES','FRAIS DE TENUE','TENUE DE COMPTE','COTISATION CARTE','COTIS CARTE','COTISATION CB','COMMISSION*','AGIOS','INTERETS DEBITEURS','FRAIS*?']],
+ ['impotsfoyer',['DGFIP','IMPOTS','IMPOT','TRESOR PUBLIC','FINANCES PUBLIQUES','TAXE FONCIERE','TAXE HABITATION','ANTAI','AMENDE*','TIMBRE*']],
+ ['epargne',['LIVRET*','LDDS','PEA','PER','PERP','ASSURANCE VIE','GENERALI VIE','LINXEA','YOMONI','NALO','TRADE REPUBLIC','DEGIRO','COINBASE','BINANCE','KRAKEN','AFER','COMPTE A TERME','CAT']],
+ /* --- hors du quotidien : simple probabilité --- */
+ ['logement',['MAIF?','MAAF?','MATMUT?','GMF?','GROUPAMA?','AXA?','ALLIANZ?','DIRECT ASSURANCE?','ASSURANCE*?']],
+ ['divers',['CRECHE*?','PERISCOLAIRE*?','ECOLE*?','GARDERIE*?','ASSISTANTE MATERNELLE?','COLLEGE*?','LYCEE*?','UNIVERSITE*?','SCOLARITE*?','PAPETERIE*?']]
+];
+/* Compilation : deux expressions par groupe, les sûres et les probables */
+const DICO_C=(()=>{
+  const motif=e=>{const a=e.startsWith('^'),s=e.replace(/^\^/,'').replace(/\*$/,'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/ /g,' ');return e.endsWith('*')?(a?'^':'(?:^| )')+s+'[A-Z0-9]*':(a?'^':'(?:^| )')+s+'(?: |$)'};
+  return DICO.map(([c,l])=>{const sur=l.filter(e=>!e.endsWith('?')), prob=l.filter(e=>e.endsWith('?')).map(e=>e.slice(0,-1));
+    return {c,sur:sur.length?new RegExp(sur.map(motif).join('|')):null,prob:prob.length?new RegExp(prob.map(motif).join('|')):null}});
+})();
+
+/* Libellé nettoyé : type d'opération, dates, numéros, code pays et ville collée retirés (« PHARM CHAILLOU »).
+   Les lettres seules sont gardées (« SUPER U »). */
+const FR_MOTS=/^FR(ANC|AIS|EE|ESH|ESC|IT|OMAG|UIT|ERE|IGO|ICHE|ONT|AGRA|ED|OID|ANP|ENCH|AMB|ANK|ANG|OG|ISE|ISB|ONDE|ANT)/;
+const TYPE_OP=new Set(['PAIEMENT','PAR','CARTE','CB','WEB','PRLV','PRELEVEMENT','SEPA','VIREMENT','VIR','EMIS','RECU','ACHAT','FACTURE','SA','SAS','SASU','SARL','EURL','EUR','UEP','DAC','SUMUP','PAYPAL','SQ','ZETTLE','IZETTLE']);
+function libelleNet(label){
+  const t=norm(String(label||'')).replace(/\bPAR CARTE(?=[A-Z])/,'PAR CARTE ').replace(/[^A-Z0-9 ]+/g,m=>m.includes('*')||m.includes('.')||m.includes("'")||m.includes('-')?' ':' ').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
+  let fin=t.length;
+  for(let k=1;k<t.length;k++){const w=t[k]; if(/^FR\d/.test(w)||(/^FR[A-Z]{2,}/.test(w)&&!FR_MOTS.test(w))||/^(IE|NL|LU|DE|GB|ES|IT|BE|US)\d/.test(w)||/^IE[A-Z]{3,}/.test(w)||/^(REF|MOTIF|RUM|ICS)$/.test(w)){fin=k;break}}
+  const w=t.slice(0,fin).filter(x=>!TYPE_OP.has(x)&&!/^\d+$/.test(x)&&(x.match(/\d/g)||[]).length<=2&&!/^\d{2,}[A-Z]?\d*$/.test(x));
+  return (w.length?w:t.filter(x=>!TYPE_OP.has(x))).join(' ').trim();
+}
+/* Suggestion du dictionnaire : {c, sur} ou null. Les probables ne sont lues que si aucune entrée sûre ne correspond.
+   Un virement n'est comparé qu'aux rubriques qui ont du sens pour lui (un prénom peut ressembler à une enseigne) ;
+   une rentrée ne l'est que si c'est un remboursement. */
+const DICO_VIR=new Set(['logement','impotsfoyer','epargne','dons','mutuelle','sante']);
+function dicoSuggest(label,amount){
+  const n=libelleNet(label)||norm(String(label||'')); if(!n) return null;
+  const brut=norm(String(label||'')), vir=/^(VIR|VIREMENT)\b/.test(brut.replace(/^(PAIEMENT|PAR|CARTE|WEB)\s+/,''));
+  if(amount>0&&!/\b(REMBOURSEMENT|REMBT|REMB|RBT|AVOIR|ANNULATION|ANNUL|RETOUR|REFUND|PREST|PRESTATION)\b/.test(brut)) return null;
+  const ok=g=>!vir||DICO_VIR.has(g.c);
+  for(const g of DICO_C) if(g.sur&&ok(g)&&g.sur.test(n)) return {c:amount>0&&g.c==='mutuelle'?'sante':g.c,sur:true};
+  for(const g of DICO_C) if(g.prob&&ok(g)&&g.prob.test(n)) return {c:g.c,sur:false};
+  return null;
+}
 /* ============ Lecture PDF ============ */
 const AMT=/^[-+]?(?:\d{1,3}(?:[ .\u00a0\u202f]\d{3})+|\d{1,7}),\d{2}(?:\s?€)?$/;
 const DATE_RE=/^(\d{2})[\/.](\d{2})(?:[\/.](\d{2}|\d{4}))?$/;
@@ -1200,7 +1293,7 @@ async function importFiles(files){
         const so=detectSolde(res.full||'',last);
         if(so&&(!a.soldeDate||so.date>=a.soldeDate)){a.solde=so.solde;a.soldeDate=so.date;a.soldeSrc='releve';stateDirty=true}
       }
-      const deja=compteur(), pris=new Set(), src=/\.csv$/i.test(f.name)?'csv':'pdf';
+      const deja=compteur(), pris=new Set(), nouvelles=[], src=/\.csv$/i.test(f.name)?'csv':'pdf';
       const atype=(acctById(rep.acct)||{}).type||'perso';
       S.douteux=S.douteux||[];
       for(const o of res.ops){
@@ -1214,8 +1307,9 @@ async function importFiles(files){
         if(j){pris.add(j.o.id);S.douteux.push({a:j.o.id,b:op.id});rep.douteux++}
         S.ops.push(op); rep.added++; rep.sample.push(op); dirtyMonths.add(o.date.slice(0,7));
         if(appliqueAuto(op,atype)) stateDirty=true;
-        if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const c=kwSuggest(op.merchant,op.label,atype,op.amount); if(c){S.sugg[op.merchant]={c,src:'kw'};stateDirty=true}}
+        nouvelles.push(op);
       }
+      classerNouvelles(nouvelles);
     }catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
     if(rep.added||rep.completees){S.imports=S.imports||{};S.imports[rep.imp]={nom:f.name,quand:Date.now()};stateDirty=true}
     reports.unshift(rep);
@@ -1223,6 +1317,118 @@ async function importFiles(files){
   if(!S.since&&S.ops.length) S.since=Date.now();
   S.ops.sort((a,b)=>a.date<b.date?1:-1);
   P=null; save(); render();
+}
+/* ============ Classement automatique après un import ============
+   Objectif : quelques questions au plus (5), tout le reste classé sans rien demander.
+   - « sûr »   : une règle de l'utilisateur, une reconnaissance d'office ou une entrée sûre du dictionnaire ;
+   - « deviné » : meilleure hypothèse, rangée automatiquement et modifiable d'un geste (mention « classé automatiquement ») ;
+   - question  : seulement les marchands qui pèsent le plus, sans réponse fiable, dans la limite de 5.
+   Une règle apprise (S.rules) passe toujours avant le classement automatique (S.auto). */
+const MAX_QUESTIONS=5, SEUIL_QUESTION=30;
+const cleAuto=o=>o.merchant+(o.amount>0?'|+':'|-');
+/* On ne classe en silence que ce qui est perso : dépenses d'un compte perso ou d'un compte qui sert à tout, et rentrées d'un compte perso */
+const silenceOk=(atype,amount)=>atype==='perso'||(atype==='mixte'&&amount<0);
+/* 's' (sûr), 'd' (deviné) ou null : d'où vient la rubrique d'une opération */
+function sourceAuto(o){
+  if(o.cat||!S.auto) return null;
+  const dk=cleAuto(o); if(S.rules[dk]||S.rules[o.merchant]) return null;
+  const a=S.auto[dk]||S.auto[o.merchant]; return a&&catOf(o)?a.q:null;
+}
+/* Meilleure proposition pour une opération : dictionnaire d'abord, puis les mots-clés déjà connus */
+/* Virement vers un de ses propres comptes : « Avec BforBank », ou un IBAN sans aucun nom. Jamais une question : rangé en « Virements entre vos comptes ». */
+const VIR_INTERNE=/\bAVEC\s+(?:[A-Z]+\s+)?(?:BANK|BANQUE|BFORBANK|BOURSO\w*|FORTUNEO|HELLO\s*BANK|REVOLUT|N26|QONTO|SHINE)\b|^(?:VIREMENT|VIR)(?:\s+(?:INSTANTANE|SEPA|EMIS|RECU))*\s+FR\d{2}[0-9A-Z ]{10,}\s*\w{0,12}$/;
+function propositionPour(o,atype){
+  /* Sur un compte pro, le dictionnaire ne range rien d'office, mais ses rubriques perso (loisirs, courses…) valent comme proposition */
+  let dic=dicoSuggest(o.label,o.amount);
+  if(atype==='pro'){ const c=dic&&catById(dic.c); dic=c&&c.univers==='perso'&&o.amount<0?{c:dic.c,sur:false,pro:true}:null }
+  if(dic&&dic.sur) return dic;
+  if(atype!=='pro'&&VIR_INTERNE.test(norm(o.label))) return {c:'interne',sur:false};
+  const kw=kwSuggestX(o.merchant,o.label,atype,o.amount);
+  if(kw&&kw.sur) return kw;
+  return dic||kw||null;
+}
+/* Range les opérations qui viennent d'être ajoutées. Renvoie {questions, sures, devinees}. */
+function classerNouvelles(ops){
+  S.auto=S.auto||{};
+  const g={};
+  for(const o of ops){ if(catOf(o)) continue;
+    const k=cleAuto(o), e=g[k]||(g[k]={k,m:o.merchant,ops:[],total:0,at:acctType(o),cred:o.amount>0});
+    e.ops.push(o); e.total+=Math.abs(o.amount) }
+  const candidats=[]; let sures=0;
+  for(const e of Object.values(g)){
+    const o=e.ops[0], p=propositionPour(o,e.at);
+    if(!silenceOk(e.at,o.amount)){ if(p&&!S.sugg[e.m]) S.sugg[e.m]={c:p.c,src:'kw'}; continue }
+    /* Une rentrée n'est rangée sans question que si c'est clairement du perso ou un remboursement */
+    if(p&&p.c==='interne'){ S.auto[e.k]={c:'interne',q:'d'}; continue }
+    const rentreeSure=!e.cred||['rentrees','retraite','salaire','sante'].includes(p&&p.c)||(p&&p.sur&&typeOf(p.c)!=='income');
+    if(p&&p.sur&&rentreeSure){ S.auto[e.k]={c:p.c,q:'s'}; sures++; continue }
+    candidats.push({e,p});
+  }
+  /* Les plus gros marchands sans réponse fiable sont demandés (5 au plus, en comptant ceux qui attendent déjà) */
+  const enAttente=new Set(candidats.map(c=>c.e.m));
+  const deja=pendingGroups().filter(x=>!enAttente.has(x.m.replace(/\|[+-]$/,''))).length;
+  let reste=Math.max(0,MAX_QUESTIONS-deja), demandes=0, montantDemande=0, montantTotal=0;
+  candidats.sort((a,b)=>b.e.total-a.e.total);
+  for(const {e,p} of candidats){
+    montantTotal+=e.total;
+    if(reste>0&&(e.total>=SEUIL_QUESTION||e.ops.length>=3)){
+      reste--; demandes++; montantDemande+=e.total;
+      if(p&&!S.sugg[e.m]) S.sugg[e.m]={c:p.c,src:'kw'};
+    } else S.auto[e.k]={c:p&&!(e.cred&&p.c==='revenus')?p.c:(e.cred?'rentrees':'divers'),q:'d'};
+  }
+  S.lastClassement={questions:demandes,part:montantTotal>0?Math.round(montantDemande/montantTotal*100):100,quand:Date.now()};
+  stateDirty=true;
+  return {questions:demandes,sures,devinees:candidats.length-demandes};
+}
+/* Marchands rangés par supposition, du plus gros montant au plus petit */
+function devinees(){
+  const g={};
+  for(const o of S.ops){ if(o.src==='rev'||sourceAuto(o)!=='d') continue;
+    const k=(S.auto[cleAuto(o)]?cleAuto(o):o.merchant), e=g[k]||(g[k]={k,label:o.label,n:0,total:0,c:S.auto[k].c});
+    e.n++; e.total+=o.amount }
+  return Object.values(g).sort((a,b)=>Math.abs(b.total)-Math.abs(a.total));
+}
+/* Reclassement des opérations déjà là avec le dictionnaire à jour : seules les suppositions (« classé automatiquement », y compris « Divers ») et les opérations encore « à vérifier »
+   sont refaites ; une règle de l'utilisateur ou un classement sûr n'est jamais touché. Renvoie le nombre d'opérations changées. */
+function reclasserDevinees(){
+  S.auto=S.auto||{};
+  const ops=S.ops.filter(o=>o.src!=='rev'&&(sourceAuto(o)==='d'||!catOf(o))); if(!ops.length) return 0;
+  const avant=new Map(ops.map(o=>[o.id,catOf(o)]));
+  for(const o of ops){ delete S.auto[cleAuto(o)]; delete S.auto[o.merchant]; if(!catOf(o)) delete S.sugg[o.merchant] }
+  classerNouvelles(ops);
+  const n=ops.filter(o=>catOf(o)!==avant.get(o.id)).length;
+  ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7))); stateDirty=true; save(); render();
+  return n;
+}
+/* « Tout valider » : chaque supposition devient une règle, donnée une seule fois */
+function validerDevinees(){
+  for(const d of devinees()){ S.rules[d.k]=d.c; delete S.auto[d.k] }
+  S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7))); stateDirty=true; save(); render();
+}
+function validerSuggestions(){
+  for(const x of pendingGroups()){ const s=S.sugg[x.m.replace(/\|[+-]$/,'')]; if(s&&catById(s.c)) setRule(x.m,s.c) }
+  render();
+}
+/* « Je ne sais pas » : rangé automatiquement, sans rien apprendre de définitif */
+function jeNeSaisPas(m){
+  const cred=/\|\+$/.test(m)||pendingGroups().some(x=>x.m===m&&x.credit);
+  S.auto=S.auto||{}; S.auto[m]={c:cred?'rentrees':'divers',q:'d'}; stateDirty=true; save(); render();
+}
+/* Deux autres rubriques probables : les plus utilisées par l'utilisateur pour ce sens, sinon des valeurs courantes */
+function rubriquesProbables(x,exclure){
+  const cnt={}; for(const o of S.ops){ if((o.amount>0)!==x.credit) continue; const c=catOf(o); if(!c||c==='_pending'||typeOf(c)==='transfer'||typeOf(c)==='remu') continue; const k=catById(c); if(!k||k.univers==='pro') continue; cnt[c]=(cnt[c]||0)+1 }
+  const defaut=x.credit?['rentrees','remb','retraite']:['courses','resto','shopping','transport'];
+  return [...Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]),...defaut].filter((c,i,t)=>t.indexOf(c)===i&&!exclure.includes(c)&&catById(c)&&(!x.credit||typeOf(c)==='income'||c==='remb')).slice(0,2);
+}
+/* Part des dépenses classées, sur une période : {ok, devine, attente} en % des montants */
+function partClassee(p){
+  const [a,z]=bounds(p); let ok=0,dv=0,att=0;
+  for(const k of monthKeys(a,z)) for(const o of (BYMONTH[k]||[])){
+    if(o.amount>=0||o.src==='rev'||(INTERNAL[o.id]&&!o.cat)) continue;
+    const c=catOf(o), v=-o.amount;
+    if(!c) att+=v; else if(typeOf(c)==='transfer') continue; else if(sourceAuto(o)==='d') dv+=v; else ok+=v }
+  const t=ok+dv+att; if(t<=0) return null;
+  return {classe:Math.round((ok+dv)/t*100),devine:Math.round(dv/t*100),attente:Math.round(att/t*100)};
 }
 /* ============ Périodes ============ */
 function defaultPeriod(){
@@ -1359,7 +1565,7 @@ function mergeCats(saved){
 /* Les champs inconnus sont conservés tels quels, puis la migration de schéma s'applique */
 let MIGRATED=false;
 function merge(x){
-  const st={...x,schemaVersion:x.schemaVersion||1,accounts:x.accounts||[],categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]};
+  const st={...x,schemaVersion:x.schemaVersion||1,accounts:x.accounts||[],categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},auto:x.auto||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]};
   if(!st.since&&st.ops.length){st.since=Date.now();MIGRATED=true}
   if(!st.masked) st.masked={};
   if(!st.douteux) st.douteux=[];
@@ -1536,8 +1742,9 @@ async function flush(){
 }
 function setStatus(s){
   saveState=s||saveState;
-  const t={saving:'Enregistrement…',saved:'Enregistré',local:'Enregistré sur cet appareil',error:'Échec de l’enregistrement, nouvel essai à la prochaine modification',quota:'Espace de stockage plein'}[saveState]||'';
+  const t={saving:'Enregistrement…',saved:'Enregistré',local:'Vos données sont gardées sur cet appareil uniquement',error:'Échec de l’enregistrement, nouvel essai à la prochaine modification',quota:'Espace de stockage plein'}[saveState]||'';
   $('#status').textContent=demo?'Exemple, rien n’est enregistré':t;
+  majSauvegardeEntete();
 }
 function migrate(){
   let ch=false; const old=new Set();
@@ -1616,9 +1823,9 @@ function render(){
   $('#tabs').innerHTML=onb?'':TABS.map(([k,l,ic])=>`<button data-tab="${k}" aria-current="${view===k}"><i data-lucide="${ic}"></i><span>${l}${k==='operations'&&nv?`<span class="badge" aria-label="${nv} à vérifier">${nv}</span>`:''}</span></button>`).join('');
   $('#demoBar').innerHTML=demo?`<div class="demo-bar"><span>Vous regardez un exemple.</span><button data-act="exitdemo">Quitter l’exemple</button></div>`:'';
   const v=$('#view');
-  if(onb) v.innerHTML=vDemarrage();
+  if(onb&&view!=='aide') v.innerHTML=vDemarrage();
   else if(!S.ops.length&&['accueil','bilan','operations'].includes(view)) v.innerHTML=libBanner()+vide();
-  else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,objectifs:vObjectifs,reglages:vReglages}[view]();
+  else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,objectifs:vObjectifs,reglages:vReglages,aide:vAide}[view]();
   if(view!=='bilan') BCAT=null;
   v.insertAdjacentHTML('beforeend',(FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'')+(NEWCAT?fenetreRubrique():'')+(MODAL?fenetreModal():''));
   document.body.classList.toggle('fige',!!(FICHE||BCAT||NEWCAT||MODAL));
@@ -1631,7 +1838,8 @@ function privacyText(){return mode==='db'
 function privacyBox(){return `<div class="note-box" role="note"><i data-lucide="lock"></i><p>${privacyText()}</p></div>`}
 function vide(){
   return `<div class="vide"><h2>Ajoutez vos relevés pour commencer</h2><p>Téléchargez vos relevés de compte en PDF sur le site de votre banque, puis ajoutez-les ici.</p>
-  <div class="boutons"><button class="btn" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div></div>`;
+  <div class="boutons"><button class="btn" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div>
+  <p class="lien-aide"><button class="lien" data-tab="aide"><i data-lucide="circle-help"></i>Comment ça marche ? Voir le mode d’emploi</button></p></div>`;
 }
 function moisBar(){
   return `<div class="mois"><button class="fleche" data-shift="-1" aria-label="Mois précédent"><i data-lucide="chevron-left"></i></button>
@@ -1667,26 +1875,59 @@ function lignesGroupe(x){
     ${x.ops.slice().sort((a,b)=>a.date<b.date?-1:1).map(o=>`<div class="ligne-grp"><p class="lg-t"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span> ${esc(o.label)} <b class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</b></p>
       <select class="grand" data-opcat="${o.id}" data-gk="${esc(x.m)}" aria-label="Rubrique de cette ligne"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',false)}</select></div>`).join('')}</details>`;
 }
-function aVerifier(){
-  const g=pendingGroups(), dv=douteuxValides(), n=g.length+dv.length; if(!n) return '';
-  return `<section class="carte verifier"><h3>À vérifier <span class="compte">(${n})</span></h3>
-  <p class="aide">Une seule réponse par marchand : elle vaudra pour toutes ses opérations, passées et futures.</p>
-  ${dv.map((d,i)=>{const a=BYID[d.a],b=BYID[d.b],L=o=>`<span class="pv"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span><span>${esc(o.label)}${o.src==='paste'?' <em>copier-coller</em>':' <em>relevé</em>'}</span><span class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></span>`;
-    return `<div class="question"><p class="q-question">Ces 2 opérations sont-elles les mêmes ?</p><div class="apercu">${L(a)}${L(b)}</div>
-    <div class="choix gros"><button class="choix-btn" data-dout="${i}:1">Oui, c’est la même : n’en garder qu’une</button><button class="choix-btn" data-dout="${i}:0">Non, ce sont deux opérations</button></div></div>`}).join('')}
-  ${g.map(x=>x.credit&&x.accts.some(id=>acctById(id)?.type==='mixte')?`<div class="question client-q"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
-    <p class="q-s">${x.n>1?`${x.n} rentrées, ${eur(x.total)} au total`:`Rentrée de ${eur(x.total)}`}. ${esc(x.label)}</p>
-    ${lienRecherche(x.label)}
-    <p class="q-question">Cet argent vient-il d’un client ?</p>
-    ${lignesGroupe(x)}
-    <div class="choix gros"><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="revenus">Oui, c’est un client</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="rentrees">Non (CAF, vente, remboursement, virement perso…)</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="epargne">Retrait d’épargne</button></div></div>`:`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
-    <p class="q-s">${x.n>1?`${x.n} ${x.credit?'rentrées':'dépenses'}, ${eur(Math.abs(x.total))} au total`:`${x.credit?'Rentrée de':'Dépense de'} ${eur(Math.abs(x.total))}`}. ${esc(x.label)}</p>
-    ${lienRecherche(x.label)}
-    ${lignesGroupe(x)}
-    <div class="choix">${choixRubriques(x)}</div>
+/* Questions : une carte à la fois, la suggestion en premier ; puis ce qui a été rangé par supposition */
+let WIZ={total:0,later:false}, DEV_OUVERT=false;
+function carteQuestion(x){
+  const base=x.m.replace(/\|[+-]$/,''), sug=S.sugg[base]&&catById(S.sugg[base].c)?S.sugg[base].c:null;
+  const types=[...new Set(x.accts.map(id=>acctById(id)?.type||'perso'))];
+  const compact=!x.credit?types.every(t=>t==='perso'||t==='mixte'):types.every(t=>t==='perso');
+  const ex=[...new Set(x.ops.map(o=>o.label))].slice(0,2).map(l=>`<p class="q-ex">${esc(l.length>70?l.slice(0,70)+'…':l)}</p>`).join('');
+  const tete=`<p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
+    <p class="q-s">${x.n>1?`${x.n} ${x.credit?'rentrées':'dépenses'}, ${eur(Math.abs(x.total))} au total`:`${x.credit?'Rentrée de':'Dépense de'} ${eur(Math.abs(x.total))}`}</p>${ex}${lienRecherche(x.label)}`;
+  if(!compact) return `<div class="question">${tete}${lignesGroupe(x)}<div class="choix">${choixRubriques(x)}</div>
     <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details>
-    ${!x.credit&&x.accts.some(id=>['pro','mixte'].includes(acctById(id)?.type))?`<details class="autre"><summary>Dépense perso</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique perso pour ${esc(x.m)}"><option value="">Dans quelle rubrique perso ?</option>${optionsPerso()}</select></details>`:''}</div>`).join('')}
-  </section>`;
+    ${!x.credit&&x.accts.some(id=>['pro','mixte'].includes(acctById(id)?.type))?`<details class="autre"><summary>Dépense perso</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique perso pour ${esc(x.m)}"><option value="">Dans quelle rubrique perso ?</option>${optionsPerso()}</select></details>`:''}</div>`;
+  const ids=[...(sug?[sug]:[]),...rubriquesProbables(x,sug?[sug]:[])].slice(0,3);
+  const btn=(c,i)=>`<button class="choix-btn gros-q${c===sug?' suggere':''}" data-qcat="${esc(x.m)}" data-c="${c}">${esc(x.credit&&c==='rentrees'?'Autre rentrée':x.credit&&c==='remb'?'Un remboursement':catById(c).name)}</button>`;
+  return `<div class="question">${tete}${lignesGroupe(x)}
+    <div class="choix">${ids.map(btn).join('')}
+      <details class="autre gros-q-d"><summary class="gros-q">Autre rubrique…</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details>
+      <button class="choix-btn gros-q" data-idk="${esc(x.m)}">Je ne sais pas</button></div></div>`;
+}
+function aVerifier(){
+  const g=pendingGroups(), dv=douteuxValides(), n=g.length+dv.length, dev=devinees();
+  if(n===0) WIZ={total:0,later:false}; else WIZ.total=Math.max(WIZ.total,n);
+  if(!n&&!dev.length) return '';
+  const avecSug=g.filter(x=>S.sugg[x.m.replace(/\|[+-]$/,'')]).length, lc=S.lastClassement;
+  let h='';
+  if(n){
+    if(WIZ.later) h+=`<section class="carte verifier"><p class="phrase">${n} question${n>1?'s':''} en attente.</p><button class="btn" data-act="wizresume">Reprendre</button></section>`;
+    else {
+      const fait=WIZ.total-n+1;
+      h+=`<section class="carte verifier"><div class="wiz-tete"><h3>À vérifier <span class="compte">(${n})</span></h3><button class="lien" data-act="wizlater">Terminer plus tard</button></div>
+      <div class="wiz-barre" role="progressbar" aria-valuemin="0" aria-valuemax="${WIZ.total}" aria-valuenow="${fait}"><span style="width:${Math.round((fait-1)/WIZ.total*100)}%"></span></div>
+      <p class="aide">Question ${fait} sur ${WIZ.total}. Votre réponse vaut pour toutes les opérations de ce marchand, passées et futures.${lc&&lc.questions&&lc.part<100?` Ces marchands couvrent ${lc.part} % des montants : le reste est classé automatiquement.`:''}</p>
+      ${dv.length?dv.slice(0,1).map((d,i)=>{const a=BYID[d.a],b=BYID[d.b],L=o=>`<span class="pv"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span><span>${esc(o.label)}${o.src==='paste'?' <em>copier-coller</em>':' <em>relevé</em>'}</span><span class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></span>`;
+        return `<div class="question"><p class="q-question">Ces 2 opérations sont-elles les mêmes ?</p><div class="apercu">${L(a)}${L(b)}</div>
+        <div class="choix gros"><button class="choix-btn" data-dout="${i}:1">Oui, c’est la même : n’en garder qu’une</button><button class="choix-btn" data-dout="${i}:0">Non, ce sont deux opérations</button></div></div>`}).join('')
+      :g.slice(0,1).map(x=>x.credit&&x.accts.some(id=>acctById(id)?.type==='mixte')?`<div class="question client-q"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
+        <p class="q-s">${x.n>1?`${x.n} rentrées, ${eur(x.total)} au total`:`Rentrée de ${eur(x.total)}`}. ${esc(x.label)}</p>
+        ${lienRecherche(x.label)}
+        <p class="q-question">Cet argent vient-il d’un client ?</p>
+        ${lignesGroupe(x)}
+        <div class="choix gros"><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="revenus">Oui, c’est un client</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="rentrees">Non (CAF, vente, remboursement, virement perso…)</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="epargne">Retrait d’épargne</button></div></div>`:carteQuestion(x)).join('')}
+      ${avecSug>1?`<button class="btn secondaire" data-act="validall">Tout valider (${avecSug} suggestion${avecSug>1?'s':''})</button>`:''}</section>`;
+    }
+  }
+  if(dev.length){
+    const tot=dev.reduce((t,d)=>t+Math.abs(d.total),0);
+    h+=`<details class="carte repli devinees"${DEV_OUVERT?' open':''}><summary>Classé automatiquement : ${dev.length} marchand${dev.length>1?'s':''}, ${eur0(tot)}</summary>
+    <p class="aide">Ces marchands n’étaient pas reconnus : ils sont rangés d’après la meilleure hypothèse. Corrigez seulement ce qui est faux.</p>
+    ${dev.slice(0,40).map(d=>`<div class="ligne-grp"><p class="lg-t"><span>${esc(ruleName(d.k).replace(/ \((dépenses|rentrées)\)$/,''))}</span> <b class="${d.total>0?'cr':''}">${d.total>0?'+':'−'}${eur(Math.abs(d.total))}</b></p>
+      <select class="grand" data-devsel="${esc(d.k)}" aria-label="Rubrique de ${esc(d.k)}">${catOptions(d.c,false,'',false)}</select>${lienRecherche(d.label)}</div>`).join('')}
+    <button class="btn" data-act="valdev">Tout valider</button></details>`;
+  }
+  return h;
 }
 let HEURES=null;
 /* Sous un encaissement de l'activité : son équivalent en heures au prix minimum, et le temps réellement passé */
@@ -1703,7 +1944,7 @@ function heuresBloc(o,statique){
 function opLine(o,statique){
   statique=statique===true; /* attention : .map(opLine) passe le rang en second paramètre */
   const c=catOf(o), x=o.src==='rev'?'Fichier de revenus':opExtra(o);
-  const nom=INTERNAL[o.id]&&!o.cat?'Virement entre vos comptes':c?catById(c)?.name||'':'À vérifier';
+  const auto=sourceAuto(o), nom=(INTERNAL[o.id]&&!o.cat?'Virement entre vos comptes':c?catById(c)?.name||'':'À vérifier')+(auto?' · classé automatiquement':'');
   const tag=statique?'div':'button', hb=heuresBloc(o,statique);
   const ligne=`<${tag} class="op"${statique?'':` data-op="${o.id}"`}><span class="op-l1"><span class="op-m">${esc(o.merchant)}</span><span class="op-amt${o.amount>0?' cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></span>
     <span class="op-l2">${o.date.slice(8,10)}/${o.date.slice(5,7)} · ${esc(nom)}${ACCN>1&&o.src!=='rev'?` · ${esc(acctName(o.acct))}`:''}</span>${x?`<span class="op-x">${esc(x)}</span>`:''}</${tag}>`;
@@ -1720,8 +1961,11 @@ function totalRecherche(list){
 }
 function vOps(){
   const t=norm(q.trim()), k=P.y+'-'+pad(P.m);
-  const list=t?S.ops.filter(o=>norm(o.label+' '+o.merchant).includes(t)):(BYMONTH[k]||[]).slice().sort((a,b)=>a.date<b.date?1:-1);
-  return aVerifier()+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand" value="${esc(q)}" aria-label="Rechercher un marchand">
+  /* Recherche : marchand, libellé, rubrique, ou somme (« 45,80 », « 45.8 », « 45 ») */
+  const som=/^[+\-−]?\d+([.,]\d{1,2})?\s*(€|eur|euros?)?$/i.test(q.trim())?q.trim().replace(/^[+\-−]/,'').replace(/\s*(€|eur|euros?)$/i,'').replace('.',','):'';
+  const okSom=o=>{if(!som) return false; const a=Math.abs(o.amount).toFixed(2).replace('.',','); return som.includes(',')?a.startsWith(som):a.split(',')[0]===som};
+  const list=t?S.ops.filter(o=>norm(o.label+' '+o.merchant+' '+((catById(catOf(o))||{}).name||'')).includes(t)||okSom(o)):(BYMONTH[k]||[]).slice().sort((a,b)=>a.date<b.date?1:-1);
+  return aVerifier()+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand ou une somme" value="${esc(q)}" aria-label="Rechercher un marchand ou une somme">
   ${t?`<p class="aide">${list.length} opération${list.length>1?'s':''} trouvée${list.length>1?'s':''}, tous mois confondus.</p>${totalRecherche(list)}`:moisBar()}
   <div class="ops">${list.slice(0,300).map(opLine).join('')||'<p class="aide">Aucune opération.</p>'}</div>
   ${list.length>300?'<p class="aide">Seules les 300 plus récentes sont affichées.</p>':''}`;
@@ -1838,7 +2082,8 @@ function choixTypeImport(){
 }
 function vImport(){
   const nRev=S.ops.filter(o=>o.src==='rev').length;
-  return privacyBox()+`<section class="carte">
+  return privacyBox()+`<div class="note-box" role="note"><i data-lucide="info"></i><p>Le premier mois est un peu long : l’application vous pose quelques questions. Ensuite, environ 90 % du travail n’est plus à faire : elle retient vos réponses et reconnaît les enseignes toute seule. <button class="lien" data-tab="aide">Voir le mode d’emploi</button></p></div>
+  <section class="carte">
   ${choixTypeImport()}
   <label class="gros-bouton" data-drop="bank"><input type="file" id="file" accept=".pdf,.csv,application/pdf,text/csv" multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
   <p class="aide">Des relevés PDF, plusieurs à la fois, même de banques différentes. Ce qui est déjà importé est ignoré.</p>
@@ -1978,14 +2223,14 @@ function ajouterColle(){
   const c=COLLE; let acct=c.acct;
   if(acct==='__new'){const n=(prompt('Nom du compte (par exemple « Crédit Agricole »)')||'').trim();if(!n)return;acct=addAccount({name:n.slice(0,40),bank:detectBank(n)||'',type:guessType(detectBank(n)||'','',n)}).id}
   const L=classeCollage(parseCollage(c.texte,c.signe).ops,acct), imp=Math.random().toString(36).slice(2,9), atype=(acctById(acct)||{}).type||'perso';
-  let added=0; S.douteux=S.douteux||[];
+  let added=0; S.douteux=S.douteux||[]; const nouvelles=[];
   for(const o of L){ if(o.etat==='deja') continue;
     const op={id:Math.random().toString(36).slice(2,10),date:o.date,label:o.label,amount:o.amount,merchant:merchantOf(o.label),acct,imp,src:'paste'};
     S.ops.push(op); added++; dirtyMonths.add(op.date.slice(0,7));
     if(o.etat==='doute') S.douteux.push({a:o.twin,b:op.id});
-    appliqueAuto(op,atype);
-    if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const k=kwSuggest(op.merchant,op.label,atype,op.amount);if(k)S.sugg[op.merchant]={c:k,src:'kw'}}
+    appliqueAuto(op,atype); nouvelles.push(op);
   }
+  classerNouvelles(nouvelles);
   const a=acctById(acct);
   if(added){S.imports=S.imports||{};S.imports[imp]={nom:'Copier-coller du '+new Date().toLocaleDateString('fr-FR'),quand:Date.now()}}
   reports.unshift({name:'Copier-coller',colle:true,bank:a?a.name:'',acct,found:L.length,added,dups:L.filter(o=>o.etat==='deja').length,completees:0,douteux:L.filter(o=>o.etat==='doute').length,sample:[],lus:L.map(o=>({...o,dup:o.etat==='deja'})),raw:'',imp,test:false});
@@ -2357,6 +2602,27 @@ function openReview(y){
 }
 /* ============ Sauvegarde ============ */
 let backupMsg='';
+/* Sous l'état de l'enregistrement : quand la dernière sauvegarde a eu lieu, et le bouton pour la mettre dans un dossier Cloud */
+function majSauvegardeEntete(){
+  const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
+  b.hidden=!!demo; l.hidden=!!demo;
+  const t=typeof S!=='undefined'&&S&&S.lastBackup;
+  l.textContent=t?'Dernière sauvegarde : '+new Date(t).toLocaleDateString('fr-FR'):'Jamais sauvegardé';
+}
+/* Chrome et Edge sur ordinateur : on choisit directement le dossier (Google Drive, iCloud, Dropbox…). Ailleurs, le fichier est téléchargé. */
+async function sauvegardeCloud(){
+  const data=JSON.stringify({app:SAL?'mon-compte':'mes-comptes',version:1,date:new Date().toISOString(),data:S});
+  const name=`${SAL?'mon-compte':'mes-comptes'}-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
+  if(window.showSaveFilePicker){
+    try{
+      const h=await showSaveFilePicker({suggestedName:name,types:[{description:'Sauvegarde',accept:{'application/json':['.json']}}]});
+      const w=await h.createWritable(); await w.write(data); await w.close();
+      S.lastBackup=Date.now(); save(); backupMsg='Sauvegarde enregistrée dans le dossier choisi ✓'; majSauvegardeEntete(); alert(backupMsg); if(view==='reglages') render(); return;
+    }catch(e){ if(e&&e.name==='AbortError') return; }
+  }
+  await backup_();
+  alert('Sauvegarde téléchargée. Déposez maintenant ce fichier dans votre dossier Cloud (Google Drive, iCloud, Dropbox…).');
+}
 async function backup_(){
   const data=JSON.stringify({app:SAL?'mon-compte':'mes-comptes',version:1,date:new Date().toISOString(),data:S});
   const name=`${SAL?'mon-compte':'mes-comptes'}-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
@@ -2365,7 +2631,7 @@ async function backup_(){
     if(dl){await dl.save({filename:name,data});S.lastBackup=Date.now();save();backupMsg='Sauvegarde enregistrée.';render();return}
   }catch(e){backupMsg='Sauvegarde annulée.';render();return}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();
-  S.lastBackup=Date.now();save();backupMsg='Sauvegarde téléchargée. Gardez ce fichier en lieu sûr.';render();
+  S.lastBackup=Date.now();save();backupMsg='Sauvegarde téléchargée. Gardez ce fichier en lieu sûr.';majSauvegardeEntete();render();
 }
 async function restore_(file){
   try{
@@ -2432,6 +2698,13 @@ document.addEventListener('click',async e=>{
   if(d.act==='relancer'){S.onboarded=false;ONB=0;save();render();window.scrollTo({top:0});return}
   if(d.tab){aller(d.tab,d.ancre);return}
   if(d.scroll){const el=document.getElementById(d.scroll);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});return}
+  if(d.act==='wizlater'){WIZ.later=true;render();return}
+  if(d.act==='wizresume'){WIZ.later=false;render();return}
+  if(d.act==='validall'){validerSuggestions();return}
+  if(d.act==='valdev'){validerDevinees();return}
+  if(d.act==='reclasser'){const n=reclasserDevinees(), r=pendingGroups().length;alert((n?n+' opération'+(n>1?'s':'')+' reclassée'+(n>1?'s':'')+' avec le dictionnaire à jour.':'Aucune opération n’a changé de rubrique.')+'\n\nIl reste '+r+' marchand'+(r>1?'s':'')+' à vérifier.\n(Dictionnaire du 30 septembre, version 3)');return}
+  if(d.idk){jeNeSaisPas(d.idk);return}
+  if(d.act==='cloud'){sauvegardeCloud();return}
   if(d.imptype){IMPTYPE=IMPTYPE===d.imptype?null:d.imptype;render();return}
   if(d.alvl){AL=d.alvl;openCat=null;render();return}
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
@@ -2490,6 +2763,7 @@ document.addEventListener('change',e=>{
   const t=e.target, d=t.dataset;
   if(d.rule){S.rules[d.rule]=t.value;save();render();return}
   if(d.limite||d.limper){const id=d.limite||d.limper,c=catById(id);if(!c)return;const row=t.closest('.limite-reg');const v=+row.querySelector('[data-limite]').value||0, per=row.querySelector('[data-limper]').value;c.limite=v>0?{montant:v,per}:null;save();return}
+  if(d.devsel){if(t.value){DEV_OUVERT=true;setRule(d.devsel,t.value);if(S.auto)delete S.auto[d.devsel];render()}return}
   if(d.opcat){const o=BYID[d.opcat];if(o&&t.value){LIGNES.add(d.gk);o.cat=t.value;dirtyMonths.add(o.date.slice(0,7));stateDirty=true;save();render()}return}
   if(d.moveimp){deplacerReleve(d.moveimp,t.value);return}
   if(d.qsel){if(t.value==='__new'){t.value='';ouvrirRubrique({de:'question',m:d.qsel});return}if(t.value){setRule(d.qsel,t.value);render()}return}
@@ -2734,7 +3008,6 @@ function conseils(){
   const tr=tresoPro(), du=resteAProvisionner();
   if(tr&&tr.t!=null&&du.du>0&&tr.t<du.du) out.push({lvl:'ko',t:`Votre compte pro ne contient pas assez pour ce qui doit être mis de côté : il manque ${eur0(du.du-tr.t)}.`,go:'data-tab="reglages" data-ancre="avances"'});
   if(X.provision>0) out.push({lvl:'',t:`Pensez à garder ${eur0(X.provision)} de côté pour vos cotisations et impôts ce mois-ci.`,go:'data-scroll="activite"'});
-  const n=nbAVerifier(); if(n) out.push({lvl:'',t:`${n} opération${n>1?'s':''} à vérifier.`,go:'data-tab="operations"'});
   const w=waitingReturns().filter(o=>(Date.now()-new Date(o.date))/864e5>30);
   if(w.length) out.push({lvl:'',t:`${w.length>1?`${w.length} remboursements attendus`:'Un remboursement attendu'} depuis plus de 30 jours : ${eur0(-w.reduce((s,o)=>s+o.amount,0))}.`,go:`data-op="${w[0].id}"`});
   if(!demo&&S.ops.length){const j=Math.floor((Date.now()-(S.lastBackup||S.since||Date.now()))/864e5);if(j>=30)out.push({lvl:'',t:'Pensez à sauvegarder vos données.',go:'data-tab="reglages" data-ancre="donnees"'})}
@@ -2765,6 +3038,14 @@ function balanceSalarie(Pe,p){
     <div class="ligne"><span>Ce que vous avez dépensé</span><b>${dep>0.005?'−'+eur0(dep):eur0(0)}</b></div>
     <div class="ligne total ${b>=0?'ok':'ko'}"><span>Balance ${TERME_PER[p.lvl]}</span><b>${signed(b)}</b></div>
     <p class="aide">${b>=0?`Vous avez dépensé moins que ce qui est entré : ${eur0(b)} de côté.`:`Vous avez dépensé ${eur0(-b)} de plus que ce qui est entré.`}${ep>0.005?` À part, ${eur0(ep)} versés sur votre épargne.`:ep<-0.005?` À part, ${eur0(-ep)} repris sur votre épargne.`:''}</p></div>`;
+}
+/* Ce qui est classé : une phrase rassurante, et ce qu'il reste à faire s'il reste des questions */
+function lienAide(){return `<p class="lien-aide"><button class="lien" data-tab="aide"><i data-lucide="circle-help"></i>Comment ça marche ? Voir le mode d’emploi</button></p>`}
+function blocClassement(PA){
+  const pc=partClassee(PA), nq=pendingGroups().length; if(!pc&&!nq) return '';
+  const min=Math.max(1,Math.ceil(nq/2));
+  return `<section class="carte classement">${pc?`<p class="phrase">Vos dépenses sont classées à ${pc.classe} %.${pc.devine>=5?` ${pc.devine} % sont des suppositions, à vérifier si vous voulez.`:''}</p>`:''}
+    ${nq?`<p class="aide">${nq} marchand${nq>1?'s':''} à classer (${min} minute${min>1?'s':''}).</p><button class="btn" data-tab="operations">Classer maintenant</button>`:''}</section>`;
 }
 /* Période affichée sur l'Accueil : mois, trimestre ou année (le mois P sert de repère) */
 let AL='M';
@@ -2798,7 +3079,7 @@ function vAccueil(){
   else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ${mens?'ce mois-ci':'sur cette période'}.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p>${balanceBloc(0,Pe,PA)}</section>`;
   if(SAL) gagne=Pe.any?`<section class="carte gagne"><h3>Votre ${mens?'mois':AL==='Q'?'trimestre':'année'}</h3>${balanceBloc(0,Pe,PA)}</section>`:'';
   const q=S.accounts.filter(a=>!a.confirmed);
-  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
+  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+lienAide()+periodeBarAccueil(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
     <p class="phrase">${eur0(Pe.net)} dépensés côté perso</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
@@ -2814,6 +3095,34 @@ function vAccueil(){
 }
 /* ============ Réglages ============ */
 const CONSEIL_TAUX='Souvent entre 25 et 45 % selon votre statut. En cas de doute, renseignez-vous auprès de votre centre de formalités ou d’un conseiller.';
+/* Mode d'emploi : un écran complet, dans l'application (rien d'autre à envoyer). Sans jargon. */
+function vAide(){
+  const nom=SAL?'Mon compte':'Mes comptes';
+  return `<div class="aide-page"><button class="lien" data-tab="accueil"><i data-lucide="chevron-left"></i>Retour</button>
+  <h2 class="titre-page">Mode d’emploi</h2>
+  <section class="carte"><h3>Ouvrir ${nom}</h3>
+    <p class="phrase">Ouvrez le lien qu’on vous a envoyé : rien à installer. Vos données restent <b>sur cet appareil</b> : personne d’autre ne peut les voir.</p></section>
+  <section class="carte"><h3>1. Ajouter vos relevés</h3>
+    <p class="phrase">Téléchargez vos relevés de compte en <b>PDF</b> sur le site de votre banque. Dans « Importer », ${SAL?'ajoutez-les':'choisissez de quel compte ils viennent, puis ajoutez-les'} (plusieurs à la fois si vous voulez).</p>
+    <p class="phrase">Vous préférez copier ? « Coller mes opérations » lit ce que vous copiez sur le site de votre banque, sans doublon avec vos relevés.</p></section>
+  <section class="carte"><h3>2. Le premier mois est un peu long</h3>
+    <p class="phrase">La première fois, l’application vous pose <b>5 questions au plus</b>, une à la fois, pour apprendre à reconnaître vos marchands. Ensuite elle retient vos réponses : <b>environ 90 % du travail n’est plus à refaire</b>.</p></section>
+  <section class="carte"><h3>3. Corriger une erreur</h3>
+    <p class="phrase">Touchez une opération pour changer sa rubrique. Les lignes « classé automatiquement » sont des suppositions : corrigez seulement ce qui est faux, ou touchez « Tout valider » dans « Classé automatiquement ».</p>
+    <p class="phrase">Un relevé rangé dans le mauvais compte ? « Importer », « Mes relevés ajoutés », puis « Mauvais compte ? ».</p></section>
+  <section class="carte"><h3>4. Sauvegarder, et retrouver vos données ailleurs</h3>
+    <p class="phrase">L’application ne fonctionne que sur <b>un seul appareil à la fois</b>.</p>
+    <p class="phrase">Touchez <b>« Sauvegarder dans mon dossier Cloud »</b> en haut de l’écran et choisissez un dossier de votre Google Drive, d’iCloud ou de Dropbox. Sur un téléphone, le fichier est téléchargé : déposez-le ensuite dans votre dossier Cloud.</p>
+    <p class="phrase">Pour ouvrir l’application sur un autre appareil, enregistrez la sauvegarde <b>de préférence dans un Cloud</b> : vous pourrez ainsi la rappeler de l’autre côté. Ouvrez le même lien, puis « Réglages », « Restaurer une sauvegarde », et choisissez le fichier.</p>
+    <p class="phrase"><b>Refaites la même chose quand vous changez de nouveau d’appareil</b> : sauvegardez, puis restaurez. Ce n’est pas automatique.</p>
+    <p class="phrase"><b>Le plus pratique reste donc de garder le même appareil.</b></p></section>
+  <section class="carte"><h3>Le petit badge « Netlify »</h3>
+    <p class="phrase">Si un petit badge « Netlify » apparaît en bas de la page, <b>touchez-le : il disparaît</b>. Cela ne change rien à vos données.</p></section>
+  <section class="carte"><h3>Bon à savoir</h3>
+    <p class="phrase">Vos données sont liées à <b>l’adresse du lien</b> et au navigateur : une autre adresse, ou une fenêtre de navigation privée, donne une application vide.</p>
+    <p class="phrase">Un doute ? « Voir un exemple » essaie l’application avec des données fictives : rien n’est enregistré.</p>
+    <div class="boutons"><button class="btn secondaire" data-act="demo">Voir un exemple</button></div></section></div>`;
+}
 function vReglages(){
   const s=S.settings, st=S.ops.length?stats({lvl:'M',...endOf(defaultPeriod())},'all'):null;
   const r=Object.entries(S.rules).sort((a,b)=>a[0].localeCompare(b[0]));
@@ -2836,6 +3145,7 @@ function vReglages(){
     ${perso.map(rub).join('')}
     ${SAL?'':`<details class="autre"><summary>Rubriques de l’activité</summary>${act.map(rub).join('')}</details>`}
     <button class="btn secondaire ajout-btn" data-act="nouvrub" data-de="reglages"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>
+  <button class="carte lien-objectifs lien-aide-carte" data-tab="aide"><span><span class="r-t">Mode d’emploi</span><span class="aide">Ajouter vos relevés, sauvegarder, retrouver vos données.</span></span><i data-lucide="chevron-right"></i></button>
   <section class="carte" id="donnees"><h3>Vos données</h3>
     <p class="aide">${mode==='db'?'Vos données sont dans votre espace privé.':'Vos données sont enregistrées dans ce navigateur, sur cet appareil.'} Ils ne se retrouvent pas tout seuls sur un autre appareil : l’application ne fonctionne que sur un seul appareil à la fois.</p>
     <details class="autre"><summary>Retrouver mes données sur mon téléphone ou un autre ordinateur</summary>
@@ -2845,6 +3155,8 @@ function vReglages(){
       <p class="aide">Ce n’est pas automatique : refaites-le après chaque ajout de relevés, et gardez toujours la sauvegarde la plus récente. Autre possibilité : ajouter vos opérations sur chaque appareil avec « Coller mes opérations » (celles déjà présentes ne sont pas comptées deux fois), chaque appareil gardant alors sa propre copie.</p></details>
     <div class="boutons"><button class="btn" data-act="backup">Sauvegarder mes données</button><label class="btn secondaire">Restaurer une sauvegarde<input type="file" id="restorefile" accept=".json,application/json" hidden></label></div>
     ${backupMsg?`<p class="ok-txt">${esc(backupMsg)}</p>`:''}
+    <p class="aide">Le dictionnaire s’enrichit de temps en temps. Pour l’appliquer à vos opérations déjà ajoutées (sans toucher à ce que vous avez corrigé) :</p>
+    <div class="boutons"><button class="btn secondaire" data-act="reclasser">Reclasser mes suppositions</button></div>
     <button class="lien danger" data-act="wipe">Tout effacer</button></section>
   ${annees.length?`<section class="carte"><h3>Votre année en revue</h3><div class="boutons">${annees.slice(0,3).map(y=>`<button class="btn secondaire" data-act="review" data-year="${y}">Année ${y}</button>`).join('')}</div></section>`:''}
   <section class="carte"><h3>Présentation</h3><button class="btn secondaire" data-act="relancer">Revoir la présentation</button></section>

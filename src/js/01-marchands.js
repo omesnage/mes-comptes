@@ -31,15 +31,17 @@ function motsRecherche(label){
 }
 const lienRecherche=label=>{const q=motsRecherche(label);return q?`<a class="lien chercher" href="https://www.google.com/search?q=${encodeURIComponent(q)}" target="_blank" rel="noopener noreferrer"><i data-lucide="search"></i>À quoi correspond ce libellé ?</a>`:''};
 /* Suggestion de rubrique d'après le libellé et le type du compte (perso, pro ou mixte) */
-function kwSuggest(m,label,atype,amount){
+/* {c, sur} : sur=false pour une simple hypothèse (rentrée d'un compte perso sans indice) */
+function kwSuggestX(m,label,atype,amount){
   const t=norm(m+' '+label);
-  if(amount<0&&CESU_RE.test(t)) return 'maison';
-  if(atype==='pro'&&amount<0&&/\b(VIR|VIREMENT)\b/.test(t)&&/\b(PERSO|PERSONNEL|REMUNERATION|PRELEVEMENT EXPLOITANT)\b/.test(t)) return 'remu';
-  if(/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|\bCFE\b|\bTVA\b/.test(t)&&atype!=='perso') return 'impots';
-  if(!SAL){for(const [re,c] of KW_PRO) if(re.test(t)) return c;
-  if(atype==='pro') for(const [re,c] of KW_PROACC) if(re.test(t)) return c}
-  for(const [re,c] of KW) if(re.test(t)){ if(SAL&&c==='revenus') return amount>0?(/SALAIRE|\bPAIE\b/.test(t)?'salaire':'rentrees'):null; if(amount<0&&typeOf(c)==='income') return null; return c }
-  if(amount>0&&!REFUND_RE.test(t)) return atype==='perso'?'rentrees':'revenus';
+  if(amount<0&&CESU_RE.test(t)) return {c:'maison',sur:true};
+  if(atype==='pro'&&amount<0&&/\b(VIR|VIREMENT)\b/.test(t)&&/\b(PERSO|PERSONNEL|REMUNERATION|PRELEVEMENT EXPLOITANT)\b/.test(t)) return {c:'remu',sur:true};
+  if(/DGFIP|IMPOTS?\b|TRESOR PUBLIC|FINANCES PUBLIQUES|\bCFE\b|\bTVA\b/.test(t)&&atype!=='perso') return {c:'impots',sur:true};
+  if(!SAL){for(const [re,c] of KW_PRO) if(re.test(t)) return {c,sur:true};
+  if(atype==='pro') for(const [re,c] of KW_PROACC) if(re.test(t)) return {c,sur:true}}
+  for(const [re,c] of KW) if(re.test(t)){ if(SAL&&c==='revenus') return amount>0?{c:/SALAIRE|\bPAIE\b/.test(t)?'salaire':'rentrees',sur:true}:null; if(amount<0&&typeOf(c)==='income') return null; return {c,sur:true} }
+  if(amount>0&&!REFUND_RE.test(t)) return {c:atype==='perso'?'rentrees':'revenus',sur:false};
   return null;
 }
+function kwSuggest(m,label,atype,amount){const r=kwSuggestX(m,label,atype,amount);return r?r.c:null}
 

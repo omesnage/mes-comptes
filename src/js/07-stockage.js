@@ -16,7 +16,7 @@ function mergeCats(saved){
 /* Les champs inconnus sont conservés tels quels, puis la migration de schéma s'applique */
 let MIGRATED=false;
 function merge(x){
-  const st={...x,schemaVersion:x.schemaVersion||1,accounts:x.accounts||[],categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]};
+  const st={...x,schemaVersion:x.schemaVersion||1,accounts:x.accounts||[],categories:mergeCats(x.categories),rules:x.rules||{},sugg:x.sugg||{},auto:x.auto||{},ops:x.ops||[],incomeSource:x.incomeSource||'bank',settings:{...SET0,...(x.settings||{})},challenges:x.challenges||[],readers:x.readers||[]};
   if(!st.since&&st.ops.length){st.since=Date.now();MIGRATED=true}
   if(!st.masked) st.masked={};
   if(!st.douteux) st.douteux=[];
@@ -193,8 +193,9 @@ async function flush(){
 }
 function setStatus(s){
   saveState=s||saveState;
-  const t={saving:'Enregistrement…',saved:'Enregistré',local:'Enregistré sur cet appareil',error:'Échec de l’enregistrement, nouvel essai à la prochaine modification',quota:'Espace de stockage plein'}[saveState]||'';
+  const t={saving:'Enregistrement…',saved:'Enregistré',local:'Vos données sont gardées sur cet appareil uniquement',error:'Échec de l’enregistrement, nouvel essai à la prochaine modification',quota:'Espace de stockage plein'}[saveState]||'';
   $('#status').textContent=demo?'Exemple, rien n’est enregistré':t;
+  majSauvegardeEntete();
 }
 function migrate(){
   let ch=false; const old=new Set();

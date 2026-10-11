@@ -128,7 +128,6 @@ function conseils(){
   const tr=tresoPro(), du=resteAProvisionner();
   if(tr&&tr.t!=null&&du.du>0&&tr.t<du.du) out.push({lvl:'ko',t:`Votre compte pro ne contient pas assez pour ce qui doit être mis de côté : il manque ${eur0(du.du-tr.t)}.`,go:'data-tab="reglages" data-ancre="avances"'});
   if(X.provision>0) out.push({lvl:'',t:`Pensez à garder ${eur0(X.provision)} de côté pour vos cotisations et impôts ce mois-ci.`,go:'data-scroll="activite"'});
-  const n=nbAVerifier(); if(n) out.push({lvl:'',t:`${n} opération${n>1?'s':''} à vérifier.`,go:'data-tab="operations"'});
   const w=waitingReturns().filter(o=>(Date.now()-new Date(o.date))/864e5>30);
   if(w.length) out.push({lvl:'',t:`${w.length>1?`${w.length} remboursements attendus`:'Un remboursement attendu'} depuis plus de 30 jours : ${eur0(-w.reduce((s,o)=>s+o.amount,0))}.`,go:`data-op="${w[0].id}"`});
   if(!demo&&S.ops.length){const j=Math.floor((Date.now()-(S.lastBackup||S.since||Date.now()))/864e5);if(j>=30)out.push({lvl:'',t:'Pensez à sauvegarder vos données.',go:'data-tab="reglages" data-ancre="donnees"'})}
@@ -159,6 +158,14 @@ function balanceSalarie(Pe,p){
     <div class="ligne"><span>Ce que vous avez dépensé</span><b>${dep>0.005?'−'+eur0(dep):eur0(0)}</b></div>
     <div class="ligne total ${b>=0?'ok':'ko'}"><span>Balance ${TERME_PER[p.lvl]}</span><b>${signed(b)}</b></div>
     <p class="aide">${b>=0?`Vous avez dépensé moins que ce qui est entré : ${eur0(b)} de côté.`:`Vous avez dépensé ${eur0(-b)} de plus que ce qui est entré.`}${ep>0.005?` À part, ${eur0(ep)} versés sur votre épargne.`:ep<-0.005?` À part, ${eur0(-ep)} repris sur votre épargne.`:''}</p></div>`;
+}
+/* Ce qui est classé : une phrase rassurante, et ce qu'il reste à faire s'il reste des questions */
+function lienAide(){return `<p class="lien-aide"><button class="lien" data-tab="aide"><i data-lucide="circle-help"></i>Comment ça marche ? Voir le mode d’emploi</button></p>`}
+function blocClassement(PA){
+  const pc=partClassee(PA), nq=pendingGroups().length; if(!pc&&!nq) return '';
+  const min=Math.max(1,Math.ceil(nq/2));
+  return `<section class="carte classement">${pc?`<p class="phrase">Vos dépenses sont classées à ${pc.classe} %.${pc.devine>=5?` ${pc.devine} % sont des suppositions, à vérifier si vous voulez.`:''}</p>`:''}
+    ${nq?`<p class="aide">${nq} marchand${nq>1?'s':''} à classer (${min} minute${min>1?'s':''}).</p><button class="btn" data-tab="operations">Classer maintenant</button>`:''}</section>`;
 }
 /* Période affichée sur l'Accueil : mois, trimestre ou année (le mois P sert de repère) */
 let AL='M';
@@ -192,7 +199,7 @@ function vAccueil(){
   else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ${mens?'ce mois-ci':'sur cette période'}.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p>${balanceBloc(0,Pe,PA)}</section>`;
   if(SAL) gagne=Pe.any?`<section class="carte gagne"><h3>Votre ${mens?'mois':AL==='Q'?'trimestre':'année'}</h3>${balanceBloc(0,Pe,PA)}</section>`:'';
   const q=S.accounts.filter(a=>!a.confirmed);
-  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
+  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+lienAide()+periodeBarAccueil(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
     <p class="phrase">${eur0(Pe.net)} dépensés côté perso</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;

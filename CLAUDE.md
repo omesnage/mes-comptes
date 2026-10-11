@@ -68,11 +68,23 @@ npm test         # build + tests Playwright (Chromium)
 
 ## Reste à faire
 
-- `LISEZMOI.md` (pour Olivier : hébergement sur Netlify ou Squarespace, mise à jour).
-- `GUIDE-UTILISATEUR.md` (court, sans jargon : ouvrir l'application, importer, sauvegarder, changer d'appareil, données liées au navigateur).
+- Hébergement Squarespace (dans `LISEZMOI.md`, seul Netlify est décrit).
 - Manifeste intégré, pour un joli nom et une icône sur l'écran d'accueil de l'iPhone.
 
 ## Deux applications, un seul code
 - `node scripts/build.mjs` produit `dist/mes-comptes.html` (indépendants, « Mes comptes ») et `dist/mon-compte.html` (salariés, « Mon compte »), plus les dossiers à publier `en-ligne/mes-comptes/index.html` et `en-ligne/mon-compte/index.html` (ignorés par git).
 - La constante `SAL` (`00-base.js`) vaut `false` dans le source ; le build la remplace par `true` pour la version salariés : pas de rubriques de l'activité, comptes toujours perso, pas de question sur le type de compte, clés de stockage et de sauvegarde distinctes.
 - Une évolution touche les deux versions sauf si elle est protégée par `SAL`. Les tests de la version salariés sont dans `tests/salaries.spec.js`.
+
+## Classement automatique (après un import)
+- `01b-dictionnaire.js` : enseignes et mots-clés par rubrique (`DICO`), sur libellés nettoyés (`libelleNet`). Une entrée qui finit par `?` est une simple probabilité (classement « deviné »). Un virement n'est comparé qu'à quelques rubriques (un prénom peut ressembler à une enseigne).
+- `05b-classement.js` : `classerNouvelles` range chaque marchand en **sûr** (règle, reconnaissance d'office, dictionnaire), **deviné** (`S.auto`, `q:'d'`, mention « classé automatiquement ») ou **question** (5 au plus, les plus gros montants). Une règle apprise (`S.rules`) passe toujours avant `S.auto`. Le silence ne vaut que pour le perso : les comptes pro et les rentrées d'un compte qui sert à tout restent demandés.
+- « À vérifier » = une carte à la fois (suggestion en premier, deux autres rubriques probables, « Autre rubrique… », « Je ne sais pas »). Les suppositions sont listées dans « Classé automatiquement », avec « Tout valider ».
+- Tests : `tests/classement.spec.js` avec un relevé **fictif** (`tests/releves-fictifs.js`). Les mesures sur de vrais relevés se font hors du dépôt.
+
+## Session Cloud (travail sans le Mac)
+- Le dossier du projet est copié dans l'espace Cloud (`/home/claude/mes-comptes`). Lancer `sh cloud-setup.sh` au début de chaque session : outils installés, construction vérifiée.
+- Tests : `. ./.cloud-env && npx playwright test --workers=2` (le navigateur Cloud est indiqué par `CHROMIUM_PATH`, déjà géré par `playwright.config.js`). Compter environ 6 minutes pour la suite complète.
+- Pas de commande `open` dans le Cloud : à la fin d'une étape, envoyer `dist/mes-comptes.html` (et `dist/mon-compte.html` si touché) à Olivier avec SendUserFile, puis le renvoyer dans `~/Documents/mes-comptes/` si le Mac est relié.
+- L'espace Cloud est temporaire : en fin de session, toujours renvoyer les fichiers modifiés vers le Mac (ou pousser sur GitHub).
+- État connu au 11/10/2026 : 4 fichiers de tests échouent aussi sur le dernier commit (migration ×3 et univers ×1), probablement liés à des dates ; à examiner avant toute mise en ligne.

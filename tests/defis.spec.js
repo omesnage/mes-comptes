@@ -42,11 +42,15 @@ test('sans défi réussi : explication des trophées ; « Vacances » devient «
 test('« À vérifier » : un marchand avec achats et rentrées donne deux questions, montants sans signe mêlé',async({page})=>{
   await openWith(page,etat([['2026-01-05',-20,'AMAZON'],['2026-01-06',-30,'AMAZON'],['2026-01-07',8.32,'AMAZON'],['2026-01-08',599,'AMAZON']],{}));
   await page.click('nav.tabs [data-tab="operations"]');
-  const q=page.locator('.verifier .question');
-  await expect(q).toHaveCount(2);
-  const s=(await q.locator('.q-s').allTextContents()).map(nb).join(' | ');
-  expect(s).toContain(nb('2 dépenses, 50,00 € au total'));
+  const g=await page.evaluate(()=>pendingGroups().map(x=>[x.n,x.credit,Math.round(x.total*100)/100]));
+  expect(g).toEqual([[2,true,607.32],[2,false,-50]]);
+  await expect(page.locator('.verifier .question')).toHaveCount(1);
+  await expect(page.locator('.verifier')).toContainText('Question 1 sur 2');
+  const s=nb(await page.locator('.verifier .question .q-s').textContent());
   expect(s).toContain(nb('2 rentrées, 607,32 € au total'));
+  await page.locator('.verifier .question .choix-btn',{hasText:'Je ne sais pas'}).click();
+  await expect(page.locator('.verifier')).toContainText('Question 2 sur 2');
+  expect(nb(await page.locator('.verifier .question .q-s').textContent())).toContain(nb('2 dépenses, 50,00 € au total'));
 });
 
 test('fiche : « toutes les opérations » d’un marchand qui a achats et rentrées ne change que celles du même sens',async({page})=>{

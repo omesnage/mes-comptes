@@ -61,7 +61,7 @@ async function importFiles(files){
         const so=detectSolde(res.full||'',last);
         if(so&&(!a.soldeDate||so.date>=a.soldeDate)){a.solde=so.solde;a.soldeDate=so.date;a.soldeSrc='releve';stateDirty=true}
       }
-      const deja=compteur(), pris=new Set(), src=/\.csv$/i.test(f.name)?'csv':'pdf';
+      const deja=compteur(), pris=new Set(), nouvelles=[], src=/\.csv$/i.test(f.name)?'csv':'pdf';
       const atype=(acctById(rep.acct)||{}).type||'perso';
       S.douteux=S.douteux||[];
       for(const o of res.ops){
@@ -75,8 +75,9 @@ async function importFiles(files){
         if(j){pris.add(j.o.id);S.douteux.push({a:j.o.id,b:op.id});rep.douteux++}
         S.ops.push(op); rep.added++; rep.sample.push(op); dirtyMonths.add(o.date.slice(0,7));
         if(appliqueAuto(op,atype)) stateDirty=true;
-        if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const c=kwSuggest(op.merchant,op.label,atype,op.amount); if(c){S.sugg[op.merchant]={c,src:'kw'};stateDirty=true}}
+        nouvelles.push(op);
       }
+      classerNouvelles(nouvelles);
     }catch(e){rep.error=e&&e.message||'Ce fichier n’a pas pu être lu. Réessayez, ou choisissez un autre relevé.'}
     if(rep.added||rep.completees){S.imports=S.imports||{};S.imports[rep.imp]={nom:f.name,quand:Date.now()};stateDirty=true}
     reports.unshift(rep);

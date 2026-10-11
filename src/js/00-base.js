@@ -14,9 +14,11 @@ const CATS0=[
  ['mutuelle','Mutuelle','shield-plus','expense','perso',1],
  ['loisirs','Sorties et loisirs','ticket','expense','perso'],
  ['shopping','Vêtements et shopping','shirt','expense','perso'],
+ ['enligne','Achats en ligne','shopping-cart','expense','perso'],
  ['maison','Maison et équipement','sofa','expense','perso'],
  ['animaux','Animaux','paw-print','expense','perso'],
  ['cadeaux','Cadeaux','gift','expense','perso'],
+ ['dons','Dons et associations','hand-heart','expense','perso'],
  ['voyages','Vacances et séjours','luggage','expense','perso'],
  ['frais','Banque','landmark','expense','auto',1],
  ['impotsfoyer','Impôts et taxes du foyer','receipt','expense','perso',1],
@@ -63,6 +65,7 @@ const RETRAITE_RE=/\b(RETRAITES?|CARSAT|CNAV|IRCEC|AGIRC|ARRCO|CAISSE D.?ASSURAN
 function autoCatOf(label,atype,amount){
   const t=norm(label||'');
   if(LOAN_RE.test(t))return atype==='pro'?'empruntpro':'pret';
+  if(/\bRETRAITS?\b|\bDAB\b|\bGAB\b/.test(t))return 'divers';
   if(!SAL&&COTIS_RE.test(t)&&!CESU_RE.test(t))return 'cotisations';
   if(!SAL&&CAISSES_RE.test(t)&&amount<0)return 'cotisations';
   if(EPARGNE_RE.test(t.replace(/CAISSE D.?EPARGNE/g,'')))return 'epargne';
@@ -106,7 +109,8 @@ const KW=[
  [/MUTUELLE|PREVOYANCE/,'mutuelle'],
  [/FREE MOBILE|FREE|ORANGE|SFR|BOUYGUES|SOSH|NETFLIX|SPOTIFY|DEEZER|DISNEY|CANAL|APPLE|ITUNES|GOOGLE|ADOBE|MICROSOFT|AMAZON PRIME|PRIME VIDEO|ANTHROPIC|CLAUDE|OPENAI|SQUARESPACE|DROPBOX/,'abonnements'],
  [/CINEMA|PATHE|GAUMONT|UGC|THEATRE|MUSEE|CONCERT|LIBRAIRIE|CULTURA|STEAM|PLAYSTATION|BILLET/,'loisirs'],
- [/AMAZON|FNAC|DECATHLON|ZARA|UNIQLO|SEPHORA|ETSY|VINTED|ZALANDO|H&M|KIABI|CELIO|JULES/,'shopping'],
+ [/AMAZON|FNAC|CDISCOUNT|ALIEXPRESS|TEMU|EBAY|ETSY|VINTED|LEBONCOIN|VEEPEE|RAKUTEN|MANOMANO|BACKMARKET/,'enligne'],
+ [/DECATHLON|ZARA|UNIQLO|SEPHORA|ETSY|VINTED|ZALANDO|H&M|KIABI|CELIO|JULES/,'shopping'],
  [/FRAIS TENUE|COTIS(ATION)? (CARTE|CB)|COMMISSION|AGIOS|INTERETS DEB|FRAIS BANCAIRES/,'frais'],
  [/SALAIRE|\bPAIE\b|HONORAIRES|\bCAF\b|FRANCE TRAVAIL|POLE EMPLOI/,'revenus'],
  [/RETRAIT ESPECES/,'divers']
@@ -147,7 +151,7 @@ let UNIV='all', OPACC='';
 const reports=[];
 const HAS_CLAUDE=!!(window.claude&&window.claude.use);
 
-function blank(){return{schemaVersion:SCHEMA,onboarded:false,accounts:[],categories:CATS0.map(c=>({...c})),rules:{},sugg:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
+function blank(){return{schemaVersion:SCHEMA,onboarded:false,accounts:[],categories:CATS0.map(c=>({...c})),rules:{},sugg:{},auto:{},ops:[],incomeSource:'bank',settings:{...SET0},challenges:[],readers:[]}}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'});
@@ -191,8 +195,9 @@ function catOf(o){
   if(o.cat) return o.cat;
   if(INTERNAL[o.id]) return 'interne';
   if(o.amount>0&&LINK[o.id]){const p=BYID[LINK[o.id]];const c=p&&(p.cat||S.rules[p.merchant+'|-']||S.rules[p.merchant]);if(c)return c}
-  const dir=S.rules[o.merchant+(o.amount>0?'|+':'|-')]; if(dir) return dir;
-  const r=S.rules[o.merchant]; if(!r) return null;
+  const dk=o.merchant+(o.amount>0?'|+':'|-'), dir=S.rules[dk]; if(dir) return dir;
+  const r=S.rules[o.merchant];
+  if(!r){ const au=S.auto&&(S.auto[dk]||S.auto[o.merchant]); return au&&!(o.amount<0&&typeOf(au.c)==='income')?au.c:null }
   if(o.amount<0&&typeOf(r)==='income') return null;
   return r;
 }
@@ -253,6 +258,6 @@ function opExtra(o){
   if(o.amount>0&&LINK[o.id]){const p=BYID[LINK[o.id]];return `Remboursement de votre achat du ${p.date.slice(8,10)}/${p.date.slice(5,7)}${p.date.slice(0,7)!==o.date.slice(0,7)?`, compté en ${MOIS[+p.date.slice(5,7)-1]}`:''}`}
   if(o.amount<0&&LINKED[o.id]){const r=BYID[LINKED[o.id]];return `Remboursé le ${r.date.slice(8,10)}/${r.date.slice(5,7)}`}
   if(o.awaiting){const d=Math.max(0,Math.round((Date.now()-new Date(o.date))/864e5));return `Retour signalé : remboursement attendu depuis ${d} jour${d>1?'s':''}`}
-  if(isRefund(o)){const c=catById(catOf(o));return c?`Remboursement, déduit de ${c.name}`:'Remboursement'}
+  if(isRefund(o)){const c=catById(catOf(o));return !c||c.id==='remb'?'Remboursement reçu, sans rubrique précise':`Remboursement, retiré de vos dépenses « ${c.name} »`}
   return '';
 }

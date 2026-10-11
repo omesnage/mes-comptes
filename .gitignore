@@ -4,3 +4,4 @@ playwright-report/
 .DS_Store
 test-results/
 en-ligne/
+.cloud-env

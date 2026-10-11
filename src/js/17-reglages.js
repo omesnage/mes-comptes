@@ -1,5 +1,33 @@
 /* ============ Réglages ============ */
 const CONSEIL_TAUX='Souvent entre 25 et 45 % selon votre statut. En cas de doute, renseignez-vous auprès de votre centre de formalités ou d’un conseiller.';
+/* Mode d'emploi : un écran complet, dans l'application (rien d'autre à envoyer). Sans jargon. */
+function vAide(){
+  const nom=SAL?'Mon compte':'Mes comptes';
+  return `<div class="aide-page"><button class="lien" data-tab="accueil"><i data-lucide="chevron-left"></i>Retour</button>
+  <h2 class="titre-page">Mode d’emploi</h2>
+  <section class="carte"><h3>Ouvrir ${nom}</h3>
+    <p class="phrase">Ouvrez le lien qu’on vous a envoyé : rien à installer. Vos données restent <b>sur cet appareil</b> : personne d’autre ne peut les voir.</p></section>
+  <section class="carte"><h3>1. Ajouter vos relevés</h3>
+    <p class="phrase">Téléchargez vos relevés de compte en <b>PDF</b> sur le site de votre banque. Dans « Importer », ${SAL?'ajoutez-les':'choisissez de quel compte ils viennent, puis ajoutez-les'} (plusieurs à la fois si vous voulez).</p>
+    <p class="phrase">Vous préférez copier ? « Coller mes opérations » lit ce que vous copiez sur le site de votre banque, sans doublon avec vos relevés.</p></section>
+  <section class="carte"><h3>2. Le premier mois est un peu long</h3>
+    <p class="phrase">La première fois, l’application vous pose <b>5 questions au plus</b>, une à la fois, pour apprendre à reconnaître vos marchands. Ensuite elle retient vos réponses : <b>environ 90 % du travail n’est plus à refaire</b>.</p></section>
+  <section class="carte"><h3>3. Corriger une erreur</h3>
+    <p class="phrase">Touchez une opération pour changer sa rubrique. Les lignes « classé automatiquement » sont des suppositions : corrigez seulement ce qui est faux, ou touchez « Tout valider » dans « Classé automatiquement ».</p>
+    <p class="phrase">Un relevé rangé dans le mauvais compte ? « Importer », « Mes relevés ajoutés », puis « Mauvais compte ? ».</p></section>
+  <section class="carte"><h3>4. Sauvegarder, et retrouver vos données ailleurs</h3>
+    <p class="phrase">L’application ne fonctionne que sur <b>un seul appareil à la fois</b>.</p>
+    <p class="phrase">Touchez <b>« Sauvegarder dans mon dossier Cloud »</b> en haut de l’écran et choisissez un dossier de votre Google Drive, d’iCloud ou de Dropbox. Sur un téléphone, le fichier est téléchargé : déposez-le ensuite dans votre dossier Cloud.</p>
+    <p class="phrase">Pour ouvrir l’application sur un autre appareil, enregistrez la sauvegarde <b>de préférence dans un Cloud</b> : vous pourrez ainsi la rappeler de l’autre côté. Ouvrez le même lien, puis « Réglages », « Restaurer une sauvegarde », et choisissez le fichier.</p>
+    <p class="phrase"><b>Refaites la même chose quand vous changez de nouveau d’appareil</b> : sauvegardez, puis restaurez. Ce n’est pas automatique.</p>
+    <p class="phrase"><b>Le plus pratique reste donc de garder le même appareil.</b></p></section>
+  <section class="carte"><h3>Le petit badge « Netlify »</h3>
+    <p class="phrase">Si un petit badge « Netlify » apparaît en bas de la page, <b>touchez-le : il disparaît</b>. Cela ne change rien à vos données.</p></section>
+  <section class="carte"><h3>Bon à savoir</h3>
+    <p class="phrase">Vos données sont liées à <b>l’adresse du lien</b> et au navigateur : une autre adresse, ou une fenêtre de navigation privée, donne une application vide.</p>
+    <p class="phrase">Un doute ? « Voir un exemple » essaie l’application avec des données fictives : rien n’est enregistré.</p>
+    <div class="boutons"><button class="btn secondaire" data-act="demo">Voir un exemple</button></div></section></div>`;
+}
 function vReglages(){
   const s=S.settings, st=S.ops.length?stats({lvl:'M',...endOf(defaultPeriod())},'all'):null;
   const r=Object.entries(S.rules).sort((a,b)=>a[0].localeCompare(b[0]));
@@ -22,6 +50,7 @@ function vReglages(){
     ${perso.map(rub).join('')}
     ${SAL?'':`<details class="autre"><summary>Rubriques de l’activité</summary>${act.map(rub).join('')}</details>`}
     <button class="btn secondaire ajout-btn" data-act="nouvrub" data-de="reglages"><i data-lucide="plus"></i>Ajouter une rubrique</button></section>
+  <button class="carte lien-objectifs lien-aide-carte" data-tab="aide"><span><span class="r-t">Mode d’emploi</span><span class="aide">Ajouter vos relevés, sauvegarder, retrouver vos données.</span></span><i data-lucide="chevron-right"></i></button>
   <section class="carte" id="donnees"><h3>Vos données</h3>
     <p class="aide">${mode==='db'?'Vos données sont dans votre espace privé.':'Vos données sont enregistrées dans ce navigateur, sur cet appareil.'} Ils ne se retrouvent pas tout seuls sur un autre appareil : l’application ne fonctionne que sur un seul appareil à la fois.</p>
     <details class="autre"><summary>Retrouver mes données sur mon téléphone ou un autre ordinateur</summary>
@@ -31,6 +60,8 @@ function vReglages(){
       <p class="aide">Ce n’est pas automatique : refaites-le après chaque ajout de relevés, et gardez toujours la sauvegarde la plus récente. Autre possibilité : ajouter vos opérations sur chaque appareil avec « Coller mes opérations » (celles déjà présentes ne sont pas comptées deux fois), chaque appareil gardant alors sa propre copie.</p></details>
     <div class="boutons"><button class="btn" data-act="backup">Sauvegarder mes données</button><label class="btn secondaire">Restaurer une sauvegarde<input type="file" id="restorefile" accept=".json,application/json" hidden></label></div>
     ${backupMsg?`<p class="ok-txt">${esc(backupMsg)}</p>`:''}
+    <p class="aide">Le dictionnaire s’enrichit de temps en temps. Pour l’appliquer à vos opérations déjà ajoutées (sans toucher à ce que vous avez corrigé) :</p>
+    <div class="boutons"><button class="btn secondaire" data-act="reclasser">Reclasser mes suppositions</button></div>
     <button class="lien danger" data-act="wipe">Tout effacer</button></section>
   ${annees.length?`<section class="carte"><h3>Votre année en revue</h3><div class="boutons">${annees.slice(0,3).map(y=>`<button class="btn secondaire" data-act="review" data-year="${y}">Année ${y}</button>`).join('')}</div></section>`:''}
   <section class="carte"><h3>Présentation</h3><button class="btn secondaire" data-act="relancer">Revoir la présentation</button></section>

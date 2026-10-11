@@ -35,9 +35,9 @@ function render(){
   $('#tabs').innerHTML=onb?'':TABS.map(([k,l,ic])=>`<button data-tab="${k}" aria-current="${view===k}"><i data-lucide="${ic}"></i><span>${l}${k==='operations'&&nv?`<span class="badge" aria-label="${nv} à vérifier">${nv}</span>`:''}</span></button>`).join('');
   $('#demoBar').innerHTML=demo?`<div class="demo-bar"><span>Vous regardez un exemple.</span><button data-act="exitdemo">Quitter l’exemple</button></div>`:'';
   const v=$('#view');
-  if(onb) v.innerHTML=vDemarrage();
+  if(onb&&view!=='aide') v.innerHTML=vDemarrage();
   else if(!S.ops.length&&['accueil','bilan','operations'].includes(view)) v.innerHTML=libBanner()+vide();
-  else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,objectifs:vObjectifs,reglages:vReglages}[view]();
+  else v.innerHTML=libBanner()+{accueil:vAccueil,bilan:vBilan,operations:vOps,importer:vImport,objectifs:vObjectifs,reglages:vReglages,aide:vAide}[view]();
   if(view!=='bilan') BCAT=null;
   v.insertAdjacentHTML('beforeend',(FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'')+(NEWCAT?fenetreRubrique():'')+(MODAL?fenetreModal():''));
   document.body.classList.toggle('fige',!!(FICHE||BCAT||NEWCAT||MODAL));
@@ -50,7 +50,8 @@ function privacyText(){return mode==='db'
 function privacyBox(){return `<div class="note-box" role="note"><i data-lucide="lock"></i><p>${privacyText()}</p></div>`}
 function vide(){
   return `<div class="vide"><h2>Ajoutez vos relevés pour commencer</h2><p>Téléchargez vos relevés de compte en PDF sur le site de votre banque, puis ajoutez-les ici.</p>
-  <div class="boutons"><button class="btn" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div></div>`;
+  <div class="boutons"><button class="btn" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div>
+  <p class="lien-aide"><button class="lien" data-tab="aide"><i data-lucide="circle-help"></i>Comment ça marche ? Voir le mode d’emploi</button></p></div>`;
 }
 function moisBar(){
   return `<div class="mois"><button class="fleche" data-shift="-1" aria-label="Mois précédent"><i data-lucide="chevron-left"></i></button>
@@ -86,26 +87,59 @@ function lignesGroupe(x){
     ${x.ops.slice().sort((a,b)=>a.date<b.date?-1:1).map(o=>`<div class="ligne-grp"><p class="lg-t"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span> ${esc(o.label)} <b class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</b></p>
       <select class="grand" data-opcat="${o.id}" data-gk="${esc(x.m)}" aria-label="Rubrique de cette ligne"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',false)}</select></div>`).join('')}</details>`;
 }
-function aVerifier(){
-  const g=pendingGroups(), dv=douteuxValides(), n=g.length+dv.length; if(!n) return '';
-  return `<section class="carte verifier"><h3>À vérifier <span class="compte">(${n})</span></h3>
-  <p class="aide">Une seule réponse par marchand : elle vaudra pour toutes ses opérations, passées et futures.</p>
-  ${dv.map((d,i)=>{const a=BYID[d.a],b=BYID[d.b],L=o=>`<span class="pv"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span><span>${esc(o.label)}${o.src==='paste'?' <em>copier-coller</em>':' <em>relevé</em>'}</span><span class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></span>`;
-    return `<div class="question"><p class="q-question">Ces 2 opérations sont-elles les mêmes ?</p><div class="apercu">${L(a)}${L(b)}</div>
-    <div class="choix gros"><button class="choix-btn" data-dout="${i}:1">Oui, c’est la même : n’en garder qu’une</button><button class="choix-btn" data-dout="${i}:0">Non, ce sont deux opérations</button></div></div>`}).join('')}
-  ${g.map(x=>x.credit&&x.accts.some(id=>acctById(id)?.type==='mixte')?`<div class="question client-q"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
-    <p class="q-s">${x.n>1?`${x.n} rentrées, ${eur(x.total)} au total`:`Rentrée de ${eur(x.total)}`}. ${esc(x.label)}</p>
-    ${lienRecherche(x.label)}
-    <p class="q-question">Cet argent vient-il d’un client ?</p>
-    ${lignesGroupe(x)}
-    <div class="choix gros"><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="revenus">Oui, c’est un client</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="rentrees">Non (CAF, vente, remboursement, virement perso…)</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="epargne">Retrait d’épargne</button></div></div>`:`<div class="question"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
-    <p class="q-s">${x.n>1?`${x.n} ${x.credit?'rentrées':'dépenses'}, ${eur(Math.abs(x.total))} au total`:`${x.credit?'Rentrée de':'Dépense de'} ${eur(Math.abs(x.total))}`}. ${esc(x.label)}</p>
-    ${lienRecherche(x.label)}
-    ${lignesGroupe(x)}
-    <div class="choix">${choixRubriques(x)}</div>
+/* Questions : une carte à la fois, la suggestion en premier ; puis ce qui a été rangé par supposition */
+let WIZ={total:0,later:false}, DEV_OUVERT=false;
+function carteQuestion(x){
+  const base=x.m.replace(/\|[+-]$/,''), sug=S.sugg[base]&&catById(S.sugg[base].c)?S.sugg[base].c:null;
+  const types=[...new Set(x.accts.map(id=>acctById(id)?.type||'perso'))];
+  const compact=!x.credit?types.every(t=>t==='perso'||t==='mixte'):types.every(t=>t==='perso');
+  const ex=[...new Set(x.ops.map(o=>o.label))].slice(0,2).map(l=>`<p class="q-ex">${esc(l.length>70?l.slice(0,70)+'…':l)}</p>`).join('');
+  const tete=`<p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
+    <p class="q-s">${x.n>1?`${x.n} ${x.credit?'rentrées':'dépenses'}, ${eur(Math.abs(x.total))} au total`:`${x.credit?'Rentrée de':'Dépense de'} ${eur(Math.abs(x.total))}`}</p>${ex}${lienRecherche(x.label)}`;
+  if(!compact) return `<div class="question">${tete}${lignesGroupe(x)}<div class="choix">${choixRubriques(x)}</div>
     <details class="autre"><summary>Une autre rubrique</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details>
-    ${!x.credit&&x.accts.some(id=>['pro','mixte'].includes(acctById(id)?.type))?`<details class="autre"><summary>Dépense perso</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique perso pour ${esc(x.m)}"><option value="">Dans quelle rubrique perso ?</option>${optionsPerso()}</select></details>`:''}</div>`).join('')}
-  </section>`;
+    ${!x.credit&&x.accts.some(id=>['pro','mixte'].includes(acctById(id)?.type))?`<details class="autre"><summary>Dépense perso</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique perso pour ${esc(x.m)}"><option value="">Dans quelle rubrique perso ?</option>${optionsPerso()}</select></details>`:''}</div>`;
+  const ids=[...(sug?[sug]:[]),...rubriquesProbables(x,sug?[sug]:[])].slice(0,3);
+  const btn=(c,i)=>`<button class="choix-btn gros-q${c===sug?' suggere':''}" data-qcat="${esc(x.m)}" data-c="${c}">${esc(x.credit&&c==='rentrees'?'Autre rentrée':x.credit&&c==='remb'?'Un remboursement':catById(c).name)}</button>`;
+  return `<div class="question">${tete}${lignesGroupe(x)}
+    <div class="choix">${ids.map(btn).join('')}
+      <details class="autre gros-q-d"><summary class="gros-q">Autre rubrique…</summary><select class="grand" data-qsel="${esc(x.m)}" aria-label="Rubrique pour ${esc(x.m)}"><option value="">Choisir une rubrique</option>${catOptions(null,false,'',true)}</select></details>
+      <button class="choix-btn gros-q" data-idk="${esc(x.m)}">Je ne sais pas</button></div></div>`;
+}
+function aVerifier(){
+  const g=pendingGroups(), dv=douteuxValides(), n=g.length+dv.length, dev=devinees();
+  if(n===0) WIZ={total:0,later:false}; else WIZ.total=Math.max(WIZ.total,n);
+  if(!n&&!dev.length) return '';
+  const avecSug=g.filter(x=>S.sugg[x.m.replace(/\|[+-]$/,'')]).length, lc=S.lastClassement;
+  let h='';
+  if(n){
+    if(WIZ.later) h+=`<section class="carte verifier"><p class="phrase">${n} question${n>1?'s':''} en attente.</p><button class="btn" data-act="wizresume">Reprendre</button></section>`;
+    else {
+      const fait=WIZ.total-n+1;
+      h+=`<section class="carte verifier"><div class="wiz-tete"><h3>À vérifier <span class="compte">(${n})</span></h3><button class="lien" data-act="wizlater">Terminer plus tard</button></div>
+      <div class="wiz-barre" role="progressbar" aria-valuemin="0" aria-valuemax="${WIZ.total}" aria-valuenow="${fait}"><span style="width:${Math.round((fait-1)/WIZ.total*100)}%"></span></div>
+      <p class="aide">Question ${fait} sur ${WIZ.total}. Votre réponse vaut pour toutes les opérations de ce marchand, passées et futures.${lc&&lc.questions&&lc.part<100?` Ces marchands couvrent ${lc.part} % des montants : le reste est classé automatiquement.`:''}</p>
+      ${dv.length?dv.slice(0,1).map((d,i)=>{const a=BYID[d.a],b=BYID[d.b],L=o=>`<span class="pv"><span>${o.date.slice(8,10)}/${o.date.slice(5,7)}</span><span>${esc(o.label)}${o.src==='paste'?' <em>copier-coller</em>':' <em>relevé</em>'}</span><span class="${o.amount>0?'cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></span>`;
+        return `<div class="question"><p class="q-question">Ces 2 opérations sont-elles les mêmes ?</p><div class="apercu">${L(a)}${L(b)}</div>
+        <div class="choix gros"><button class="choix-btn" data-dout="${i}:1">Oui, c’est la même : n’en garder qu’une</button><button class="choix-btn" data-dout="${i}:0">Non, ce sont deux opérations</button></div></div>`}).join('')
+      :g.slice(0,1).map(x=>x.credit&&x.accts.some(id=>acctById(id)?.type==='mixte')?`<div class="question client-q"><p class="q-t">${esc(ruleName(x.m).replace(/ \((dépenses|rentrées)\)$/,''))}</p>
+        <p class="q-s">${x.n>1?`${x.n} rentrées, ${eur(x.total)} au total`:`Rentrée de ${eur(x.total)}`}. ${esc(x.label)}</p>
+        ${lienRecherche(x.label)}
+        <p class="q-question">Cet argent vient-il d’un client ?</p>
+        ${lignesGroupe(x)}
+        <div class="choix gros"><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="revenus">Oui, c’est un client</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="rentrees">Non (CAF, vente, remboursement, virement perso…)</button><button class="choix-btn" data-qcat="${esc(x.m)}" data-c="epargne">Retrait d’épargne</button></div></div>`:carteQuestion(x)).join('')}
+      ${avecSug>1?`<button class="btn secondaire" data-act="validall">Tout valider (${avecSug} suggestion${avecSug>1?'s':''})</button>`:''}</section>`;
+    }
+  }
+  if(dev.length){
+    const tot=dev.reduce((t,d)=>t+Math.abs(d.total),0);
+    h+=`<details class="carte repli devinees"${DEV_OUVERT?' open':''}><summary>Classé automatiquement : ${dev.length} marchand${dev.length>1?'s':''}, ${eur0(tot)}</summary>
+    <p class="aide">Ces marchands n’étaient pas reconnus : ils sont rangés d’après la meilleure hypothèse. Corrigez seulement ce qui est faux.</p>
+    ${dev.slice(0,40).map(d=>`<div class="ligne-grp"><p class="lg-t"><span>${esc(ruleName(d.k).replace(/ \((dépenses|rentrées)\)$/,''))}</span> <b class="${d.total>0?'cr':''}">${d.total>0?'+':'−'}${eur(Math.abs(d.total))}</b></p>
+      <select class="grand" data-devsel="${esc(d.k)}" aria-label="Rubrique de ${esc(d.k)}">${catOptions(d.c,false,'',false)}</select>${lienRecherche(d.label)}</div>`).join('')}
+    <button class="btn" data-act="valdev">Tout valider</button></details>`;
+  }
+  return h;
 }
 let HEURES=null;
 /* Sous un encaissement de l'activité : son équivalent en heures au prix minimum, et le temps réellement passé */
@@ -122,7 +156,7 @@ function heuresBloc(o,statique){
 function opLine(o,statique){
   statique=statique===true; /* attention : .map(opLine) passe le rang en second paramètre */
   const c=catOf(o), x=o.src==='rev'?'Fichier de revenus':opExtra(o);
-  const nom=INTERNAL[o.id]&&!o.cat?'Virement entre vos comptes':c?catById(c)?.name||'':'À vérifier';
+  const auto=sourceAuto(o), nom=(INTERNAL[o.id]&&!o.cat?'Virement entre vos comptes':c?catById(c)?.name||'':'À vérifier')+(auto?' · classé automatiquement':'');
   const tag=statique?'div':'button', hb=heuresBloc(o,statique);
   const ligne=`<${tag} class="op"${statique?'':` data-op="${o.id}"`}><span class="op-l1"><span class="op-m">${esc(o.merchant)}</span><span class="op-amt${o.amount>0?' cr':''}">${o.amount>0?'+':'−'}${eur(Math.abs(o.amount))}</span></span>
     <span class="op-l2">${o.date.slice(8,10)}/${o.date.slice(5,7)} · ${esc(nom)}${ACCN>1&&o.src!=='rev'?` · ${esc(acctName(o.acct))}`:''}</span>${x?`<span class="op-x">${esc(x)}</span>`:''}</${tag}>`;
@@ -139,8 +173,11 @@ function totalRecherche(list){
 }
 function vOps(){
   const t=norm(q.trim()), k=P.y+'-'+pad(P.m);
-  const list=t?S.ops.filter(o=>norm(o.label+' '+o.merchant).includes(t)):(BYMONTH[k]||[]).slice().sort((a,b)=>a.date<b.date?1:-1);
-  return aVerifier()+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand" value="${esc(q)}" aria-label="Rechercher un marchand">
+  /* Recherche : marchand, libellé, rubrique, ou somme (« 45,80 », « 45.8 », « 45 ») */
+  const som=/^[+\-−]?\d+([.,]\d{1,2})?\s*(€|eur|euros?)?$/i.test(q.trim())?q.trim().replace(/^[+\-−]/,'').replace(/\s*(€|eur|euros?)$/i,'').replace('.',','):'';
+  const okSom=o=>{if(!som) return false; const a=Math.abs(o.amount).toFixed(2).replace('.',','); return som.includes(',')?a.startsWith(som):a.split(',')[0]===som};
+  const list=t?S.ops.filter(o=>norm(o.label+' '+o.merchant+' '+((catById(catOf(o))||{}).name||'')).includes(t)||okSom(o)):(BYMONTH[k]||[]).slice().sort((a,b)=>a.date<b.date?1:-1);
+  return aVerifier()+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand ou une somme" value="${esc(q)}" aria-label="Rechercher un marchand ou une somme">
   ${t?`<p class="aide">${list.length} opération${list.length>1?'s':''} trouvée${list.length>1?'s':''}, tous mois confondus.</p>${totalRecherche(list)}`:moisBar()}
   <div class="ops">${list.slice(0,300).map(opLine).join('')||'<p class="aide">Aucune opération.</p>'}</div>
   ${list.length>300?'<p class="aide">Seules les 300 plus récentes sont affichées.</p>':''}`;
@@ -257,7 +294,8 @@ function choixTypeImport(){
 }
 function vImport(){
   const nRev=S.ops.filter(o=>o.src==='rev').length;
-  return privacyBox()+`<section class="carte">
+  return privacyBox()+`<div class="note-box" role="note"><i data-lucide="info"></i><p>Le premier mois est un peu long : l’application vous pose quelques questions. Ensuite, environ 90 % du travail n’est plus à faire : elle retient vos réponses et reconnaît les enseignes toute seule. <button class="lien" data-tab="aide">Voir le mode d’emploi</button></p></div>
+  <section class="carte">
   ${choixTypeImport()}
   <label class="gros-bouton" data-drop="bank"><input type="file" id="file" accept=".pdf,.csv,application/pdf,text/csv" multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
   <p class="aide">Des relevés PDF, plusieurs à la fois, même de banques différentes. Ce qui est déjà importé est ignoré.</p>

@@ -1,5 +1,26 @@
 /* ============ Sauvegarde ============ */
 let backupMsg='';
+/* Sous l'état de l'enregistrement : quand la dernière sauvegarde a eu lieu, et le bouton pour la mettre dans un dossier Cloud */
+function majSauvegardeEntete(){
+  const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
+  b.hidden=!!demo; l.hidden=!!demo;
+  const t=typeof S!=='undefined'&&S&&S.lastBackup;
+  l.textContent=t?'Dernière sauvegarde : '+new Date(t).toLocaleDateString('fr-FR'):'Jamais sauvegardé';
+}
+/* Chrome et Edge sur ordinateur : on choisit directement le dossier (Google Drive, iCloud, Dropbox…). Ailleurs, le fichier est téléchargé. */
+async function sauvegardeCloud(){
+  const data=JSON.stringify({app:SAL?'mon-compte':'mes-comptes',version:1,date:new Date().toISOString(),data:S});
+  const name=`${SAL?'mon-compte':'mes-comptes'}-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
+  if(window.showSaveFilePicker){
+    try{
+      const h=await showSaveFilePicker({suggestedName:name,types:[{description:'Sauvegarde',accept:{'application/json':['.json']}}]});
+      const w=await h.createWritable(); await w.write(data); await w.close();
+      S.lastBackup=Date.now(); save(); backupMsg='Sauvegarde enregistrée dans le dossier choisi ✓'; majSauvegardeEntete(); alert(backupMsg); if(view==='reglages') render(); return;
+    }catch(e){ if(e&&e.name==='AbortError') return; }
+  }
+  await backup_();
+  alert('Sauvegarde téléchargée. Déposez maintenant ce fichier dans votre dossier Cloud (Google Drive, iCloud, Dropbox…).');
+}
 async function backup_(){
   const data=JSON.stringify({app:SAL?'mon-compte':'mes-comptes',version:1,date:new Date().toISOString(),data:S});
   const name=`${SAL?'mon-compte':'mes-comptes'}-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
@@ -8,7 +29,7 @@ async function backup_(){
     if(dl){await dl.save({filename:name,data});S.lastBackup=Date.now();save();backupMsg='Sauvegarde enregistrée.';render();return}
   }catch(e){backupMsg='Sauvegarde annulée.';render();return}
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();
-  S.lastBackup=Date.now();save();backupMsg='Sauvegarde téléchargée. Gardez ce fichier en lieu sûr.';render();
+  S.lastBackup=Date.now();save();backupMsg='Sauvegarde téléchargée. Gardez ce fichier en lieu sûr.';majSauvegardeEntete();render();
 }
 async function restore_(file){
   try{

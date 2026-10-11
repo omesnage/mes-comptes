@@ -35,7 +35,8 @@ test('relevé avec signe moins en fin de montant : les montants sans signe sont 
   expect(await page.evaluate(()=>S.accounts.map(a=>[a.name,a.type,a.solde,a.soldeDate]))).toEqual([['Qonto','pro',5000,'2026-03-31']]);
   // Suggestions adaptées à un compte pro
   const sg=await page.evaluate(()=>Object.fromEntries(Object.entries(S.sugg).map(([m,s])=>[m,s.c])));
-  expect(sg).toMatchObject({URSSAF:'cotisations','ADOBE SYSTEMS':'logiciels',LDLC:'logiciels'});
+  expect(sg).toMatchObject({'ADOBE SYSTEMS':'logiciels',LDLC:'logiciels'});
+  expect(await page.evaluate(()=>S.ops.filter(o=>/URSSAF/.test(o.label)).map(catOf))).toEqual(['cotisations']);
   expect(Object.entries(sg).filter(([m])=>/CLIENT/.test(m)).every(([,c])=>c==='revenus')).toBe(true);
 });
 

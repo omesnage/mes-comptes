@@ -7,7 +7,9 @@ test('À vérifier : une question par marchand, gros boutons, la réponse devien
   await expect(v.locator('h3')).toContainText('À vérifier (1)');
   await expect(page.locator('nav.tabs .badge')).toHaveText('1');
   const q=v.locator('.question',{hasText:'ATELIER CERAMIQUE'});
-  await q.locator('.choix-btn',{hasText:'Loisirs'}).click();
+  await expect(q.locator('.choix-btn').last()).toHaveText('Je ne sais pas');
+  await q.locator('summary',{hasText:'Autre rubrique'}).click();
+  await q.locator('select[data-qsel]').selectOption('loisirs');
   expect(await page.evaluate(()=>S.rules['ATELIER CERAMIQUE'])).toBe('loisirs');
   await expect(page.locator('.verifier')).toHaveCount(0);
 });
@@ -44,11 +46,6 @@ test('fiche : changer la rubrique pour une opération ou pour tout le marchand, 
 });
 
 
-test('« À vérifier » : Vacances et Cadeaux font partie des boutons proposés',async({page})=>{
-  await demo(page);
-  const b=await page.locator('.verifier .question').first().locator('.choix-btn').allTextContents();
-  expect(b).toEqual(expect.arrayContaining(['Vacances et séjours','Cadeaux']));
-});
 
 test('rubriques Charges sociales, Taxes et TVA, Mutuelle, Comptabilité, Communication ; « Dépense perso » fait passer une dépense côté perso',async({page})=>{
   await openWith(page,{schemaVersion:15,onboarded:true,accounts:[{id:'pr',name:'Qonto',type:'pro',confirmed:true}],
@@ -112,12 +109,20 @@ PRELEVEMENT SFR
     ['2026-01-21','PRELEVEMENT SFR',-17.47]]);
 });
 
-test('« À vérifier » : Maison et équipement et Espèces et divers font partie des boutons proposés',async({page})=>{
-  await openWith(page,{schemaVersion:15,onboarded:true,accounts:[{id:'a',name:'Banque',type:'perso',confirmed:true}],
-    ops:[{id:'1',date:'2026-01-05',label:'CB INCONNU',amount:-30,merchant:'INCONNU',acct:'a'}]});
+test('« À vérifier » : la suggestion en premier, puis deux rubriques probables, « Autre rubrique… » (toutes les rubriques) et « Je ne sais pas »',async({page})=>{
+  await openWith(page,{schemaVersion:16,onboarded:true,accounts:[{id:'a',name:'Banque',type:'perso',confirmed:true}],
+    sugg:{INCONNU:{c:'sante',src:'kw'}},
+    ops:[{id:'1',date:'2026-01-05',label:'CB INCONNU',amount:-90,merchant:'INCONNU',acct:'a'},{id:'2',date:'2026-01-06',label:'CB CARREFOUR',amount:-30,merchant:'CARREFOUR',acct:'a',cat:'courses'},{id:'3',date:'2026-01-07',label:'CB RESTO',amount:-30,merchant:'RESTO',acct:'a',cat:'resto'}]});
   await page.evaluate(()=>{view='operations';render()});
-  const b=await page.locator('.verifier .question').first().locator('.choix-btn').allTextContents();
-  expect(b).toEqual(expect.arrayContaining(['Maison et équipement','Espèces et divers']));
+  const q=page.locator('.verifier .question').first();
+  const b=await q.locator('.choix-btn').allTextContents();
+  expect(b).toEqual(['Santé','Courses','Restaurants et cafés','Je ne sais pas']);
+  await expect(q.locator('.choix-btn').first()).toHaveClass(/suggere/);
+  const h=await q.locator('.choix-btn').first().evaluate(e=>e.getBoundingClientRect().height);
+  expect(h).toBeGreaterThanOrEqual(56);
+  await q.locator('summary',{hasText:'Autre rubrique'}).click();
+  const opts=await q.locator('select[data-qsel] option').allTextContents();
+  expect(opts).toEqual(expect.arrayContaining(['Vacances et séjours','Cadeaux','Maison et équipement','Espèces et divers','Dons et associations']));
 });
 
 test('recherche d’un fournisseur : la somme des dépenses, et ce qui a été remboursé',async({page})=>{
@@ -133,4 +138,19 @@ test('recherche d’un fournisseur : la somme des dépenses, et ce qui a été r
   await expect(t).toContainText('100,50');
   await page.fill('#search','zzzz');
   await expect(page.locator('#total-recherche')).toHaveCount(0);
+});
+
+test('en-tête : état clair de l’enregistrement, dernière sauvegarde et bouton pour le dossier Cloud',async({page})=>{
+  await openWith(page,{onboarded:true,accounts:[{id:'a',name:'Banque',type:'perso',confirmed:true}],ops:[{id:'1',date:'2026-01-05',label:'CB X',amount:-5,merchant:'X',acct:'a'}]});
+  await page.evaluate(()=>{setStatus('local')});
+  await expect(page.locator('#status')).toHaveText('Vos données sont gardées sur cet appareil uniquement');
+  await expect(page.locator('#lastbk')).toHaveText('Jamais sauvegardé');
+  await expect(page.locator('#cloudBtn')).toContainText('Sauvegarder dans mon dossier Cloud');
+  await page.evaluate(()=>{window.__f=null;window.alert=()=>{};window.showSaveFilePicker=async o=>({createWritable:async()=>({write:async d=>{window.__f={name:o.suggestedName,d}},close:async()=>{}})})});
+  await page.click('#cloudBtn');
+  await page.waitForFunction(()=>window.__f);
+  const r=await page.evaluate(()=>({n:window.__f.name,j:JSON.parse(window.__f.d),bk:S.lastBackup}));
+  expect(r.n).toMatch(/^mes-comptes-sauvegarde-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(r.j.app).toBe('mes-comptes'); expect(r.j.data.ops.length).toBe(1); expect(r.bk).toBeGreaterThan(0);
+  await expect(page.locator('#lastbk')).toContainText('Dernière sauvegarde');
 });

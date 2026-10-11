@@ -22,13 +22,17 @@ test('un seul compte qui sert à tout : mêmes chiffres qu’avec un compte pro 
 test('compte sans compte pro : pour une rentrée d’argent inconnue, « Cet argent vient-il d’un client ? »',async({page})=>{
   const e=etat(true); e.rules={}; await openWith(page,e);
   await page.click('nav.tabs [data-tab="operations"]');
-  const q=page.locator('.client-q',{hasText:'CLIENT ALPHA'});
-  await expect(q.locator('.q-question')).toHaveText('Cet argent vient-il d’un client ?');
-  await expect(q.locator('.choix-btn')).toHaveText(['Oui, c’est un client','Non (CAF, vente, remboursement, virement perso…)','Retrait d’épargne']);
-  await q.locator('.choix-btn',{hasText:'Oui'}).click();
-  await page.locator('.client-q').filter({has:page.locator('.q-t',{hasText:/^CAF$/})}).locator('.choix-btn',{hasText:'Non'}).click();
+  /* Une carte à la fois : les rentrées inconnues (clients ALPHA et BETA, la CAF) sont demandées, les dépenses se passent d'un geste */
+  for(let i=0;i<12&&await page.locator('.verifier .question').count();i++){
+    const q=page.locator('.verifier .question').first();
+    if(!(await q.getAttribute('class')).includes('client-q')){await q.locator('.choix-btn',{hasText:'Je ne sais pas'}).click();continue}
+    await expect(q.locator('.q-question')).toHaveText('Cet argent vient-il d’un client ?');
+    await expect(q.locator('.choix-btn')).toHaveText(['Oui, c’est un client','Non (CAF, vente, remboursement, virement perso…)','Retrait d’épargne']);
+    const nom=await q.locator('.q-t').textContent();
+    await q.locator('.choix-btn',{hasText:/CLIENT/.test(nom)?'Oui':'Non'}).click();
+  }
   const r=await page.evaluate(()=>{const p={lvl:'M',y:2026,m:6};return [agg(p,'pro').ca,agg(p,'perso').inc.rentrees]});
-  expect(r).toEqual([3000,150]);
+  expect(r).toEqual([4200,150]);
 });
 test('démarrage : « Avez-vous un compte bancaire réservé à votre activité ? » ; « Non » fait supposer un compte qui sert à tout',async({page})=>{
   await openWith(page,'vierge');

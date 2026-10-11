@@ -3,7 +3,7 @@ test('réglages : une page simple, tout l’avancé replié',async({page})=>{
   await openWith(page,null); await page.click('[data-act="demo"]'); await page.click('nav.tabs [data-tab="reglages"]');
   await expect(page.locator('#view .carte h3')).toHaveText(['Votre réserve','Vos comptes','Vos rubriques','Vos données','Votre année en revue','Présentation']);
   await expect(page.locator('#avances')).not.toHaveAttribute('open','');
-  await expect(page.locator('.lien-objectifs')).toContainText('Mes objectifs');
+  await expect(page.locator('.lien-objectifs[data-tab="objectifs"]')).toContainText('Mes objectifs');
   await page.click('nav.tabs [data-tab="objectifs"]');
   await expect(page.locator('[data-set="heuresSemaine"]')).toHaveValue('40');
   await expect(page.locator('#prixLive')).toContainText('vous devez vous faire payer au minimum');

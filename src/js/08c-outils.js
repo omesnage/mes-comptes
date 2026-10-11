@@ -88,14 +88,14 @@ function ajouterColle(){
   const c=COLLE; let acct=c.acct;
   if(acct==='__new'){const n=(prompt('Nom du compte (par exemple « Crédit Agricole »)')||'').trim();if(!n)return;acct=addAccount({name:n.slice(0,40),bank:detectBank(n)||'',type:guessType(detectBank(n)||'','',n)}).id}
   const L=classeCollage(parseCollage(c.texte,c.signe).ops,acct), imp=Math.random().toString(36).slice(2,9), atype=(acctById(acct)||{}).type||'perso';
-  let added=0; S.douteux=S.douteux||[];
+  let added=0; S.douteux=S.douteux||[]; const nouvelles=[];
   for(const o of L){ if(o.etat==='deja') continue;
     const op={id:Math.random().toString(36).slice(2,10),date:o.date,label:o.label,amount:o.amount,merchant:merchantOf(o.label),acct,imp,src:'paste'};
     S.ops.push(op); added++; dirtyMonths.add(op.date.slice(0,7));
     if(o.etat==='doute') S.douteux.push({a:o.twin,b:op.id});
-    appliqueAuto(op,atype);
-    if(!S.rules[op.merchant]&&!S.sugg[op.merchant]){const k=kwSuggest(op.merchant,op.label,atype,op.amount);if(k)S.sugg[op.merchant]={c:k,src:'kw'}}
+    appliqueAuto(op,atype); nouvelles.push(op);
   }
+  classerNouvelles(nouvelles);
   const a=acctById(acct);
   if(added){S.imports=S.imports||{};S.imports[imp]={nom:'Copier-coller du '+new Date().toLocaleDateString('fr-FR'),quand:Date.now()}}
   reports.unshift({name:'Copier-coller',colle:true,bank:a?a.name:'',acct,found:L.length,added,dups:L.filter(o=>o.etat==='deja').length,completees:0,douteux:L.filter(o=>o.etat==='doute').length,sample:[],lus:L.map(o=>({...o,dup:o.etat==='deja'})),raw:'',imp,test:false});

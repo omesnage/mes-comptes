@@ -30,6 +30,13 @@ document.addEventListener('click',async e=>{
   if(d.act==='relancer'){S.onboarded=false;ONB=0;save();render();window.scrollTo({top:0});return}
   if(d.tab){aller(d.tab,d.ancre);return}
   if(d.scroll){const el=document.getElementById(d.scroll);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});return}
+  if(d.act==='wizlater'){WIZ.later=true;render();return}
+  if(d.act==='wizresume'){WIZ.later=false;render();return}
+  if(d.act==='validall'){validerSuggestions();return}
+  if(d.act==='valdev'){validerDevinees();return}
+  if(d.act==='reclasser'){const n=reclasserDevinees(), r=pendingGroups().length;alert((n?n+' opération'+(n>1?'s':'')+' reclassée'+(n>1?'s':'')+' avec le dictionnaire à jour.':'Aucune opération n’a changé de rubrique.')+'\n\nIl reste '+r+' marchand'+(r>1?'s':'')+' à vérifier.\n(Dictionnaire du 30 septembre, version 3)');return}
+  if(d.idk){jeNeSaisPas(d.idk);return}
+  if(d.act==='cloud'){sauvegardeCloud();return}
   if(d.imptype){IMPTYPE=IMPTYPE===d.imptype?null:d.imptype;render();return}
   if(d.alvl){AL=d.alvl;openCat=null;render();return}
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
@@ -88,6 +95,7 @@ document.addEventListener('change',e=>{
   const t=e.target, d=t.dataset;
   if(d.rule){S.rules[d.rule]=t.value;save();render();return}
   if(d.limite||d.limper){const id=d.limite||d.limper,c=catById(id);if(!c)return;const row=t.closest('.limite-reg');const v=+row.querySelector('[data-limite]').value||0, per=row.querySelector('[data-limper]').value;c.limite=v>0?{montant:v,per}:null;save();return}
+  if(d.devsel){if(t.value){DEV_OUVERT=true;setRule(d.devsel,t.value);if(S.auto)delete S.auto[d.devsel];render()}return}
   if(d.opcat){const o=BYID[d.opcat];if(o&&t.value){LIGNES.add(d.gk);o.cat=t.value;dirtyMonths.add(o.date.slice(0,7));stateDirty=true;save();render()}return}
   if(d.moveimp){deplacerReleve(d.moveimp,t.value);return}
   if(d.qsel){if(t.value==='__new'){t.value='';ouvrirRubrique({de:'question',m:d.qsel});return}if(t.value){setRule(d.qsel,t.value);render()}return}
