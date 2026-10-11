@@ -159,16 +159,14 @@ test('mode d’emploi : le premier mois est un peu long, ensuite l’essentiel d
   expect(t).toContain('90 %');
 });
 
-test('mode d’emploi dans l’application : lien dans l’en-tête, sur l’Accueil, dans Importer et dans Réglages ; contenu complet',async({page})=>{
+test('mode d’emploi dans l’application : icône dans l’en-tête, dans Importer et dans Réglages ; contenu complet',async({page})=>{
   await openWith(page,{onboarded:true});
-  await expect(page.locator('header .lien',{hasText:'Mode d’emploi'})).toBeVisible();
+  await expect(page.locator('header [data-tab="aide"]')).toBeVisible();
+  await expect(page.locator('.lien-aide')).toHaveCount(0);
   await page.click('header [data-tab="aide"]');
   const t=await page.locator('.aide-page').textContent();
   for(const mot of ['Ouvrir Mes comptes','Ajouter vos relevés','premier mois est un peu long','90 %','Sauvegarder dans mon dossier Cloud','Restaurer une sauvegarde','de préférence dans un Cloud','Refaites la même chose quand vous changez de nouveau d’appareil','garder le même appareil','badge « Netlify »','touchez-le : il disparaît','adresse du lien']) expect(t).toContain(mot);
   await page.click('.aide-page [data-tab="accueil"]');
-  await expect(page.locator('.lien-aide')).toBeVisible();
-  await page.click('.lien-aide [data-tab="aide"]');
-  await expect(page.locator('.aide-page')).toBeVisible();
   await page.click('nav.tabs [data-tab="importer"]');
   await page.click('button:has-text("Voir le mode d’emploi")');
   await expect(page.locator('.aide-page')).toBeVisible();

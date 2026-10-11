@@ -95,6 +95,7 @@ document.addEventListener('click',async e=>{
   if(d.act==='revok'){revImport();return}
   if(d.act==='revcancel'){revDraft=null;render();return}
   if(d.act==='exitdemo'){exitDemo();render();return}
+  if(d.act==='collerreleve'){collerReleveCopie();return}
   if(d.act==='wipe'){WIPE=true;render();return}
   if(d.act==='wipeno'){WIPE=false;render();return}
   if(d.act==='wipeok'){WIPE=false;S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));S=blank();S.onboarded=true;reports.length=0;P=null;save();aller('accueil');return}

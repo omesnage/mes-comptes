@@ -68,12 +68,23 @@ async function lireFichier(f){
   if(!/\.pdf$/i.test(f.name)&&f.type!=='application/pdf'&&!tete.includes('%PDF')) throw new Error(MSG_PAS_RELEVE);
   return await parsePDF(f);
 }
+/* Bouton « Coller le relevé copié » : lit le presse-papiers (quand le téléphone le permet) */
+async function collerReleveCopie(){
+  try{
+    const items=await navigator.clipboard.read(), fs=[];
+    for(const it of items){const t=it.types.find(x=>/pdf|csv/.test(x)); if(t){const b=await it.getType(t);fs.push(new File([b],t.includes('pdf')?'Relevé collé.pdf':'Relevé collé.csv',{type:t}))}}
+    if(fs.length){importFiles(fs);return}
+  }catch(e){}
+  const r=newReport({name:'Relevé collé'},false);
+  r.error='Le relevé copié n’a pas pu être lu ici. Dans le partage, choisissez plutôt « Enregistrer dans Fichiers », puis touchez « Ajouter mes relevés » et choisissez-le. Autre possibilité : touchez la zone « Coller ici » ci-dessous un instant, puis « Coller ».';
+  reports.unshift(r); render();
+}
 /* Un lien (ou un fichier) collé dans la page : un fichier PDF ou CSV est importé, un lien est expliqué */
 document.addEventListener('paste',e=>{
   if(view!=='importer'||/^(INPUT|TEXTAREA)$/.test((e.target||{}).tagName)) return;
   const cd=e.clipboardData; if(!cd) return;
-  const fs=[...(cd.files||[])].filter(f=>/\.(pdf|csv)$/i.test(f.name)||/pdf|csv/.test(f.type));
-  if(fs.length){e.preventDefault();importFiles(fs);return}
+  const fs=[...(cd.files||[]),...[...(cd.items||[])].filter(i=>i.kind==='file').map(i=>i.getAsFile())].filter(f=>f&&(/\.(pdf|csv)$/i.test(f.name)||/pdf|csv/.test(f.type)));
+  if(fs.length){e.preventDefault();const z=document.getElementById('zoneColle');if(z)z.textContent='';importFiles(fs);return}
   if(/^\s*https?:\/\//i.test(cd.getData('text')||'')){e.preventDefault();const r=newReport({name:'Lien collé'},false);r.error=MSG_PAS_RELEVE;reports.unshift(r);render()}
 });
 const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;

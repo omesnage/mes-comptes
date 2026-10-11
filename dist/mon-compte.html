@@ -53,14 +53,22 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .top-droite{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right}
 .btn-cloud{display:inline-flex;align-items:center;gap:6px;font-size:15px;min-height:44px}
 .btn-cloud svg{width:16px;height:16px}
-.actions-top{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
-.act-top{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 14px;font-size:15px;line-height:1.25;color:var(--ink);background:var(--p);border:1px solid transparent;cursor:pointer;text-align:left}
-.act-top svg{width:20px;height:20px;color:var(--i)}
-.act-top:hover{border-color:var(--i)}
-.act-top.ciel{--p:var(--p-ciel);--i:var(--i-ciel)}
-.act-top.menthe{--p:var(--p-menthe);--i:var(--i-menthe)}
-.act-top.alerte{--p:var(--amber-soft);--i:var(--amber);font-weight:500}
-.act-top[hidden]{display:none}
+.actions-top{display:flex;gap:8px}
+.ico{position:relative;display:inline-grid;place-items:center;width:48px;height:48px;background:var(--p);color:var(--i);border:1px solid transparent;cursor:pointer}
+.ico svg{width:24px;height:24px}
+.ico:hover,.ico:focus-visible{border-color:var(--i)}
+.ico[hidden]{display:none}
+.ico.ciel{--p:var(--p-ciel);--i:var(--i-ciel)}
+.ico.menthe{--p:var(--p-menthe);--i:var(--i-menthe)}
+.ico.sable{--p:var(--p-sable);--i:var(--i-sable)}
+.ico.alerte{--p:var(--amber-soft);--i:var(--amber)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#bulle{position:fixed;z-index:60;max-width:min(280px,calc(100vw - 16px));padding:10px 14px;background:var(--ink);color:var(--bg);font-size:16px;line-height:1.4;pointer-events:none;opacity:0;transition:opacity .12s}
+#bulle.on{opacity:1}
+.zone-colle{min-height:56px;margin:10px 0;padding:14px 16px;border:1px dashed var(--i-peche);background:var(--p-peche);color:var(--ink);font-size:16px;overflow-wrap:anywhere}
+.zone-colle:empty::before{content:attr(data-vide);color:var(--muted)}
+#lastbk::before{content:"· "}
+.etat-top{margin:-6px 0 14px;font-size:15px;color:var(--muted);text-align:right}
 .dern-sauv{font-size:15px;color:var(--muted)}
 .status{font-size:15px;color:var(--muted)}
 nav.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:26px}
@@ -274,15 +282,26 @@ textarea.anon{width:100%;min-height:160px;font:15px/1.45 ui-monospace,Menlo,mono
 .vide p{font-size:18px;color:var(--muted);max-width:32ch;margin:0 auto}
 .vide .boutons{justify-content:center;margin-top:26px}
 
-/* Année en revue */
-#review{position:fixed;inset:0;z-index:30;background:var(--ink);color:var(--bg);overflow-y:auto;scroll-snap-type:y mandatory}
-#review .slide{min-height:100vh;min-height:100dvh;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:40px 28px;max-width:640px;margin:0 auto}
-#review .lbl{font-size:18px;opacity:.8;margin-bottom:14px}
-#review .v{font-size:clamp(52px,15vw,100px);font-weight:300;font-variant-numeric:tabular-nums;line-height:1;color:var(--gold)}
-#review .v.txt{font-size:clamp(36px,10vw,60px);color:var(--bg)}
-#review .v.txt::first-letter{text-transform:uppercase}
-#review .c{font-size:18px;opacity:.85;margin-top:18px;max-width:36ch}
-#review .close{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:16px;color:var(--bg);font-size:17px;text-decoration:underline;text-underline-offset:4px;min-height:48px;padding:0 8px;z-index:31}
+/* Année en revue : une seule page */
+#review{position:fixed;inset:0;z-index:30;background:var(--bg);color:var(--ink);overflow-y:auto}
+#review .rv-page{max-width:640px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px))}
+#review .rv-tete{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
+#review h2{font-size:26px;font-weight:500;margin:0}
+#review .close{display:inline-flex;align-items:center;gap:6px;min-height:48px;padding:0 6px;font-size:17px;color:var(--ink)}
+#review .close svg{width:22px;height:22px}
+#review .rv-l{display:flex;gap:16px;align-items:flex-start;padding:16px 18px;margin:12px 0;background:var(--p);}
+#review .rv-l>svg{width:28px;height:28px;margin-top:4px;color:var(--i)}
+#review .rv-l.menthe{--p:var(--p-menthe);--i:var(--i-menthe)}
+#review .rv-l.ciel{--p:var(--p-ciel);--i:var(--i-ciel)}
+#review .rv-l.peche{--p:var(--p-peche);--i:var(--i-peche)}
+#review .rv-l.rose{--p:var(--p-rose);--i:var(--i-rose)}
+#review .rv-l.lavande{--p:var(--p-lavande);--i:var(--i-lavande)}
+#review .rv-l.sable{--p:var(--p-sable);--i:var(--i-sable)}
+#review .rv-l p{margin:0}
+#review .rv-lbl{font-size:17px;color:var(--muted)}
+#review .rv-v{font-size:32px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.2;overflow-wrap:anywhere}
+#review .rv-v::first-letter{text-transform:uppercase}
+#review .rv-c{font-size:17px;margin-top:4px}
 
 @media (max-width:700px){
   .carte{padding:20px 16px}
@@ -542,18 +561,18 @@ a.chercher svg{width:20px;height:20px}
 <div class="wrap">
   <header class="top">
     <div class="brand">Mon compte</div>
-    <div class="top-droite"><span class="status" id="status"></span>
-      <div class="actions-top">
-        <button class="act-top ciel" id="cloudBtn" data-act="cloud"><i data-lucide="cloud-upload"></i>Sauvegarder dans mon dossier Cloud</button>
-        <label class="act-top menthe" id="importBtn"><i data-lucide="folder-down"></i><span id="importTxt">Importer la sauvegarde</span><input type="file" id="restorefile2" accept=".json,application/json" hidden></label>
-        <button class="act-top alerte" id="warnBtn" data-act="cloud"><i data-lucide="triangle-alert"></i>Aucune sauvegarde : sauvegarder maintenant</button>
-      </div>
-      <span class="dern-sauv" id="lastbk"></span>
-      <button class="lien" data-tab="aide">Mode d’emploi</button></div>
+    <div class="actions-top" role="toolbar" aria-label="Actions rapides">
+      <button class="ico ciel" id="cloudBtn" data-act="cloud" data-tip="Sauvegarder : enregistre une copie de vos comptes dans un dossier de votre choix (Google Drive, iCloud…)."><i data-lucide="cloud-upload"></i><span class="sr">Sauvegarder dans mon dossier Cloud</span></button>
+      <label class="ico menthe" id="importBtn" data-tip="Retrouver vos comptes à partir d’un fichier de sauvegarde."><i data-lucide="folder-down"></i><span class="sr" id="importTxt">Importer la sauvegarde</span><input type="file" id="restorefile2" accept=".json,application/json" hidden></label>
+      <button class="ico alerte" id="warnBtn" data-act="cloud" data-tip="Vous n’avez encore fait aucune sauvegarde. Touchez ici pour en faire une : si vous perdez votre téléphone, vos comptes seront retrouvés."><i data-lucide="triangle-alert"></i><span class="sr">Aucune sauvegarde : sauvegarder maintenant</span></button>
+      <button class="ico sable" data-tab="aide" data-tip="Mode d’emploi : comment ajouter vos relevés, sauvegarder et vous y retrouver."><i data-lucide="circle-help"></i><span class="sr">Mode d’emploi</span></button>
+    </div>
   </header>
+  <p class="etat-top"><span class="status" id="status"></span> <span class="dern-sauv" id="lastbk"></span></p>
   <nav class="tabs" id="tabs" aria-label="Navigation principale"></nav>
   <div id="demoBar"></div>
   <main id="view"></main>
+  <div id="bulle" role="tooltip"></div>
 </div>
 
 <script>
@@ -1343,12 +1362,23 @@ async function lireFichier(f){
   if(!/\.pdf$/i.test(f.name)&&f.type!=='application/pdf'&&!tete.includes('%PDF')) throw new Error(MSG_PAS_RELEVE);
   return await parsePDF(f);
 }
+/* Bouton « Coller le relevé copié » : lit le presse-papiers (quand le téléphone le permet) */
+async function collerReleveCopie(){
+  try{
+    const items=await navigator.clipboard.read(), fs=[];
+    for(const it of items){const t=it.types.find(x=>/pdf|csv/.test(x)); if(t){const b=await it.getType(t);fs.push(new File([b],t.includes('pdf')?'Relevé collé.pdf':'Relevé collé.csv',{type:t}))}}
+    if(fs.length){importFiles(fs);return}
+  }catch(e){}
+  const r=newReport({name:'Relevé collé'},false);
+  r.error='Le relevé copié n’a pas pu être lu ici. Dans le partage, choisissez plutôt « Enregistrer dans Fichiers », puis touchez « Ajouter mes relevés » et choisissez-le. Autre possibilité : touchez la zone « Coller ici » ci-dessous un instant, puis « Coller ».';
+  reports.unshift(r); render();
+}
 /* Un lien (ou un fichier) collé dans la page : un fichier PDF ou CSV est importé, un lien est expliqué */
 document.addEventListener('paste',e=>{
   if(view!=='importer'||/^(INPUT|TEXTAREA)$/.test((e.target||{}).tagName)) return;
   const cd=e.clipboardData; if(!cd) return;
-  const fs=[...(cd.files||[])].filter(f=>/\.(pdf|csv)$/i.test(f.name)||/pdf|csv/.test(f.type));
-  if(fs.length){e.preventDefault();importFiles(fs);return}
+  const fs=[...(cd.files||[]),...[...(cd.items||[])].filter(i=>i.kind==='file').map(i=>i.getAsFile())].filter(f=>f&&(/\.(pdf|csv)$/i.test(f.name)||/pdf|csv/.test(f.type)));
+  if(fs.length){e.preventDefault();const z=document.getElementById('zoneColle');if(z)z.textContent='';importFiles(fs);return}
   if(/^\s*https?:\/\//i.test(cd.getData('text')||'')){e.preventDefault();const r=newReport({name:'Lien collé'},false);r.error=MSG_PAS_RELEVE;reports.unshift(r);render()}
 });
 const cleOp=o=>o.date+'|'+o.label+'|'+o.amount;
@@ -1927,8 +1957,7 @@ function privacyText(){return mode==='db'
 function privacyBox(){return `<div class="note-box" role="note"><i data-lucide="lock"></i><p>${privacyText()}</p></div>`}
 function vide(){
   return `<div class="vide"><h2>Ajoutez vos relevés pour commencer</h2><p>Téléchargez vos relevés de compte en PDF sur le site de votre banque, puis ajoutez-les ici.</p>
-  <div class="boutons"><button class="btn" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div>
-  <p class="lien-aide"><button class="lien" data-tab="aide"><i data-lucide="circle-help"></i>Comment ça marche ? Voir le mode d’emploi</button></p></div>`;
+  <div class="boutons"><button class="btn" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div></div>`;
 }
 function moisBar(){
   return `<div class="mois"><button class="fleche" data-shift="-1" aria-label="Mois précédent"><i data-lucide="chevron-left"></i></button>
@@ -2230,8 +2259,13 @@ function vImport(){
   ${choixTypeImport()}
   <label class="gros-bouton" data-drop="bank"><input type="file" id="file"${ACCEPT_RELEVE} multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
   <p class="aide">Des relevés PDF, plusieurs à la fois, même de banques différentes. Ce qui est déjà importé est ignoré.</p>
-  <details class="autre"><summary>Sur iPhone ou iPad : le relevé est dans un lien ou un dossier ?</summary>
-    <p class="aide">L’application lit le fichier PDF lui-même : un lien copié ne peut pas être ouvert, car vos données ne quittent jamais votre appareil. Ouvrez d’abord le lien, puis enregistrez le PDF dans « Fichiers » (touchez le bouton Partager, puis « Enregistrer dans Fichiers »). Ensuite, touchez « Ajouter mes relevés » et choisissez-le dans « Fichiers », « iCloud Drive » ou « Google Drive ».</p></details>
+  <details class="autre"${IOS?' open':''}><summary>Sur iPhone ou iPad : le relevé est dans l’application de ma banque ?</summary>
+    <p class="aide">Dans l’application de votre banque, touchez le relevé, puis le bouton Partager. Deux possibilités :</p>
+    <p class="aide"><b>1. « Enregistrer dans Fichiers »</b> (le plus sûr). Revenez ensuite ici, touchez « Ajouter mes relevés » et choisissez le relevé dans « Fichiers ».</p>
+    <p class="aide"><b>2. « Copier »</b>, puis touchez le bouton ci-dessous.</p>
+    <button class="btn secondaire" data-act="collerreleve"><i data-lucide="clipboard-paste"></i>Coller le relevé copié</button>
+    <div class="zone-colle" id="zoneColle" contenteditable="true" role="textbox" aria-label="Zone pour coller un relevé copié" data-vide="Si le bouton ne marche pas : touchez ici un instant, puis « Coller »."></div>
+    <p class="aide">Un lien copié ne peut pas être ouvert par l’application, car vos données ne quittent jamais votre appareil : il faut le fichier PDF lui-même.</p></details>
   <label class="btn secondaire">Tester un relevé<input type="file" id="testfile"${ACCEPT_RELEVE} hidden></label>
   <p class="aide">Pour voir comment un relevé est lu, sans rien enregistrer.</p>
   <button class="btn secondaire" data-act="coller"><i data-lucide="clipboard-paste"></i>Coller mes opérations</button>
@@ -2732,18 +2766,20 @@ function openReview(y){
   const ops=S.ops.filter(o=>o.date.startsWith(y+'-')&&o.amount<0&&o.src!=='rev'&&!INTERNAL[o.id]&&opUniv(o)==='perso');
   const cnt={}; ops.forEach(o=>cnt[o.merchant]=(cnt[o.merchant]||0)+1); const fav=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
   const defis=S.challenges.filter(c=>c.id==='auto'&&c.month.startsWith(y+'-')).map(evalDefi).filter(x=>x&&x.status==='réussi');
-  const sl=(lbl,v,c,txt)=>`<section class="slide"><div class="lbl">${lbl}</div><div class="v${txt?' txt':''}">${v}</div>${c?`<div class="c">${c}</div>`:''}</section>`;
-  const html=`<div id="review" role="dialog" aria-label="Votre année en revue"><button class="close" data-act="closereview">Fermer</button>
-    ${sl(`Votre année ${y}`,'En revue','Faites défiler vers le bas.',true)}
-    ${pro.length?sl('Vous avez encaissé',esc(eur0(ca)),`Sur ${pro.length} mois, soit ${esc(eur0(ca/pro.length))} par mois en moyenne.`):''}
-    ${pro.length?sl('Ce que vous avez gagné',esc(signed(net)),`Une heure de travail vous a rapporté ${esc(eurH(net/pro.length/heures()))} en moyenne, pour ${esc(eurH(tauxCible()))} visés.`):''}
-    ${best&&pro.length>1?sl('Votre meilleur mois',esc(MOIS[best.m-1]),`${esc(eur0(best.pro.revenuNet))} gagnés. Le plus difficile : ${esc(MOIS[worst.m-1])}, avec ${esc(signed(worst.pro.revenuNet))}.`,true):''}
-    ${pe.length?sl('Vos dépenses perso',esc(eur0(dep)),top?`La première rubrique : ${esc(catById(top[0])?.name||'')}, ${esc(eur0(top[1]))}.`:''):''}
-    ${fav?sl('Votre adresse préférée',esc(fav[0]),`${fav[1]} passages dans l’année.`,true):''}
-    ${sl('Défis réussis',String(defis.length),defis.length?`Bravo : ${esc(eur0(defis.reduce((s,x)=>s+x.economie,0)))} économisés grâce à eux.`:'Relevez le défi du mois : il est sur votre page d’accueil.')}
-    ${sl('À l’année prochaine','Merci','Continuez d’ajouter vos relevés chaque mois.',true)}
-  </div>`;
-  document.body.insertAdjacentHTML('beforeend',html); document.body.style.overflow='hidden';
+  /* Tout sur une seule page : une ligne par chiffre important */
+  const li=(couleur,icone,lbl,v,c)=>`<div class="rv-l ${couleur}"><i data-lucide="${icone}"></i><div><p class="rv-lbl">${lbl}</p><p class="rv-v">${v}</p>${c?`<p class="rv-c">${c}</p>`:''}</div></div>`;
+  const html=`<div id="review" role="dialog" aria-label="Votre année en revue"><div class="rv-page">
+    <div class="rv-tete"><h2>Votre année ${y}</h2><button class="close" data-act="closereview"><i data-lucide="x"></i>Fermer</button></div>
+    <p class="aide">Les chiffres importants de l’année, sur une seule page.</p>
+    ${pro.length?li('menthe','banknote','Vous avez encaissé',esc(eur0(ca)),`Sur ${pro.length} mois, soit ${esc(eur0(ca/pro.length))} par mois en moyenne.`):''}
+    ${pro.length?li('ciel','piggy-bank','Ce que vous avez gagné',esc(signed(net)),`Une heure de travail vous a rapporté ${esc(eurH(net/pro.length/heures()))} en moyenne, pour ${esc(eurH(tauxCible()))} visés.`):''}
+    ${best&&pro.length>1?li('peche','trophy','Votre meilleur mois',esc(MOIS[best.m-1]),`${esc(eur0(best.pro.revenuNet))} gagnés. Le plus difficile : ${esc(MOIS[worst.m-1])}, avec ${esc(signed(worst.pro.revenuNet))}.`):''}
+    ${pe.length?li('rose','shopping-cart','Vos dépenses perso',esc(eur0(dep)),top?`La première rubrique : ${esc(catById(top[0])?.name||'')}, ${esc(eur0(top[1]))}.`:''):''}
+    ${fav?li('lavande','heart','Votre adresse préférée',esc(fav[0]),`${fav[1]} passages dans l’année.`):''}
+    ${li('sable','target','Défis réussis',String(defis.length),defis.length?`Bravo : ${esc(eur0(defis.reduce((s,x)=>s+x.economie,0)))} économisés grâce à eux.`:'Relevez le défi du mois : il est sur votre page d’accueil.')}
+    <p class="aide centre">Continuez d’ajouter vos relevés chaque mois.</p>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html); document.body.style.overflow='hidden'; icons();
 }
 /* ============ Sauvegarde ============ */
 let backupMsg='';
@@ -2752,7 +2788,7 @@ function majSauvegardeEntete(){
   const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
   b.hidden=!!demo; l.hidden=!!demo;
   const aS=typeof S!=='undefined'&&S&&S.lastBackup, ib=$('#importBtn'), wb=$('#warnBtn');
-  if(ib&&wb){ib.hidden=!!demo||!aS; wb.hidden=!!demo||!!aS; if(aS) $('#importTxt').textContent='Importer la sauvegarde du '+new Date(S.lastBackup).toLocaleDateString('fr-FR')}
+  if(ib&&wb){ib.hidden=!!demo||!aS; wb.hidden=!!demo||!!aS; if(aS){const d=new Date(S.lastBackup).toLocaleDateString('fr-FR');$('#importTxt').textContent='Importer la sauvegarde du '+d;ib.dataset.tip='Retrouver vos comptes : choisissez le fichier de la sauvegarde du '+d+'.'}}
   const t=typeof S!=='undefined'&&S&&S.lastBackup;
   l.textContent=t?'Dernière sauvegarde : '+new Date(t).toLocaleDateString('fr-FR'):'Jamais sauvegardé';
 }
@@ -2916,6 +2952,7 @@ document.addEventListener('click',async e=>{
   if(d.act==='revok'){revImport();return}
   if(d.act==='revcancel'){revDraft=null;render();return}
   if(d.act==='exitdemo'){exitDemo();render();return}
+  if(d.act==='collerreleve'){collerReleveCopie();return}
   if(d.act==='wipe'){WIPE=true;render();return}
   if(d.act==='wipeno'){WIPE=false;render();return}
   if(d.act==='wipeok'){WIPE=false;S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));S=blank();S.onboarded=true;reports.length=0;P=null;save();aller('accueil');return}
@@ -2962,6 +2999,27 @@ document.addEventListener('input',e=>{
   z.classList.toggle('over',ev==='dragover');
   if(ev==='drop'&&e.dataTransfer.files.length){ if(z.dataset.drop==='rev'){if(demo)exitDemo();readRev(e.dataTransfer.files[0])} else importFiles([...e.dataTransfer.files]); }
 }));
+/* ============ Bulles d'explication ============
+   Sur ordinateur : en passant la souris. Sur téléphone : en gardant le doigt posé un instant (un simple toucher agit comme d'habitude). */
+let BULLE_T=null, BULLE_LONG=0;
+function montrerBulle(el){
+  const b=document.getElementById('bulle'); if(!b||!el||!el.dataset.tip) return;
+  b.textContent=el.dataset.tip; b.classList.add('on');
+  const r=el.getBoundingClientRect(), w=b.offsetWidth, vw=document.documentElement.clientWidth;
+  b.style.top=Math.round(r.bottom+8)+'px';
+  b.style.left=Math.round(Math.max(8,Math.min(r.left+r.width/2-w/2,vw-w-8)))+'px';
+}
+function cacherBulle(){clearTimeout(BULLE_T);const b=document.getElementById('bulle');if(b)b.classList.remove('on')}
+const cibleBulle=e=>e.target.closest&&e.target.closest('[data-tip]');
+document.addEventListener('mouseover',e=>{const c=cibleBulle(e);if(c&&matchMedia('(hover:hover)').matches)montrerBulle(c)});
+document.addEventListener('mouseout',e=>{if(cibleBulle(e))cacherBulle()});
+document.addEventListener('focusin',e=>{const c=cibleBulle(e);if(c)montrerBulle(c)});
+document.addEventListener('focusout',cacherBulle);
+document.addEventListener('touchstart',e=>{const c=cibleBulle(e);cacherBulle();if(!c)return;
+  BULLE_T=setTimeout(()=>{BULLE_LONG=Date.now();montrerBulle(c);BULLE_T=setTimeout(cacherBulle,4000)},450)},{passive:true});
+['touchend','touchmove','touchcancel'].forEach(ev=>document.addEventListener(ev,()=>{if(ev!=='touchend')cacherBulle();else clearTimeout(BULLE_T)},{passive:true}));
+document.addEventListener('click',e=>{if(Date.now()-BULLE_LONG<900&&cibleBulle(e)){e.preventDefault();e.stopImmediatePropagation()}},true);
+document.addEventListener('contextmenu',e=>{if(cibleBulle(e)&&Date.now()-BULLE_LONG<2000)e.preventDefault()});
 /* ============ Exemple fictif ============ */
 /* Douze mois complets jusqu'au mois dernier, un compte perso et un compte pro. Données fixes (tirage à graine).
    Mois affiché : au-dessus de l'objectif, restaurants qui dérapent, défi réussi, remboursement d'achat, frais kilométriques,
@@ -3243,7 +3301,7 @@ function vAccueil(){
   else if(Pe.any) gagne=`<section class="carte"><h3>Ce que vous avez gagné</h3><p class="aide">Aucun encaissement de votre activité ${mens?'ce mois-ci':'sur cette période'}.${S.accounts.some(a=>a.type!=='perso')?'':' Indiquez dans les réglages quel compte sert à votre activité.'}</p>${balanceBloc(0,Pe,PA)}</section>`;
   if(SAL) gagne=Pe.any?`<section class="carte gagne"><h3>Votre ${mens?'mois':AL==='Q'?'trimestre':'année'}</h3>${balanceBloc(0,Pe,PA)}</section>`:'';
   const q=S.accounts.filter(a=>!a.confirmed);
-  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+lienAide()+periodeBarAccueil(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
+  return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+periodeBarAccueil(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
   ${Pe.any?`<section class="carte argent"><h3>Où part votre argent</h3>
     <p class="phrase">${eur0(Pe.net)} dépensés côté perso</p>
     <div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;

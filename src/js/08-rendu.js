@@ -50,8 +50,7 @@ function privacyText(){return mode==='db'
 function privacyBox(){return `<div class="note-box" role="note"><i data-lucide="lock"></i><p>${privacyText()}</p></div>`}
 function vide(){
   return `<div class="vide"><h2>Ajoutez vos relevés pour commencer</h2><p>Téléchargez vos relevés de compte en PDF sur le site de votre banque, puis ajoutez-les ici.</p>
-  <div class="boutons"><button class="btn" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div>
-  <p class="lien-aide"><button class="lien" data-tab="aide"><i data-lucide="circle-help"></i>Comment ça marche ? Voir le mode d’emploi</button></p></div>`;
+  <div class="boutons"><button class="btn" data-tab="importer">Ajouter mes relevés</button><button class="btn secondaire" data-act="demo">Voir un exemple</button></div></div>`;
 }
 function moisBar(){
   return `<div class="mois"><button class="fleche" data-shift="-1" aria-label="Mois précédent"><i data-lucide="chevron-left"></i></button>
@@ -353,8 +352,13 @@ function vImport(){
   ${choixTypeImport()}
   <label class="gros-bouton" data-drop="bank"><input type="file" id="file"${ACCEPT_RELEVE} multiple><i data-lucide="file-plus-2"></i><span>Ajouter mes relevés</span></label>
   <p class="aide">Des relevés PDF, plusieurs à la fois, même de banques différentes. Ce qui est déjà importé est ignoré.</p>
-  <details class="autre"><summary>Sur iPhone ou iPad : le relevé est dans un lien ou un dossier ?</summary>
-    <p class="aide">L’application lit le fichier PDF lui-même : un lien copié ne peut pas être ouvert, car vos données ne quittent jamais votre appareil. Ouvrez d’abord le lien, puis enregistrez le PDF dans « Fichiers » (touchez le bouton Partager, puis « Enregistrer dans Fichiers »). Ensuite, touchez « Ajouter mes relevés » et choisissez-le dans « Fichiers », « iCloud Drive » ou « Google Drive ».</p></details>
+  <details class="autre"${IOS?' open':''}><summary>Sur iPhone ou iPad : le relevé est dans l’application de ma banque ?</summary>
+    <p class="aide">Dans l’application de votre banque, touchez le relevé, puis le bouton Partager. Deux possibilités :</p>
+    <p class="aide"><b>1. « Enregistrer dans Fichiers »</b> (le plus sûr). Revenez ensuite ici, touchez « Ajouter mes relevés » et choisissez le relevé dans « Fichiers ».</p>
+    <p class="aide"><b>2. « Copier »</b>, puis touchez le bouton ci-dessous.</p>
+    <button class="btn secondaire" data-act="collerreleve"><i data-lucide="clipboard-paste"></i>Coller le relevé copié</button>
+    <div class="zone-colle" id="zoneColle" contenteditable="true" role="textbox" aria-label="Zone pour coller un relevé copié" data-vide="Si le bouton ne marche pas : touchez ici un instant, puis « Coller »."></div>
+    <p class="aide">Un lien copié ne peut pas être ouvert par l’application, car vos données ne quittent jamais votre appareil : il faut le fichier PDF lui-même.</p></details>
   <label class="btn secondaire">Tester un relevé<input type="file" id="testfile"${ACCEPT_RELEVE} hidden></label>
   <p class="aide">Pour voir comment un relevé est lu, sans rien enregistrer.</p>
   <button class="btn secondaire" data-act="coller"><i data-lucide="clipboard-paste"></i>Coller mes opérations</button>

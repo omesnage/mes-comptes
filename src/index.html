@@ -19,18 +19,18 @@
 <div class="wrap">
   <header class="top">
     <div class="brand">Mes comptes</div>
-    <div class="top-droite"><span class="status" id="status"></span>
-      <div class="actions-top">
-        <button class="act-top ciel" id="cloudBtn" data-act="cloud"><i data-lucide="cloud-upload"></i>Sauvegarder dans mon dossier Cloud</button>
-        <label class="act-top menthe" id="importBtn"><i data-lucide="folder-down"></i><span id="importTxt">Importer la sauvegarde</span><input type="file" id="restorefile2" accept=".json,application/json" hidden></label>
-        <button class="act-top alerte" id="warnBtn" data-act="cloud"><i data-lucide="triangle-alert"></i>Aucune sauvegarde : sauvegarder maintenant</button>
-      </div>
-      <span class="dern-sauv" id="lastbk"></span>
-      <button class="lien" data-tab="aide">Mode d’emploi</button></div>
+    <div class="actions-top" role="toolbar" aria-label="Actions rapides">
+      <button class="ico ciel" id="cloudBtn" data-act="cloud" data-tip="Sauvegarder : enregistre une copie de vos comptes dans un dossier de votre choix (Google Drive, iCloud…)."><i data-lucide="cloud-upload"></i><span class="sr">Sauvegarder dans mon dossier Cloud</span></button>
+      <label class="ico menthe" id="importBtn" data-tip="Retrouver vos comptes à partir d’un fichier de sauvegarde."><i data-lucide="folder-down"></i><span class="sr" id="importTxt">Importer la sauvegarde</span><input type="file" id="restorefile2" accept=".json,application/json" hidden></label>
+      <button class="ico alerte" id="warnBtn" data-act="cloud" data-tip="Vous n’avez encore fait aucune sauvegarde. Touchez ici pour en faire une : si vous perdez votre téléphone, vos comptes seront retrouvés."><i data-lucide="triangle-alert"></i><span class="sr">Aucune sauvegarde : sauvegarder maintenant</span></button>
+      <button class="ico sable" data-tab="aide" data-tip="Mode d’emploi : comment ajouter vos relevés, sauvegarder et vous y retrouver."><i data-lucide="circle-help"></i><span class="sr">Mode d’emploi</span></button>
+    </div>
   </header>
+  <p class="etat-top"><span class="status" id="status"></span> <span class="dern-sauv" id="lastbk"></span></p>
   <nav class="tabs" id="tabs" aria-label="Navigation principale"></nav>
   <div id="demoBar"></div>
   <main id="view"></main>
+  <div id="bulle" role="tooltip"></div>
 </div>
 
 <script>

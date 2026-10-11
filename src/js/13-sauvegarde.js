@@ -5,7 +5,7 @@ function majSauvegardeEntete(){
   const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
   b.hidden=!!demo; l.hidden=!!demo;
   const aS=typeof S!=='undefined'&&S&&S.lastBackup, ib=$('#importBtn'), wb=$('#warnBtn');
-  if(ib&&wb){ib.hidden=!!demo||!aS; wb.hidden=!!demo||!!aS; if(aS) $('#importTxt').textContent='Importer la sauvegarde du '+new Date(S.lastBackup).toLocaleDateString('fr-FR')}
+  if(ib&&wb){ib.hidden=!!demo||!aS; wb.hidden=!!demo||!!aS; if(aS){const d=new Date(S.lastBackup).toLocaleDateString('fr-FR');$('#importTxt').textContent='Importer la sauvegarde du '+d;ib.dataset.tip='Retrouver vos comptes : choisissez le fichier de la sauvegarde du '+d+'.'}}
   const t=typeof S!=='undefined'&&S&&S.lastBackup;
   l.textContent=t?'Dernière sauvegarde : '+new Date(t).toLocaleDateString('fr-FR'):'Jamais sauvegardé';
 }
