@@ -186,6 +186,14 @@ details[open]>summary::before{transform:rotate(90deg)}
 .f-actions{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
 body.fige{overflow:hidden}
 
+.filtre{margin:0 0 16px}
+.filtre .seg{margin:12px 0}
+.filtre .champ{margin:12px 0}
+.filtre .grand{width:100%}
+.dates{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 20px}
+.dates .champ{flex:1;min-width:150px}
+.dates input{display:block;width:100%;min-height:52px;font-size:18px;padding:8px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+
 /* Importer */
 .gros-bouton{display:flex;align-items:center;justify-content:center;gap:14px;min-height:88px;padding:18px;background:var(--ink);color:var(--bg);font-size:21px;font-weight:500;cursor:pointer;text-align:center}
 .gros-bouton svg{width:28px;height:28px}
@@ -1959,16 +1967,59 @@ function totalRecherche(list){
     ${rec>0.005?`<div class="ligne"><span>Reçu ou remboursé</span><b>+${eur(rec)}</b></div>
     <div class="ligne total"><span>Au final</span><b>${net<0?'−':'+'}${eur(Math.abs(net))}</b></div>`:''}</div>`;
 }
+/* Filtre de Mes opérations : période (mois, trimestre, année, dates précises) et rubrique */
+let FIL={lvl:'M',cat:'',du:'',au:''};
+const filActif=()=>FIL.cat!==''||FIL.lvl!=='M';
+function filBornes(){
+  if(FIL.lvl==='D'){
+    const ds=S.ops.map(o=>o.date).sort(), min=ds[0]||'', max=ds[ds.length-1]||'';
+    let du=FIL.du||min, au=FIL.au||max;
+    if(du>au) [du,au]=[au,du];
+    return [du,au];
+  }
+  const [a,b]=bounds({...P,lvl:FIL.lvl}); return [a+'-01',b+'-31'];
+}
+function opsFiltrees(){
+  let l;
+  if(FIL.lvl==='M') l=(BYMONTH[P.y+'-'+pad(P.m)]||[]).slice();
+  else{
+    const [du,au]=filBornes();
+    l=du?monthKeys(du.slice(0,7),au.slice(0,7)).flatMap(k=>BYMONTH[k]||[]).filter(o=>o.date>=du&&o.date<=au):[];
+  }
+  return filtreRubrique(l);
+}
+function filtreRubrique(l){
+  if(!FIL.cat) return l;
+  if(FIL.cat==='_aver') return l.filter(o=>!catOf(o)&&!(INTERNAL[o.id]&&!o.cat));
+  return l.filter(o=>catOf(o)===FIL.cat);
+}
+function periodeTexte(){
+  if(FIL.lvl==='D'){const [du,au]=filBornes();return du?`Du ${dfmt(du).replace(/(\d\d)$/,'20$1')} au ${dfmt(au).replace(/(\d\d)$/,'20$1')}`:''}
+  const t=plabel({...P,lvl:FIL.lvl});return t[0].toUpperCase()+t.slice(1);
+}
+function filtreBar(t){
+  const lv=[['M','Mois'],['Q','Trimestre'],['Y','Année'],['D','Dates']];
+  const nav=t?'':FIL.lvl==='M'?moisBar()
+    :FIL.lvl==='D'?`<div class="dates"><label class="champ">Du<input id="filtreDu" type="date" value="${esc(FIL.du)}"></label><label class="champ">Au<input id="filtreAu" type="date" value="${esc(FIL.au)}"></label></div>`
+    :`<div class="mois"><button class="fleche" data-oshift="-1" aria-label="Période précédente"><i data-lucide="chevron-left"></i></button><h2>${esc(periodeTexte())}</h2><button class="fleche" data-oshift="1" aria-label="Période suivante"><i data-lucide="chevron-right"></i></button></div>`;
+  return `<details class="carte repli filtre"${filActif()?' open':''}><summary>Filtrer par période et par rubrique${filActif()?' <span class="compte">(actif)</span>':''}</summary>
+    ${t?'<p class="aide">La recherche porte sur toutes les périodes ; seule la rubrique choisie s’applique.</p>':`<div class="seg" role="group" aria-label="Période">${lv.map(([k,l])=>`<button data-flvl="${k}" aria-pressed="${FIL.lvl===k}">${l}</button>`).join('')}</div>`}
+    <label class="champ">Rubrique<select class="grand" id="filtreCat"><option value="">Toutes les rubriques</option><option value="_aver"${FIL.cat==='_aver'?' selected':''}>À vérifier (sans rubrique)</option>${catOptions(FIL.cat,false,'',false)}</select></label>
+    ${filActif()?'<button class="lien" data-act="filreset">Tout afficher</button>':''}</details>${nav}`;
+}
 function vOps(){
-  const t=norm(q.trim()), k=P.y+'-'+pad(P.m);
+  const t=norm(q.trim());
   /* Recherche : marchand, libellé, rubrique, ou somme (« 45,80 », « 45.8 », « 45 ») */
   const som=/^[+\-−]?\d+([.,]\d{1,2})?\s*(€|eur|euros?)?$/i.test(q.trim())?q.trim().replace(/^[+\-−]/,'').replace(/\s*(€|eur|euros?)$/i,'').replace('.',','):'';
   const okSom=o=>{if(!som) return false; const a=Math.abs(o.amount).toFixed(2).replace('.',','); return som.includes(',')?a.startsWith(som):a.split(',')[0]===som};
-  const list=t?S.ops.filter(o=>norm(o.label+' '+o.merchant+' '+((catById(catOf(o))||{}).name||'')).includes(t)||okSom(o)):(BYMONTH[k]||[]).slice().sort((a,b)=>a.date<b.date?1:-1);
+  const list=(t?filtreRubrique(S.ops.filter(o=>norm(o.label+' '+o.merchant+' '+((catById(catOf(o))||{}).name||'')).includes(t)||okSom(o))):opsFiltrees()).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
+  const resume=t?`${list.length} opération${list.length>1?'s':''} trouvée${list.length>1?'s':''}, tous mois confondus.`
+    :filActif()?`${list.length} opération${list.length>1?'s':''}${FIL.cat?' dans '+(FIL.cat==='_aver'?'« À vérifier »':'« '+esc(catById(FIL.cat)?.name||'')+' »'):''}${FIL.lvl!=='M'?', '+esc(periodeTexte()):''}.`:'';
   return aVerifier()+`<input class="recherche" id="search" type="search" placeholder="Rechercher un marchand ou une somme" value="${esc(q)}" aria-label="Rechercher un marchand ou une somme">
-  ${t?`<p class="aide">${list.length} opération${list.length>1?'s':''} trouvée${list.length>1?'s':''}, tous mois confondus.</p>${totalRecherche(list)}`:moisBar()}
+  ${filtreBar(t)}
+  ${resume?`<p class="aide">${resume}</p>`:''}${t||filActif()?totalRecherche(list):''}
   <div class="ops">${list.slice(0,300).map(opLine).join('')||'<p class="aide">Aucune opération.</p>'}</div>
-  ${list.length>300?'<p class="aide">Seules les 300 plus récentes sont affichées.</p>':''}`;
+  ${list.length>300?'<p class="aide">Seules les 300 plus récentes sont affichées. Réduisez la période pour voir le reste.</p>':''}`;
 }
 /* Fiche d'une opération : rubrique, retour d'achat, suppression */
 function fiche(id){
@@ -2709,6 +2760,9 @@ document.addEventListener('click',async e=>{
   if(d.alvl){AL=d.alvl;openCat=null;render();return}
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
+  if(d.oshift){const n=shift({...P,lvl:FIL.lvl},+d.oshift);P={lvl:'M',y:n.y,m:n.m};render();return}
+  if(d.flvl){FIL.lvl=d.flvl;if(d.flvl==='D'&&!FIL.du&&!FIL.au){const [a,b]=bounds({...P,lvl:'M'});FIL.du=a+'-01';FIL.au=b+'-'+pad(new Date(P.y,P.m,0).getDate())}render();return}
+  if(d.act==='filreset'){FIL={lvl:'M',cat:'',du:'',au:''};render();return}
   if(d.op){FICHE=d.op;FICHESEL=null;render();setTimeout(()=>$('.fiche .fermer')?.focus(),30);return}
   if(d.cat){openCat=openCat===d.cat?null:d.cat;render();return}
   if(d.qcat){setRule(d.qcat,d.c);render();return}
@@ -2767,6 +2821,8 @@ document.addEventListener('change',e=>{
   if(d.opcat){const o=BYID[d.opcat];if(o&&t.value){LIGNES.add(d.gk);o.cat=t.value;dirtyMonths.add(o.date.slice(0,7));stateDirty=true;save();render()}return}
   if(d.moveimp){deplacerReleve(d.moveimp,t.value);return}
   if(d.qsel){if(t.value==='__new'){t.value='';ouvrirRubrique({de:'question',m:d.qsel});return}if(t.value){setRule(d.qsel,t.value);render()}return}
+  if(t.id==='filtreCat'){FIL.cat=t.value;render();return}
+  if(t.id==='filtreDu'||t.id==='filtreAu'){FIL[t.id==='filtreDu'?'du':'au']=t.value;render();return}
   if(t.id==='ficheCat'){if(t.value==='__new'){t.value=FICHESEL||'';ouvrirRubrique({de:'fiche',id:FICHE})}else FICHESEL=t.value||null;return}
   if(d.repacct){let v=t.value;const r=reports.find(x=>x.imp===d.repacct);if(!r)return;
     if(v==='__new'){const n=(prompt('Nom du compte')||'').trim();if(!n){render();return}v=addAccount({name:n.slice(0,40),type:guessType('','',n)}).id;r.isNew=true}
