@@ -41,6 +41,8 @@ document.addEventListener('click',async e=>{
   if(d.alvl){AL=d.alvl;openCat=null;render();return}
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
+  if(d.act==='restok'){if(RESTAURER)appliquerRestauration(RESTAURER);return}
+  if(d.act==='restno'){RESTAURER=null;render();return}
   if(d.oshift){const n=shift({...P,lvl:FIL.lvl},+d.oshift);P={lvl:'M',y:n.y,m:n.m};render();return}
   if(d.flvl){FIL.lvl=d.flvl;if(d.flvl==='D'&&!FIL.du&&!FIL.au){const [a,b]=bounds({...P,lvl:'M'});FIL.du=a+'-01';FIL.au=b+'-'+pad(new Date(P.y,P.m,0).getDate())}render();return}
   if(d.act==='filreset'){FIL={lvl:'M',cat:'',du:'',au:''};render();return}

@@ -59,6 +59,7 @@ function vReglages(){
       <li>Sur l’autre appareil, ouvrez l’application, récupérez le fichier dans Drive, puis touchez « Restaurer une sauvegarde » et choisissez-le.</li></ol>
       <p class="aide">Ce n’est pas automatique : refaites-le après chaque ajout de relevés, et gardez toujours la sauvegarde la plus récente. Autre possibilité : ajouter vos opérations sur chaque appareil avec « Coller mes opérations » (celles déjà présentes ne sont pas comptées deux fois), chaque appareil gardant alors sa propre copie.</p></details>
     <div class="boutons"><button class="btn" data-act="backup">Sauvegarder mes données</button><label class="btn secondaire">Restaurer une sauvegarde<input type="file" id="restorefile" accept=".json,application/json" hidden></label></div>
+    ${RESTAURER?`<div class="question"><p class="q-t">Remplacer vos données actuelles par cette sauvegarde ?</p><p class="q-s">Ce qui est enregistré ici sera remplacé.</p><div class="choix gros"><button class="choix-btn" data-act="restok">Oui, restaurer</button><button class="choix-btn" data-act="restno">Non, garder mes données</button></div></div>`:''}
     ${backupMsg?`<p class="ok-txt">${esc(backupMsg)}</p>`:''}
     <p class="aide">Le dictionnaire s’enrichit de temps en temps. Pour l’appliquer à vos opérations déjà ajoutées (sans toucher à ce que vous avez corrigé) :</p>
     <div class="boutons"><button class="btn secondaire" data-act="reclasser">Reclasser mes suppositions</button></div>

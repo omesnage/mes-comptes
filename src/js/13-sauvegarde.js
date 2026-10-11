@@ -31,16 +31,22 @@ async function backup_(){
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();
   S.lastBackup=Date.now();save();backupMsg='Sauvegarde téléchargée. Gardez ce fichier en lieu sûr.';majSauvegardeEntete();render();
 }
+/* Restaurer : la confirmation est dans la page (certains écrans, dont l’aperçu en ligne, masquent les fenêtres du navigateur) */
+let RESTAURER=null;
 async function restore_(file){
   try{
     const j=JSON.parse(await file.text());
     if(j.app!==(SAL?'mon-compte':'mes-comptes')||!j.data) throw 0;
-    if(!confirm('Remplacer toutes vos données actuelles par cette sauvegarde ?')) return;
-    if(demo) exitDemo();
-    S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));
-    S=merge(j.data); S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));
-    backupMsg=`Sauvegarde du ${new Date(j.date).toLocaleDateString('fr-FR')} restaurée.`; P=null; save(); render();
+    if(S.ops.length&&!demo){RESTAURER=j;backupMsg='';render();return}
+    appliquerRestauration(j);
   }catch(e){backupMsg='Ce fichier n’est pas une sauvegarde de '+(SAL?'Mon compte':'Mes comptes')+'.';render()}
+}
+function appliquerRestauration(j){
+  RESTAURER=null;
+  if(demo) exitDemo();
+  S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));
+  S=merge(j.data); S.ops.forEach(o=>dirtyMonths.add(o.date.slice(0,7)));
+  backupMsg=`Sauvegarde du ${new Date(j.date).toLocaleDateString('fr-FR')} restaurée.`; P=null; save(); render();
 }
 
 let readerMsg='', readerErr=false;
