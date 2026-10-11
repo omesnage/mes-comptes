@@ -33,7 +33,11 @@ for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]]){
   test(`${nom} icône camembert : les sommes se lisent sur le graphique et dans la légende`,async({page})=>{
     await openWith(page,{onboarded:true},url);
     await donnees(page,['2026-09','2026-08']);
-    await page.click('nav.tabs [data-tab="accueil"]');
+    await expect(page.locator('#camBtn')).toBeVisible();                                 // l'icône du haut, avec les trois autres
+    await page.click('nav.tabs [data-tab="bilan"]');
+    await page.click('#camBtn');
+    await expect(page.locator('.camembert')).toBeVisible();                              // elle amène aux dépenses, en camembert
+    await page.click('[data-vue="liste"]');
     await expect(page.locator('.camembert')).toHaveCount(0);
     await page.click('[data-vue="camembert"]');
     await expect(page.locator('.camembert svg path.part')).toHaveCount(5);
@@ -52,3 +56,12 @@ for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]]){
     await expect(page.locator('.repartition .rep-l').first()).toBeVisible();
   });
 }
+
+test('icone camembert cachee sans operation, et message si la periode est vide',async({page})=>{
+  await openWith(page,{onboarded:true});
+  await expect(page.locator('#camBtn')).toBeHidden();
+  await donnees(page,['2026-09']);
+  await page.evaluate(()=>{P={lvl:'M',y:2025,m:1};render()});
+  await page.click('#camBtn');
+  await expect(page.locator('#toast')).toContainText('Aucune dépense sur cette période');
+});

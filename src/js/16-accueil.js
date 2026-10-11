@@ -216,7 +216,7 @@ function vAccueil(){
   if(SAL) gagne=Pe.any?`<section class="carte gagne"><h3>Votre ${mens?'mois':AL==='Q'?'trimestre':'année'}</h3>${balanceBloc(0,Pe,PA)}</section>`:'';
   const q=S.accounts.filter(a=>!a.confirmed);
   return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+blocMoisManquants(true)+periodeBarAccueil(PA)+blocMeilleursMois(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
-  ${Pe.any?`<section class="carte argent"><div class="titre-vue"><h3>Où part votre argent</h3>${boutonsVue()}</div>
+  ${Pe.any?`<section class="carte argent" id="argent"><div class="titre-vue"><h3>Où part votre argent</h3>${boutonsVue()}</div>
     <p class="phrase">${eur0(Pe.net)} dépensés${SAL?'':' côté perso'}</p>
     ${VUE_REP==='camembert'?camembert(lignes.map(([cid,e])=>({id:cid,nom:cid==='_pending'?'À vérifier':(catById(cid)?.name||cid),v:e.net})),false):`<div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>

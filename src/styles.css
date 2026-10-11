@@ -47,6 +47,7 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .ico.ciel{--p:var(--p-ciel);--i:var(--i-ciel)}
 .ico.menthe{--p:var(--p-menthe);--i:var(--i-menthe)}
 .ico.sable{--p:var(--p-sable);--i:var(--i-sable)}
+.ico.lavande{--p:var(--p-lavande);--i:var(--i-lavande)}
 .ico.alerte{--p:var(--amber-soft);--i:var(--amber)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 #toast{position:fixed;left:16px;right:16px;top:calc(12px + env(safe-area-inset-top,0px));z-index:70;max-width:560px;margin:0 auto;padding:14px 18px;font-size:18px;line-height:1.4;font-weight:500;color:var(--ink);background:var(--p-menthe);border:1px solid var(--i-menthe);opacity:0;transform:translateY(-12px);pointer-events:none;transition:opacity .2s,transform .2s}
@@ -73,10 +74,10 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .manque-t>svg{width:26px;height:26px;color:var(--amber);margin-top:2px}
 .manque-t p{margin:0 0 8px;font-size:17px}
 .manque-t .btn{margin-top:4px}
-.titre-vue{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.titre-vue{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px;margin:0 0 6px}
 .titre-vue h3{margin:0 0 6px}
 .vue-rep{display:flex;flex:none;border:1px solid var(--line);background:var(--surface)}
-.ico-vue{position:relative;display:grid;place-items:center;width:44px;height:44px;color:var(--muted)}
+.ico-vue{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;font-size:16px;color:var(--muted)}
 .ico-vue svg{width:22px;height:22px}
 .ico-vue+.ico-vue{border-left:1px solid var(--line)}
 .ico-vue[aria-pressed="true"]{background:var(--p-lavande);color:var(--i-lavande)}

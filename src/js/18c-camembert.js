@@ -3,8 +3,8 @@
 let VUE_REP='liste';
 const NB_PARTS=6;
 function boutonsVue(){
-  const b=(k,ic,tip)=>`<button class="ico-vue" data-vue="${k}" aria-pressed="${VUE_REP===k}" data-tip="${tip}"><i data-lucide="${ic}"></i><span class="sr">${tip}</span></button>`;
-  return `<div class="vue-rep" role="group" aria-label="Façon de voir les dépenses">${b('liste','list','Voir en liste')}${b('camembert','chart-pie','Voir en camembert : chaque part porte son montant')}</div>`;
+  const b=(k,ic,mot,tip)=>`<button class="ico-vue" data-vue="${k}" aria-pressed="${VUE_REP===k}" data-tip="${tip}"><i data-lucide="${ic}"></i><span>${mot}</span></button>`;
+  return `<div class="vue-rep" role="group" aria-label="Façon de voir les dépenses">${b('liste','list','Liste','Voir les dépenses en liste')}${b('camembert','chart-pie','Camembert','Voir les dépenses en camembert : chaque part porte son montant')}</div>`;
 }
 /* rows : [{id, nom, v}] déjà triées de la plus grosse à la plus petite. cliquable : les lignes de la légende ouvrent la rubrique (data-bcat). */
 function camembert(rows,cliquable){

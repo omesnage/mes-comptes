@@ -43,6 +43,7 @@ document.addEventListener('click',async e=>{
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
   if(d.vue){VUE_REP=d.vue;render();return}
+  if(d.act==='camembert'){VUE_REP='camembert';aller('accueil','argent');if(!document.getElementById('argent'))toast('Aucune dépense sur cette période : changez de période pour voir le camembert.',false);return}
   if(d.act==='restok'){if(RESTAURER)appliquerRestauration(RESTAURER);return}
   if(d.act==='restno'){RESTAURER=null;render();return}
   if(d.oshift){const n=shift({...P,lvl:FIL.lvl},+d.oshift);P={lvl:'M',y:n.y,m:n.m};render();return}

@@ -61,6 +61,7 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .ico.ciel{--p:var(--p-ciel);--i:var(--i-ciel)}
 .ico.menthe{--p:var(--p-menthe);--i:var(--i-menthe)}
 .ico.sable{--p:var(--p-sable);--i:var(--i-sable)}
+.ico.lavande{--p:var(--p-lavande);--i:var(--i-lavande)}
 .ico.alerte{--p:var(--amber-soft);--i:var(--amber)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 #toast{position:fixed;left:16px;right:16px;top:calc(12px + env(safe-area-inset-top,0px));z-index:70;max-width:560px;margin:0 auto;padding:14px 18px;font-size:18px;line-height:1.4;font-weight:500;color:var(--ink);background:var(--p-menthe);border:1px solid var(--i-menthe);opacity:0;transform:translateY(-12px);pointer-events:none;transition:opacity .2s,transform .2s}
@@ -87,10 +88,10 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .manque-t>svg{width:26px;height:26px;color:var(--amber);margin-top:2px}
 .manque-t p{margin:0 0 8px;font-size:17px}
 .manque-t .btn{margin-top:4px}
-.titre-vue{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.titre-vue{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px;margin:0 0 6px}
 .titre-vue h3{margin:0 0 6px}
 .vue-rep{display:flex;flex:none;border:1px solid var(--line);background:var(--surface)}
-.ico-vue{position:relative;display:grid;place-items:center;width:44px;height:44px;color:var(--muted)}
+.ico-vue{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;font-size:16px;color:var(--muted)}
 .ico-vue svg{width:22px;height:22px}
 .ico-vue+.ico-vue{border-left:1px solid var(--line)}
 .ico-vue[aria-pressed="true"]{background:var(--p-lavande);color:var(--i-lavande)}
@@ -602,6 +603,7 @@ a.chercher svg{width:20px;height:20px}
       <button class="ico ciel" id="cloudBtn" data-act="cloud" data-tip="Sauvegarder : enregistre une copie de vos comptes dans un dossier de votre choix (Google Drive, iCloud…)."><i data-lucide="cloud-upload"></i><span class="sr">Sauvegarder dans mon dossier Cloud</span></button>
       <label class="ico menthe" id="importBtn" data-tip="Retrouver vos comptes à partir d’un fichier de sauvegarde."><i data-lucide="folder-down"></i><span class="sr" id="importTxt">Importer la sauvegarde</span><input type="file" id="restorefile2" accept=".json,application/json" hidden></label>
       <button class="ico alerte" id="warnBtn" data-act="cloud" data-tip="Vous n’avez encore fait aucune sauvegarde. Touchez ici pour en faire une : si vous perdez votre téléphone, vos comptes seront retrouvés."><i data-lucide="triangle-alert"></i><span class="sr">Aucune sauvegarde : sauvegarder maintenant</span></button>
+      <button class="ico lavande" id="camBtn" data-act="camembert" data-tip="Voir mes dépenses en camembert : chaque part porte son montant."><i data-lucide="chart-pie"></i><span class="sr">Mes dépenses en camembert</span></button>
       <button class="ico sable" data-tab="aide" data-tip="Mode d’emploi : comment ajouter vos relevés, sauvegarder et vous y retrouver."><i data-lucide="circle-help"></i><span class="sr">Mode d’emploi</span></button>
     </div>
   </header>
@@ -2877,6 +2879,7 @@ let backupMsg='';
 function majSauvegardeEntete(){
   const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
   b.hidden=!!demo; l.hidden=!!demo;
+  if($('#camBtn')) $('#camBtn').hidden=!(typeof S!=='undefined'&&S&&S.ops&&S.ops.length);
   const aS=typeof S!=='undefined'&&S&&S.lastBackup, ib=$('#importBtn'), wb=$('#warnBtn');
   const videA=!(S&&S.ops&&S.ops.length);
   if(ib&&wb){ib.hidden=!!demo||(!aS&&!videA); wb.hidden=!!demo||!!aS||videA; if(!aS){$('#importTxt').textContent='Importer une sauvegarde';ib.dataset.tip='Vous avez déjà des comptes sur un autre appareil ? Choisissez ici le fichier de sauvegarde pour les retrouver.'} if(aS){const d=new Date(S.lastBackup).toLocaleDateString('fr-FR');$('#importTxt').textContent='Importer la sauvegarde du '+d;ib.dataset.tip='Retrouver vos comptes : choisissez le fichier de la sauvegarde du '+d+'.'}}
@@ -2991,6 +2994,7 @@ document.addEventListener('click',async e=>{
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
   if(d.vue){VUE_REP=d.vue;render();return}
+  if(d.act==='camembert'){VUE_REP='camembert';aller('accueil','argent');if(!document.getElementById('argent'))toast('Aucune dépense sur cette période : changez de période pour voir le camembert.',false);return}
   if(d.act==='restok'){if(RESTAURER)appliquerRestauration(RESTAURER);return}
   if(d.act==='restno'){RESTAURER=null;render();return}
   if(d.oshift){const n=shift({...P,lvl:FIL.lvl},+d.oshift);P={lvl:'M',y:n.y,m:n.m};render();return}
@@ -3418,7 +3422,7 @@ function vAccueil(){
   if(SAL) gagne=Pe.any?`<section class="carte gagne"><h3>Votre ${mens?'mois':AL==='Q'?'trimestre':'année'}</h3>${balanceBloc(0,Pe,PA)}</section>`:'';
   const q=S.accounts.filter(a=>!a.confirmed);
   return (q.length?`<section class="carte verifier">${q.map(acctAsk).join('')}</section>`:'')+blocMoisManquants(true)+periodeBarAccueil(PA)+blocMeilleursMois(PA)+blocClassement(PA)+(!X.any&&!Pe.any?`<p class="aide centre">Aucune opération ${mens?'ce mois-ci':'sur cette période'}.</p>`:'')+gagne+`
-  ${Pe.any?`<section class="carte argent"><div class="titre-vue"><h3>Où part votre argent</h3>${boutonsVue()}</div>
+  ${Pe.any?`<section class="carte argent" id="argent"><div class="titre-vue"><h3>Où part votre argent</h3>${boutonsVue()}</div>
     <p class="phrase">${eur0(Pe.net)} dépensés${SAL?'':' côté perso'}</p>
     ${VUE_REP==='camembert'?camembert(lignes.map(([cid,e])=>({id:cid,nom:cid==='_pending'?'À vérifier':(catById(cid)?.name||cid),v:e.net})),false):`<div class="rubriques">${lignes.map(([cid,e])=>{const c=catById(cid), pend=cid==='_pending', d=pend||!mens?null:derapage(cid,e.net,P), open=openCat===cid;
       return `<button class="rub${d?' derape':''}" data-cat="${cid}" aria-expanded="${open}"><i data-lucide="${pend?'circle-help':c?.icon||'circle'}"></i>
@@ -3764,8 +3768,8 @@ function fenetreModal(){
 let VUE_REP='liste';
 const NB_PARTS=6;
 function boutonsVue(){
-  const b=(k,ic,tip)=>`<button class="ico-vue" data-vue="${k}" aria-pressed="${VUE_REP===k}" data-tip="${tip}"><i data-lucide="${ic}"></i><span class="sr">${tip}</span></button>`;
-  return `<div class="vue-rep" role="group" aria-label="Façon de voir les dépenses">${b('liste','list','Voir en liste')}${b('camembert','chart-pie','Voir en camembert : chaque part porte son montant')}</div>`;
+  const b=(k,ic,mot,tip)=>`<button class="ico-vue" data-vue="${k}" aria-pressed="${VUE_REP===k}" data-tip="${tip}"><i data-lucide="${ic}"></i><span>${mot}</span></button>`;
+  return `<div class="vue-rep" role="group" aria-label="Façon de voir les dépenses">${b('liste','list','Liste','Voir les dépenses en liste')}${b('camembert','chart-pie','Camembert','Voir les dépenses en camembert : chaque part porte son montant')}</div>`;
 }
 /* rows : [{id, nom, v}] déjà triées de la plus grosse à la plus petite. cliquable : les lignes de la légende ouvrent la rubrique (data-bcat). */
 function camembert(rows,cliquable){
