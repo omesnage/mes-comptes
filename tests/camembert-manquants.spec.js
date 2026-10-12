@@ -88,6 +88,30 @@ test(`${nom} camembert : toucher une rubrique montre ses operations, pour la per
   expect(n.length).toBe(1); expect(n[0]).toContain('ACHAT COURSES');
 });
 
+for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]])
+test(`${nom} camembert : changer la rubrique d'une operation depuis la page, qui se met a jour`,async({page})=>{
+  await openWith(page,{onboarded:true},url);
+  await page.evaluate(()=>{
+    S.accounts=[{id:'a',name:'Banque',type:'perso',confirmed:true}];
+    S.ops=[['LIDL',-400,'courses'],['RESTO',-200,'resto'],['SORTIE',-100,'loisirs']].map(([l,a,cat],i)=>({id:'o'+i,date:'2026-09-1'+i,label:'ACHAT '+l,amount:a,merchant:'ACHAT '+l,acct:'a',cat}));
+    save();P={lvl:'M',y:2026,m:9};render();
+  });
+  await page.click('#camBtn');
+  const p=page.locator('#camPage');
+  await p.locator('.cam-l[data-camcat="courses"]').click();
+  await p.locator('.cam-ops [data-op]').first().click();
+  await expect(page.locator('.fiche')).toBeVisible();                                   // la fiche s'ouvre par-dessus le camembert
+  await page.selectOption('#ficheCat','loisirs');
+  await page.check('input[name="portee"][value="une"]');
+  await page.click('[data-act="savefiche"]');
+  await expect(page.locator('.fiche')).toHaveCount(0);
+  await expect(page.locator('#camPage')).toBeVisible();                                  // on reste dans le camembert
+  expect(await page.evaluate(()=>catOf(S.ops[0]))).toBe('loisirs');
+  await expect(p.locator('.cam-leg')).not.toContainText('Courses');                       // la rubrique vidée disparaît
+  await expect(p.locator('.cam-leg')).toContainText('500 €');                             // loisirs : 400 + 100
+  await expect(p.locator('.rep-total')).toContainText('700 €');                           // le total ne change pas
+});
+
 test('icone camembert toujours visible : sans operation, la page explique et renvoie vers Importer',async({page})=>{
   await openWith(page,{onboarded:true});
   await expect(page.locator('#camBtn')).toBeVisible();

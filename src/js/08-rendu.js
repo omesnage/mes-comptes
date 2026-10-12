@@ -42,6 +42,7 @@ function render(){
   v.insertAdjacentHTML('beforeend',(FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'')+(NEWCAT?fenetreRubrique():'')+(MODAL?fenetreModal():''));
   document.body.classList.toggle('fige',!!(FICHE||BCAT||NEWCAT||MODAL));
   icons(); setStatus();
+  if(document.getElementById('camPage')&&typeof majCam==='function') majCam();
 }
 function libBanner(){return window.pdfjsLib&&window.XLSX?'':`<div class="note-box alerte-box" role="alert"><i data-lucide="wifi-off"></i><p>${MSG_RESEAU}</p></div>`}
 function privacyText(){return mode==='db'

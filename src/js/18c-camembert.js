@@ -79,6 +79,6 @@ function ligneLegende(p,total,reste,opt){
 }
 function opsRubrique(id,opt){
   const e=opt.by&&opt.by[id], ops=e?e.ops.slice().sort((a,b)=>a.date<b.date?1:-1):[];
-  return `<div class="cam-ops">${ops.length?ops.map(o=>opLine(o,true)).join(''):'<p class="aide">Aucune opération.</p>'}
+  return `<div class="cam-ops">${ops.length?`<p class="aide">Touchez une opération pour changer sa rubrique.</p>${ops.map(o=>opLine(o)).join('')}`:'<p class="aide">Aucune opération.</p>'}
     <button class="btn secondaire" data-camvoir="${esc(id)}"><i data-lucide="list"></i>Les voir dans Mes opérations</button></div>`;
 }

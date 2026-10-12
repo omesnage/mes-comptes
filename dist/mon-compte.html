@@ -92,7 +92,7 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .titre-vue h3{margin:0}
 .ico-vue.seul{display:grid;place-items:center;flex:none;width:44px;height:44px;color:var(--i-lavande);background:var(--p-lavande)}
 .ico-vue svg{width:22px;height:22px}
-#camPage{position:fixed;inset:0;z-index:30;background:var(--bg);color:var(--ink);overflow-y:auto}
+#camPage{position:fixed;inset:0;z-index:19;background:var(--bg);color:var(--ink);overflow-y:auto}
 .cam-page{max-width:640px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px))}
 .cam-page h2{font-size:26px;font-weight:500;margin:0}
 .cam-page .mois h2{font-size:22px}
@@ -634,7 +634,7 @@ a.chercher svg{width:20px;height:20px}
 /* Version salariés : rien de ce qui concerne une activité indépendante (le build remplace false par true) */
 const SAL=true;
 /* Date et heure de la construction du fichier : permet de vérifier qu'on regarde bien la dernière version */
-const BUILD="11 octobre 2026, 20:58";
+const BUILD="12 octobre 2026, 09:50";
 const SCHEMA=16;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
@@ -2025,6 +2025,7 @@ function render(){
   v.insertAdjacentHTML('beforeend',(FICHE?fiche(FICHE):BCAT?ficheRub(BCAT):'')+(NEWCAT?fenetreRubrique():'')+(MODAL?fenetreModal():''));
   document.body.classList.toggle('fige',!!(FICHE||BCAT||NEWCAT||MODAL));
   icons(); setStatus();
+  if(document.getElementById('camPage')&&typeof majCam==='function') majCam();
 }
 function libBanner(){return window.pdfjsLib&&window.XLSX?'':`<div class="note-box alerte-box" role="alert"><i data-lucide="wifi-off"></i><p>${MSG_RESEAU}</p></div>`}
 function privacyText(){return mode==='db'
@@ -3885,7 +3886,7 @@ function ligneLegende(p,total,reste,opt){
 }
 function opsRubrique(id,opt){
   const e=opt.by&&opt.by[id], ops=e?e.ops.slice().sort((a,b)=>a.date<b.date?1:-1):[];
-  return `<div class="cam-ops">${ops.length?ops.map(o=>opLine(o,true)).join(''):'<p class="aide">Aucune opération.</p>'}
+  return `<div class="cam-ops">${ops.length?`<p class="aide">Touchez une opération pour changer sa rubrique.</p>${ops.map(o=>opLine(o)).join('')}`:'<p class="aide">Aucune opération.</p>'}
     <button class="btn secondaire" data-camvoir="${esc(id)}"><i data-lucide="list"></i>Les voir dans Mes opérations</button></div>`;
 }
 /* ============ Mes objectifs ============ */
