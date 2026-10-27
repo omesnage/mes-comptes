@@ -628,7 +628,7 @@ a.chercher svg{width:20px;height:20px}
     </div>
   </header>
   <p class="etat-top"><span class="status" id="status"></span> <span class="dern-sauv" id="lastbk"></span></p>
-  <button class="releves-top" id="relevesTop" data-tab="importer" aria-label="État de vos relevés : voir dans Importer" hidden></button>
+  <button class="releves-top" id="relevesTop" data-act="versimporter" aria-label="État de vos relevés : voir dans Importer" hidden></button>
   <nav class="tabs" id="tabs" aria-label="Navigation principale"></nav>
   <div id="demoBar"></div>
   <main id="view"></main>
@@ -641,7 +641,7 @@ a.chercher svg{width:20px;height:20px}
 /* Version salariés : rien de ce qui concerne une activité indépendante (le build remplace false par true) */
 const SAL=true;
 /* Date et heure de la construction du fichier : permet de vérifier qu'on regarde bien la dernière version */
-const BUILD="27 octobre 2026, 17:26";
+const BUILD="27 octobre 2026, 17:31";
 const SCHEMA=16;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
@@ -3057,6 +3057,7 @@ document.addEventListener('click',async e=>{
   if(d.ashift){P=shift({...P,lvl:AL},+d.ashift);P.lvl='M';openCat=null;render();return}
   if(d.shift){P=shift(P,+d.shift);openCat=null;render();return}
   if(d.act==='camembert'){ouvrirCamembert();return}
+  if(d.act==='versimporter'){aller('importer');return}
   if(d.act==='camimporter'){$('#camPage')?.remove();document.body.style.overflow='';aller('importer');return}
   if(d.act==='closecam'){$('#camPage')?.remove();document.body.style.overflow='';return}
   if(d.clvl){CAM.lvl=d.clvl;majCam();return}
