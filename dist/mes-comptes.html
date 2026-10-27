@@ -122,6 +122,10 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .etat-releves .er p{margin:0 0 4px;font-size:17px}
 .etat-releves .er-m{font-weight:500}
 .etat-releves .er.ko .er-m{color:var(--alert)}
+.releves-top{display:block;width:100%;margin:-8px 0 14px;font-size:15px;line-height:1.45;color:var(--muted);text-align:right}
+.releves-top[hidden]{display:none}
+.releves-top .rt-l{display:block}
+.releves-top .rouge{color:var(--alert);font-weight:500}
 .etat-top{margin:-6px 0 14px;font-size:15px;color:var(--muted);text-align:right}
 .dern-sauv{font-size:15px;color:var(--muted)}
 .status{font-size:15px;color:var(--muted)}
@@ -624,6 +628,7 @@ a.chercher svg{width:20px;height:20px}
     </div>
   </header>
   <p class="etat-top"><span class="status" id="status"></span> <span class="dern-sauv" id="lastbk"></span></p>
+  <button class="releves-top" id="relevesTop" data-tab="importer" aria-label="État de vos relevés : voir dans Importer" hidden></button>
   <nav class="tabs" id="tabs" aria-label="Navigation principale"></nav>
   <div id="demoBar"></div>
   <main id="view"></main>
@@ -636,7 +641,7 @@ a.chercher svg{width:20px;height:20px}
 /* Version salariés : rien de ce qui concerne une activité indépendante (le build remplace false par true) */
 const SAL=false;
 /* Date et heure de la construction du fichier : permet de vérifier qu'on regarde bien la dernière version */
-const BUILD="27 octobre 2026, 17:08";
+const BUILD="27 octobre 2026, 17:26";
 const SCHEMA=16;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
@@ -2331,15 +2336,27 @@ function phraseMoisManquants(mois){
 /* Date de la dernière opération connue d'un compte (celle du dernier relevé ajouté) */
 const dernierJour=acctId=>S.ops.filter(o=>o.acct===acctId&&o.src!=='rev').reduce((m,o)=>o.date>m?o.date:m,'');
 const dfmtLong=d=>d?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4):'';
-function etatReleves(){
-  if(!S.ops.length) return '';
+/* État des relevés compte par compte : premier et dernier mois, dernière opération, mois manquants (mois sautés, et ceux d'après le dernier jusqu'au mois dernier) */
+function etatParCompte(){
   const d=new Date(), cle=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'), prev=cle(new Date(d.getFullYear(),d.getMonth()-1,1));
-  const nomMois=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4);
   const L=S.accounts.map(a=>{
     const vus=[...new Set(S.ops.filter(o=>o.acct===a.id&&o.src!=='rev').map(o=>o.date.slice(0,7)))].sort(); if(!vus.length) return null;
     const dernier=vus[vus.length-1], fin=dernier<prev?monthKeys(dernier,prev).slice(1):[];
     return {a,premier:vus[0],dernier,jour:dernierJour(a.id),manque:[...moisManquants(a.id),...fin]};
   }).filter(Boolean).sort((x,y)=>(x.a.bank||x.a.name).localeCompare(y.a.bank||y.a.name,'fr'));
+  return {L,prev,d};
+}
+/* Une ligne en haut de chaque écran : le dernier relevé, et les relevés manquants en rouge */
+function ligneReleves(){
+  if(!S.ops.length||demo) return '';
+  const {L}=etatParCompte(); if(!L.length) return '';
+  const nm=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4), plusieurs=L.length>1;
+  return L.slice(0,4).map(({a,dernier,manque})=>`<span class="rt-l">${plusieurs?`<b>${esc(a.bank||a.name)}</b> : `:''}dernier relevé ${esc(nm(dernier))}${manque.length?` · <span class="rouge">${manque.length>1?'manquent':'manque'} : ${esc(listeMois(manque))}</span>`:''}</span>`).join('')+(L.length>4?`<span class="rt-l">et ${L.length-4} autre${L.length>5?'s':''} compte${L.length>5?'s':''}…</span>`:'');
+}
+function etatReleves(){
+  if(!S.ops.length) return '';
+  const {L,prev,d}=etatParCompte();
+  const nomMois=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4);
   if(!L.length) return '';
   const jour=d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
   return `<section class="carte etat-releves"><h3>Vos relevés, à ce jour</h3>
@@ -2365,7 +2382,7 @@ function blocMoisManquants(avecBouton){
   const nomMois=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4);
   const nom=a=>`<b>${esc(a.name)}</b> : `;
   return `<section class="carte manque" role="status"><div class="manque-t"><i data-lucide="triangle-alert"></i><div>
-    ${l.map(({a,m,r})=>`<p class="manque-der">${nom(a)}dernier relevé : <b>${esc(nomMois(dernierJour(a.id).slice(0,7)))}</b>.</p>${m.length?`<p>${nom(a)}${phraseMoisManquants(m).replace(/^Il manque un mois/,'Il manque un relevé').replace(/^Il manque des mois/,'Il manque des relevés')} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`:''}${r?`<p>${nom(a)}le relevé de ${esc(nomMois(r))} n’est pas encore ajouté.</p>`:''}`).join('')}
+    ${l.map(({a,m,r})=>`${m.length?`<p>${nom(a)}${phraseMoisManquants(m).replace(/^Il manque un mois/,'Il manque un relevé').replace(/^Il manque des mois/,'Il manque des relevés')} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`:''}${r?`<p>${nom(a)}le relevé de ${esc(nomMois(r))} n’est pas encore ajouté.</p>`:''}`).join('')}
     ${avecBouton?'<button class="btn secondaire" data-tab="importer">Ajouter un relevé</button>':''}</div></div></section>`;
 }
 function choixTypeImport(){
@@ -2925,6 +2942,7 @@ function majSauvegardeEntete(){
   const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
   b.hidden=!!demo; l.hidden=!!demo;
   if($('#camBtn')) $('#camBtn').hidden=false;
+  const rt=$('#relevesTop'); if(rt&&typeof S!=='undefined'&&S&&S.ops&&typeof ligneReleves==='function'){const h=ligneReleves(); rt.innerHTML=h; rt.hidden=!h}
   const aS=typeof S!=='undefined'&&S&&S.lastBackup, ib=$('#importBtn'), wb=$('#warnBtn');
   const videA=!(S&&S.ops&&S.ops.length);
   if(ib&&wb){ib.hidden=!!demo||(!aS&&!videA); wb.hidden=!!demo||!!aS||videA; if(!aS){$('#importTxt').textContent='Importer une sauvegarde';ib.dataset.tip='Vous avez déjà des comptes sur un autre appareil ? Choisissez ici le fichier de sauvegarde pour les retrouver.'} if(aS){const d=new Date(S.lastBackup).toLocaleDateString('fr-FR');$('#importTxt').textContent='Importer la sauvegarde du '+d;ib.dataset.tip='Retrouver vos comptes : choisissez le fichier de la sauvegarde du '+d+'.'}}

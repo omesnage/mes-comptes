@@ -108,6 +108,10 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .etat-releves .er p{margin:0 0 4px;font-size:17px}
 .etat-releves .er-m{font-weight:500}
 .etat-releves .er.ko .er-m{color:var(--alert)}
+.releves-top{display:block;width:100%;margin:-8px 0 14px;font-size:15px;line-height:1.45;color:var(--muted);text-align:right}
+.releves-top[hidden]{display:none}
+.releves-top .rt-l{display:block}
+.releves-top .rouge{color:var(--alert);font-weight:500}
 .etat-top{margin:-6px 0 14px;font-size:15px;color:var(--muted);text-align:right}
 .dern-sauv{font-size:15px;color:var(--muted)}
 .status{font-size:15px;color:var(--muted)}

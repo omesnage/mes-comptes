@@ -5,6 +5,7 @@ function majSauvegardeEntete(){
   const b=$('#cloudBtn'), l=$('#lastbk'); if(!b||!l) return;
   b.hidden=!!demo; l.hidden=!!demo;
   if($('#camBtn')) $('#camBtn').hidden=false;
+  const rt=$('#relevesTop'); if(rt&&typeof S!=='undefined'&&S&&S.ops&&typeof ligneReleves==='function'){const h=ligneReleves(); rt.innerHTML=h; rt.hidden=!h}
   const aS=typeof S!=='undefined'&&S&&S.lastBackup, ib=$('#importBtn'), wb=$('#warnBtn');
   const videA=!(S&&S.ops&&S.ops.length);
   if(ib&&wb){ib.hidden=!!demo||(!aS&&!videA); wb.hidden=!!demo||!!aS||videA; if(!aS){$('#importTxt').textContent='Importer une sauvegarde';ib.dataset.tip='Vous avez déjà des comptes sur un autre appareil ? Choisissez ici le fichier de sauvegarde pour les retrouver.'} if(aS){const d=new Date(S.lastBackup).toLocaleDateString('fr-FR');$('#importTxt').textContent='Importer la sauvegarde du '+d;ib.dataset.tip='Retrouver vos comptes : choisissez le fichier de la sauvegarde du '+d+'.'}}

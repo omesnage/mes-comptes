@@ -13,7 +13,8 @@ for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]]){
     for(const tab of ['accueil','bilan','operations']){
       await page.click(`nav.tabs [data-tab="${tab}"]`);
       await expect(page.locator('.manque'),tab).toContainText('Il manque un relevé : août 2026');
-      await expect(page.locator('.manque'),tab).toContainText('dernier relevé : septembre 2026');
+      await expect(page.locator('#relevesTop'),tab).toContainText('dernier relevé septembre 2026');   // la ligne du haut, sur tous les écrans
+      await expect(page.locator('#relevesTop .rouge'),tab).toContainText('manque : août 2026');
     }
     await page.click('.manque [data-tab="importer"]');
     await expect(page.locator('.etat-releves')).toContainText('Relevé manquant : août 2026');   // Importer : l'état à ce jour
@@ -25,6 +26,8 @@ for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]]){
     await donnees(page,['2026-09','2026-08','2026-07']);                  // plus rien ne manque
     await page.click('nav.tabs [data-tab="accueil"]');
     await expect(page.locator('.manque')).toHaveCount(0);
+    await expect(page.locator('#relevesTop')).toContainText('dernier relevé septembre 2026');
+    await expect(page.locator('#relevesTop .rouge')).toHaveCount(0);
   });
   test(`${nom} le relevé du mois dernier pas encore ajouté est signalé`,async({page})=>{
     await openWith(page,{onboarded:true},url);

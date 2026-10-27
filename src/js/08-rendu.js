@@ -346,15 +346,27 @@ function phraseMoisManquants(mois){
 /* Date de la dernière opération connue d'un compte (celle du dernier relevé ajouté) */
 const dernierJour=acctId=>S.ops.filter(o=>o.acct===acctId&&o.src!=='rev').reduce((m,o)=>o.date>m?o.date:m,'');
 const dfmtLong=d=>d?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4):'';
-function etatReleves(){
-  if(!S.ops.length) return '';
+/* État des relevés compte par compte : premier et dernier mois, dernière opération, mois manquants (mois sautés, et ceux d'après le dernier jusqu'au mois dernier) */
+function etatParCompte(){
   const d=new Date(), cle=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'), prev=cle(new Date(d.getFullYear(),d.getMonth()-1,1));
-  const nomMois=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4);
   const L=S.accounts.map(a=>{
     const vus=[...new Set(S.ops.filter(o=>o.acct===a.id&&o.src!=='rev').map(o=>o.date.slice(0,7)))].sort(); if(!vus.length) return null;
     const dernier=vus[vus.length-1], fin=dernier<prev?monthKeys(dernier,prev).slice(1):[];
     return {a,premier:vus[0],dernier,jour:dernierJour(a.id),manque:[...moisManquants(a.id),...fin]};
   }).filter(Boolean).sort((x,y)=>(x.a.bank||x.a.name).localeCompare(y.a.bank||y.a.name,'fr'));
+  return {L,prev,d};
+}
+/* Une ligne en haut de chaque écran : le dernier relevé, et les relevés manquants en rouge */
+function ligneReleves(){
+  if(!S.ops.length||demo) return '';
+  const {L}=etatParCompte(); if(!L.length) return '';
+  const nm=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4), plusieurs=L.length>1;
+  return L.slice(0,4).map(({a,dernier,manque})=>`<span class="rt-l">${plusieurs?`<b>${esc(a.bank||a.name)}</b> : `:''}dernier relevé ${esc(nm(dernier))}${manque.length?` · <span class="rouge">${manque.length>1?'manquent':'manque'} : ${esc(listeMois(manque))}</span>`:''}</span>`).join('')+(L.length>4?`<span class="rt-l">et ${L.length-4} autre${L.length>5?'s':''} compte${L.length>5?'s':''}…</span>`:'');
+}
+function etatReleves(){
+  if(!S.ops.length) return '';
+  const {L,prev,d}=etatParCompte();
+  const nomMois=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4);
   if(!L.length) return '';
   const jour=d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
   return `<section class="carte etat-releves"><h3>Vos relevés, à ce jour</h3>
@@ -380,7 +392,7 @@ function blocMoisManquants(avecBouton){
   const nomMois=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4);
   const nom=a=>`<b>${esc(a.name)}</b> : `;
   return `<section class="carte manque" role="status"><div class="manque-t"><i data-lucide="triangle-alert"></i><div>
-    ${l.map(({a,m,r})=>`<p class="manque-der">${nom(a)}dernier relevé : <b>${esc(nomMois(dernierJour(a.id).slice(0,7)))}</b>.</p>${m.length?`<p>${nom(a)}${phraseMoisManquants(m).replace(/^Il manque un mois/,'Il manque un relevé').replace(/^Il manque des mois/,'Il manque des relevés')} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`:''}${r?`<p>${nom(a)}le relevé de ${esc(nomMois(r))} n’est pas encore ajouté.</p>`:''}`).join('')}
+    ${l.map(({a,m,r})=>`${m.length?`<p>${nom(a)}${phraseMoisManquants(m).replace(/^Il manque un mois/,'Il manque un relevé').replace(/^Il manque des mois/,'Il manque des relevés')} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`:''}${r?`<p>${nom(a)}le relevé de ${esc(nomMois(r))} n’est pas encore ajouté.</p>`:''}`).join('')}
     ${avecBouton?'<button class="btn secondaire" data-tab="importer">Ajouter un relevé</button>':''}</div></div></section>`;
 }
 function choixTypeImport(){
