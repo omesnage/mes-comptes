@@ -83,9 +83,10 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .mode-court[open]>summary{margin-bottom:12px}
 .comment-ajouter>summary{display:flex;align-items:center;gap:8px;min-height:44px;color:var(--ink);font-size:16px}
 .comment-ajouter>summary svg{width:20px;height:20px;color:var(--i-ciel)}
-.manque{border-color:var(--amber);background:var(--amber-soft)}
+.manque{border-color:var(--alert);background:var(--alert-soft)}
 .manque-t{display:flex;gap:14px;align-items:flex-start}
-.manque-t>svg{width:26px;height:26px;color:var(--amber);margin-top:2px}
+.manque-t>svg{width:26px;height:26px;color:var(--alert);margin-top:2px}
+.manque-t .manque-der{font-size:16px;color:var(--muted);margin-bottom:4px}
 .manque-t p{margin:0 0 8px;font-size:17px}
 .manque-t .btn{margin-top:4px}
 .titre-vue{display:flex;justify-content:space-between;align-items:center;gap:8px 12px;margin:0 0 6px}
@@ -116,10 +117,11 @@ header.top{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-
 .cam-pc{color:var(--muted);font-size:16px}
 .etat-releves .er{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
 .etat-releves .er>svg{width:24px;height:24px;margin-top:2px}
-.etat-releves .er.ok>svg{color:var(--ok)}.etat-releves .er.ko>svg{color:var(--amber)}
+.etat-releves .er.ok>svg{color:var(--ok)}.etat-releves .er.ko>svg{color:var(--alert)}
+.etat-releves .er-d{color:var(--muted)}
 .etat-releves .er p{margin:0 0 4px;font-size:17px}
 .etat-releves .er-m{font-weight:500}
-.etat-releves .er.ko .er-m{color:var(--amber)}
+.etat-releves .er.ko .er-m{color:var(--alert)}
 .etat-top{margin:-6px 0 14px;font-size:15px;color:var(--muted);text-align:right}
 .dern-sauv{font-size:15px;color:var(--muted)}
 .status{font-size:15px;color:var(--muted)}
@@ -634,7 +636,7 @@ a.chercher svg{width:20px;height:20px}
 /* Version salariés : rien de ce qui concerne une activité indépendante (le build remplace false par true) */
 const SAL=false;
 /* Date et heure de la construction du fichier : permet de vérifier qu'on regarde bien la dernière version */
-const BUILD="12 octobre 2026, 09:50";
+const BUILD="27 octobre 2026, 17:08";
 const SCHEMA=16;
 const SET0={epargne:0,taux:0,heuresSemaine:40,netVise:2500,objectif:6,assiette:'ca',semNonTrav:7,epRetraite:10,nonFacture:30,hJour:7};
 /* univers : 'perso', 'pro' ou 'auto' (suit le type du compte) */
@@ -2326,6 +2328,9 @@ function phraseMoisManquants(mois){
   return `${mois.length>1?'Il manque des mois':'Il manque un mois'} : ${listeMois(mois)}.`;
 }
 /* Importer : où en sont les relevés, banque par banque, à la date du jour. Un relevé par mois et par compte est attendu, jusqu'à celui du mois dernier. */
+/* Date de la dernière opération connue d'un compte (celle du dernier relevé ajouté) */
+const dernierJour=acctId=>S.ops.filter(o=>o.acct===acctId&&o.src!=='rev').reduce((m,o)=>o.date>m?o.date:m,'');
+const dfmtLong=d=>d?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4):'';
 function etatReleves(){
   if(!S.ops.length) return '';
   const d=new Date(), cle=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'), prev=cle(new Date(d.getFullYear(),d.getMonth()-1,1));
@@ -2333,15 +2338,16 @@ function etatReleves(){
   const L=S.accounts.map(a=>{
     const vus=[...new Set(S.ops.filter(o=>o.acct===a.id&&o.src!=='rev').map(o=>o.date.slice(0,7)))].sort(); if(!vus.length) return null;
     const dernier=vus[vus.length-1], fin=dernier<prev?monthKeys(dernier,prev).slice(1):[];
-    return {a,premier:vus[0],dernier,manque:[...moisManquants(a.id),...fin]};
+    return {a,premier:vus[0],dernier,jour:dernierJour(a.id),manque:[...moisManquants(a.id),...fin]};
   }).filter(Boolean).sort((x,y)=>(x.a.bank||x.a.name).localeCompare(y.a.bank||y.a.name,'fr'));
   if(!L.length) return '';
   const jour=d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
   return `<section class="carte etat-releves"><h3>Vos relevés, à ce jour</h3>
     <p class="aide">Au ${esc(jour)} : un relevé par mois et par compte est attendu, jusqu’à celui de ${esc(nomMois(prev))}.</p>
-    ${L.map(({a,premier,dernier,manque})=>`<div class="er ${manque.length?'ko':'ok'}"><i data-lucide="${manque.length?'triangle-alert':'circle-check'}"></i><div>
+    ${L.map(({a,premier,dernier,jour,manque})=>`<div class="er ${manque.length?'ko':'ok'}"><i data-lucide="${manque.length?'triangle-alert':'circle-check'}"></i><div>
       <p class="er-t"><b>${esc(a.bank||a.name)}</b>${a.bank&&a.name&&a.name!==a.bank?` · ${esc(a.name)}`:''}</p>
       <p>Relevés ajoutés : ${premier===dernier?esc(nomMois(premier)):`de ${esc(nomMois(premier))} à ${esc(nomMois(dernier))}`}.</p>
+      <p class="er-d">Dernier relevé : <b>${esc(nomMois(dernier))}</b> (dernière opération le ${esc(dfmtLong(jour))}).</p>
       <p class="er-m">${manque.length?`${manque.length>1?'Relevés manquants':'Relevé manquant'} : ${esc(listeMois(manque))}.`:'Aucun relevé ne manque.'}</p></div></div>`).join('')}</section>`;
 }
 /* Le relevé du mois dernier n'est pas encore ajouté : seulement quand le dernier mois connu du compte est l'avant-dernier mois du calendrier
@@ -2359,7 +2365,7 @@ function blocMoisManquants(avecBouton){
   const nomMois=k=>MOIS[+k.slice(5,7)-1]+' '+k.slice(0,4);
   const nom=a=>`<b>${esc(a.name)}</b> : `;
   return `<section class="carte manque" role="status"><div class="manque-t"><i data-lucide="triangle-alert"></i><div>
-    ${l.map(({a,m,r})=>`${m.length?`<p>${nom(a)}${phraseMoisManquants(m).replace(/^Il manque un mois/,'Il manque un relevé').replace(/^Il manque des mois/,'Il manque des relevés')} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`:''}${r?`<p>${nom(a)}le relevé de ${esc(nomMois(r))} n’est pas encore ajouté.</p>`:''}`).join('')}
+    ${l.map(({a,m,r})=>`<p class="manque-der">${nom(a)}dernier relevé : <b>${esc(nomMois(dernierJour(a.id).slice(0,7)))}</b>.</p>${m.length?`<p>${nom(a)}${phraseMoisManquants(m).replace(/^Il manque un mois/,'Il manque un relevé').replace(/^Il manque des mois/,'Il manque des relevés')} Ajoutez ${m.length>1?'les relevés correspondants':'le relevé correspondant'} pour que vos chiffres soient complets.</p>`:''}${r?`<p>${nom(a)}le relevé de ${esc(nomMois(r))} n’est pas encore ajouté.</p>`:''}`).join('')}
     ${avecBouton?'<button class="btn secondaire" data-tab="importer">Ajouter un relevé</button>':''}</div></div></section>`;
 }
 function choixTypeImport(){

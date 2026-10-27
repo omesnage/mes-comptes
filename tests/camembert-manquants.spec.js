@@ -13,10 +13,15 @@ for(const [nom,url] of [['Mes comptes',APP],['Mon compte',APP_SAL]]){
     for(const tab of ['accueil','bilan','operations']){
       await page.click(`nav.tabs [data-tab="${tab}"]`);
       await expect(page.locator('.manque'),tab).toContainText('Il manque un relevé : août 2026');
+      await expect(page.locator('.manque'),tab).toContainText('dernier relevé : septembre 2026');
     }
     await page.click('.manque [data-tab="importer"]');
     await expect(page.locator('.etat-releves')).toContainText('Relevé manquant : août 2026');   // Importer : l'état à ce jour
     await expect(page.locator('.etat-releves')).toContainText('Au ');
+    await expect(page.locator('.etat-releves .er-d')).toContainText('Dernier relevé : septembre 2026');       // la date du dernier relevé
+    await expect(page.locator('.etat-releves .er-d')).toContainText('dernière opération le 09/09/2026');
+    const rouge=await page.evaluate(()=>{const m=getComputedStyle(document.querySelector('.etat-releves .er-m')).color, a=getComputedStyle(document.documentElement).getPropertyValue('--alert').trim();const c=document.createElement('i');c.style.color=a;document.body.appendChild(c);const r=getComputedStyle(c).color;c.remove();return m===r});
+    expect(rouge).toBe(true);                                                                              // les relevés manquants en rouge
     await donnees(page,['2026-09','2026-08','2026-07']);                  // plus rien ne manque
     await page.click('nav.tabs [data-tab="accueil"]');
     await expect(page.locator('.manque')).toHaveCount(0);
